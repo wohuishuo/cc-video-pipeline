@@ -1,0 +1,112 @@
+# Claude Code 视频创作流水线的忽略规则
+# =================================
+
+# 敏感信息
+reference/cookies.txt
+reference/**/cookies.txt
+**/SESSDATA
+**/bili_jct
+*.cookie
+*.cookies
+.env
+.env.local
+secrets/
+
+# 下载的视频/音频产物（很大且包含平台元数据）
+reference/**/video.mp4
+reference/**/video.mkv
+reference/**/video.webm
+reference/**/video.f*.mp4
+reference/**/video.f*.m4a
+reference/**/video.part
+reference/**/audio.wav
+reference/**/audio.mp3
+reference/**/audio.m4a
+reference/**/audio_hq.wav
+reference/**/video.jpg
+reference/**/video.png
+reference/**/video.webp
+reference/**/video.info.json
+reference/**/*.info.json
+
+# 抽帧图（小但量大 100+张，且 SOP 范例可手动生成）
+reference/**/frames/
+reference/**/montage_*.jpg
+reference/**/_analysis/
+
+# 参考视频的 montage/jpg 拼图
+reference/**/*.jpg
+!reference/**/.gitkeep
+
+# Python 虚拟环境
+tools/.venv/
+tools/.venv/**
+tools/__pycache__/
+tools/**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+*.egg-info/
+.pytest_cache/
+
+# Remotion node_modules
+tools/remotion-hello/node_modules/
+tools/remotion-hello/dist/
+tools/remotion-hello/.cache/
+tools/remotion-hello/build/
+
+# 临时文件
+$TEMP/
+*.tmp
+*.temp
+*.part
+*.ytdl
+*.aria2
+
+# 数据采集的原始缓存
+data/**/*.json
+!data/**/videos_table.md
+!data/**/README.md
+!data/**/analysis.md
+!data/**/videos.json
+
+# 知识库缓存
+.cache/
+**/__pycache__/
+*.log
+npm-debug.log*
+yt-dlp-*.log
+ffmpeg-*.log
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.code-workspace
+
+# Python 包构建
+build/
+dist/
+*.egg
+.eggs/
+htmlcov/
+.coverage
+.tox/
+.pytest_cache/
+
+# NPM
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npm/
+.eslintcache
+
+# 外部学习参考（独立 clone，独立版本控制）
+_refs/
+data/我/              # 你的 B 站账号数据是私人
+projects/active/      # 正在进行的私人项目
