@@ -54,6 +54,10 @@ tools/remotion-hello/node_modules/
 tools/remotion-hello/dist/
 tools/remotion-hello/.cache/
 tools/remotion-hello/build/
+tools/remotion-hello/out.mp4
+tools/remotion-hello/out.webm
+tools/remotion-hello/*.mp4
+tools/remotion-hello/*.webm
 
 # 临时文件
 $TEMP/
