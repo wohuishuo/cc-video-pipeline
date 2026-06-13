@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 先看 [TOOLS.md](TOOLS.md) 了解所有工具。每次对话开始时说：
 > "项目根在 C:\Users\艾莉\Videos\cc视频剪辑，工具速查 TOOLS.md，cookie 在 reference\cookies.txt，环境自检跑 setup.ps1"
 
+**接手新机器/重装时**：先看 [INSTALL_HISTORY.md](INSTALL_HISTORY.md) 知道已装什么，**别重复装**。
+
 ## 环境硬约束——必须遵守
 
 - **OS**: Windows 11 原生 PowerShell（非 WSL）
