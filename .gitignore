@@ -38,6 +38,9 @@ reference/**/_analysis/
 reference/**/*.jpg
 !reference/**/.gitkeep
 
+# 误生成的根目录文件（probe.ps1 旧 bug 修了，但万一又生成）
+.reference*
+
 # Python 虚拟环境
 tools/.venv/
 tools/.venv/**
