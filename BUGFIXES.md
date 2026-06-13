@@ -15,3 +15,4 @@ via `/code-review` xhigh → 6 bugs found + 8 repaired
 - `bilibili_data.py:43` — `open(cookie_file)` → `open(cookie_file, encoding="utf-8")`
 - `silence_cut.ps1:86‑95` — `Out-File -Encoding ascii -Append` which writes a UTF-8 BOM on first call → `Set-Content -Encoding ascii` (no BOM) + `Add-Content` for subsequent lines
 - `remotion-hello/package.json:6` — build script updated to point at `src/root.tsx hello-world`
+- `probe.ps1:28` — `file=$Dir\rms.txt` is relative-to-CWD parsed by ffmpeg ametadata, file landed in shell CWD instead of `$Dir` → use `Join-Path (Resolve-Path $Dir) "rms.txt"` (absolute path)

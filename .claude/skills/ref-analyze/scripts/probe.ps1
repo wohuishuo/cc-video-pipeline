@@ -25,6 +25,8 @@ Write-Host "[ok] 检测到 $($cuts.Count) 个镜头切换 -> cuts.txt"
 
 # 2) 每秒响度（语音/BGM 能量代理），用于找钩子/高潮/留白
 Write-Host "[*] 响度包络…"
-ffmpeg -i $video.FullName -af "astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level:file=$Dir\rms.txt" -f null - 2>$null
-Write-Host "[ok] rms.txt 就绪"
+# ffmpeg ametadata 滤镜的 file= 路径是相对 CWD 解析的，必须用绝对路径
+$rmsAbs = Join-Path (Resolve-Path $Dir) "rms.txt"
+ffmpeg -i $video.FullName -af "astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level:file=`"$rmsAbs`"" -f null - 2>$null
+if (Test-Path $rmsAbs) { Write-Host "[ok] rms.txt 就绪 ($rmsAbs)" } else { Write-Host "[warn] rms.txt 未生成" }
 Write-Output $Dir
