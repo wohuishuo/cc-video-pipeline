@@ -23,6 +23,10 @@ reference/**/audio.wav
 reference/**/audio.mp3
 reference/**/audio.m4a
 reference/**/audio_hq.wav
+reference/**/audio.json     # 转录原始 JSON（大且可重现）
+reference/**/audio.srt      # 字幕文件（可重新生成）
+reference/**/cuts.txt      # 镜头切换点列表
+reference/**/rms.txt       # 响度包络（大）
 reference/**/video.jpg
 reference/**/video.png
 reference/**/video.webp
