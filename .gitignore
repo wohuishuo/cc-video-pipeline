@@ -121,3 +121,22 @@ pnpm-lock.yaml
 _refs/
 data/我/              # 你的 B 站账号数据是私人
 projects/active/      # 正在进行的私人项目
+
+# 临时工具源码（不下传 — 用完即删）
+tools/weflow-src/
+
+# TTS MVP (tools/tts-mvp)
+# 独立 Python venv + 大模型权重 — 不入版本控制
+tools/tts-mvp/.venv/
+tools/tts-mvp/.venv/**
+tools/tts-mvp/models/
+tools/tts-mvp/outputs/*.wav
+tools/tts-mvp/outputs/*.mp3
+tools/tts-mvp/voices/**/*.wav
+tools/tts-mvp/voices/**/*.mp3
+tools/tts-mvp/voices/**/ref_*.bin
+!tools/tts-mvp/.gitkeep
+!tools/tts-mvp/outputs/.gitkeep
+!tools/tts-mvp/voices/.gitkeep
+!tools/tts-mvp/tts.py
+!tools/tts-mvp/README.md
