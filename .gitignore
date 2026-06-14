@@ -135,6 +135,15 @@ tools/tts-mvp/outputs/*.mp3
 tools/tts-mvp/voices/**/*.wav
 tools/tts-mvp/voices/**/*.mp3
 tools/tts-mvp/voices/**/ref_*.bin
+tools/tts-mvp/voices/**/ready/
+tools/tts-mvp/voices/**/raw/
+tools/tts-mvp/voices/**/_from_7z/
+tools/tts-mvp/voices/**/_tmp*/
+tools/tts-mvp/voices/**/_parquet_cache/
+tools/tts-mvp/voices/**/_cache/
+tools/tts-mvp/voices/**/_aihobbyist_datasets/
+tools/tts-mvp/voices/**/_genshinvoice/
+tools/tts-mvp/voices/**/_aliyun_index.json
 !tools/tts-mvp/.gitkeep
 !tools/tts-mvp/outputs/.gitkeep
 !tools/tts-mvp/voices/.gitkeep

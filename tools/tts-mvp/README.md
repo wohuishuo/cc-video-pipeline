@@ -6,13 +6,20 @@
 ## 当前状态
 
 - 引擎：Qwen3-TTS 官方 Python 版（`qwen-tts` PyPI）
-- 模型：Qwen3-TTS-12Hz-0.6B-CustomVoice（9 个预设音色）✅ 已下载（1.69GB）
+- 模型：
+  - `Qwen3-TTS-12Hz-0.6B-CustomVoice`（9 个预设音色）✅ 已下载 1.69GB
+  - `Qwen3-TTS-12Hz-0.6B-Base`（VoiceClone 能力）✅ 已下载 1.69GB
 - 设备：~~Intel Arc 140T XPU~~ **当前强制 CPU**（XPU 路径有 device 不一致 bug，待 transformers 修复）
 - 语种：10 国（中/英/日/韩/德/法/俄/葡/西/意）
+- **参考音频库**：
+  - `voices/纳西妲_zh/ready/` — 298 个中文纳西妲游戏内语音 (167MB)
+  - `voices/七七_zh/ready/` — 136 个中文七七游戏内语音 (65MB)
+  - `voices/nahida_jp/raw/` — 日语纳西妲 (streaming 下载, 进行中)
 - **本机实测速度**（2026-06-14，CPU 模式）：
   - 11 字中文 → 2.9s 音频（耗时 ~30s 算加载）
   - 36 字中文 → ~10s 音频（耗时 42s 算加载）
   - 13 字日语/19 字俄语/28 字英语 → 3-5s 音频
+  - 跨语言 VoiceClone: zh→ru / zh→jp / jp→zh 全部 3-4s 输出
 
 ## 目录结构
 
@@ -109,6 +116,37 @@ ffmpeg -i projects\cos-2026-07\video.mp4 -i projects\cos-2026-07\voice.wav `
        -c:v h264_qsv -c:a aac -shortest `
        projects\cos-2026-07\final.mp4
 ```
+
+## 跨语言 VoiceClone（纳西妲/七七专用）
+
+原理：用 3-15 秒参考音频（含真实文本）+ Qwen3-TTS Base 模型，
+**让模型用参考声线说另一种语言的文本**。
+
+```powershell
+# 1. 中→俄: 用中文纳西妲说俄语
+.\.venv\Scripts\python.exe .\cross_clone.py `
+  --ref voices\纳西妲_zh\ready\vo_dialog_LLZAQ004_nahida_01.wav `
+  --ref_text "这次太感谢你们了，请好好休息。累了可以去洗个澡上个厕所转换心情哦。" `
+  --ref_lang Chinese `
+  --text "Привет, я Нахида, добро пожаловать в Сумеру" `
+  --lang Russian `
+  --out outputs\clone_zh2ru.wav
+
+# 2. 日→中: 用日语纳西妲说中文
+.\.venv\Scripts\python.exe .\cross_clone.py `
+  --ref voices\nahida_jp\raw\voice_326_気を付けて。何か出てきたわ！.wav `
+  --ref_text "気を付けて。何か出てきたわ！" `
+  --ref_lang Japanese `
+  --text "你好，欢迎来到须弥，我是纳西妲" `
+  --lang Chinese `
+  --out outputs\clone_jp2zh.wav
+```
+
+参考音频质量要求：
+- 时长 3-15 秒最佳（太长 Qwen3-TTS 会截断）
+- 单声道 (ch=1) 优先
+- 48kHz/24kHz Qwen3-TTS 内部 resample
+- **ref_text 必须与 wav 实际发音一致**（否则克隆失败）
 
 ## 性能预期（Intel Arc 140T / 当前 CPU 实测）
 
