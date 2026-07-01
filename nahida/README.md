@@ -27,6 +27,15 @@ Use an existing audio file instead:
   -Out .\nahida\sovits\outputs\test_zh_nahida.wav
 ```
 
+Batch a long Markdown script into one narration wav:
+
+```powershell
+python .\tools\tts-mvp\nahida_sovits_batch.py `
+  --script .\projects\information-gap-business\script.md `
+  --out .\projects\information-gap-business\audio\information-gap-nahida-sovits.wav `
+  --max-chars 1800
+```
+
 ## Installed pieces
 
 - Runtime: `tools/tts-mvp/.venv`

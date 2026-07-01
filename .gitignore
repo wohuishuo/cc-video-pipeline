@@ -121,6 +121,8 @@ pnpm-lock.yaml
 _refs/
 data/我/              # 你的 B 站账号数据是私人
 projects/active/      # 正在进行的私人项目
+projects/**/audio/*.wav
+projects/**/audio/*.mp3
 
 # 临时工具源码（不下传 — 用完即删）
 tools/weflow-src/
@@ -159,6 +161,7 @@ nahida/**/*.wav
 nahida/**/*.mp3
 nahida/sovits/input/
 nahida/sovits/outputs/
+nahida/sovits/batch/
 nahida/sovits/logs/
 nahida/sovits/.mplconfig/
 !nahida/README.md
