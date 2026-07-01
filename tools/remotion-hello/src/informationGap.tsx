@@ -398,6 +398,259 @@ const NetworkLines: React.FC<{ count: number; color: string; vertical?: boolean 
   </svg>
 );
 
+const FlowTimeline: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? BLUE;
+  const items = scene.items.slice(0, vertical ? 6 : 8);
+  return (
+    <div style={{
+      position: "relative",
+      width: vertical ? 900 : 1360,
+      height: vertical ? 830 : 520,
+      fontFamily: SANS,
+    }}>
+      <div style={{
+        position: "absolute",
+        left: vertical ? 430 : 70,
+        right: vertical ? undefined : 70,
+        top: vertical ? 50 : 250,
+        bottom: vertical ? 70 : undefined,
+        width: vertical ? 8 : undefined,
+        height: vertical ? undefined : 8,
+        background: `linear-gradient(${vertical ? "180deg" : "90deg"}, ${color}, rgba(255,255,255,0.28))`,
+        boxShadow: `0 0 26px ${color}77`,
+      }} />
+      {items.map((item, i) => {
+        const x = vertical ? (i % 2 === 0 ? 40 : 500) : 30 + i * (1280 / Math.max(1, items.length - 1));
+        const y = vertical ? 55 + i * 120 : (i % 2 === 0 ? 42 : 292);
+        return (
+          <div key={item} style={{ position: "absolute", left: x, top: y }}>
+            <FloatingEvidenceCard text={item} index={i} color={color} vertical={vertical} dense />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const ScreenshotWall: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? BLUE;
+  const cards = [...scene.items, "未展示人数", "退款记录", "投放成本", "平台抽成"].slice(0, vertical ? 8 : 10);
+  return (
+    <div style={{
+      position: "relative",
+      width: vertical ? 900 : 1360,
+      height: vertical ? 830 : 520,
+      fontFamily: SANS,
+    }}>
+      {cards.map((item, i) => (
+        <div key={`${item}-${i}`} style={{
+          position: "absolute",
+          left: vertical ? 55 + (i % 2) * 405 : 20 + (i % 5) * 255,
+          top: vertical ? 20 + Math.floor(i / 2) * 188 : 20 + Math.floor(i / 5) * 210,
+          width: vertical ? 350 : 225,
+          height: vertical ? 160 : 178,
+          background: i % 3 === 0 ? "#1f262c" : "#eee7d8",
+          color: i % 3 === 0 ? "#f7fbff" : INK,
+          borderRadius: 6,
+          border: "1px solid rgba(255,255,255,0.18)",
+          boxShadow: "0 20px 56px rgba(0,0,0,0.36)",
+          padding: 18,
+          transform: `rotate(${[-3, 2, -1, 3, -2][i % 5]}deg)`,
+        }}>
+          <div style={{ color, fontSize: 18, fontWeight: 950 }}>截图 {String(i + 1).padStart(2, "0")}</div>
+          <div style={{ marginTop: 18, fontSize: vertical ? 28 : 24, fontWeight: 950 }}>{item}</div>
+          <div style={{ position: "absolute", left: 18, right: 18, bottom: 18, height: 8, background: "currentColor", opacity: 0.18 }} />
+        </div>
+      ))}
+      <div style={{
+        position: "absolute",
+        right: vertical ? 60 : 38,
+        bottom: vertical ? 34 : 18,
+        width: vertical ? 380 : 410,
+        background: "rgba(12,13,14,0.86)",
+        border: `2px solid ${color}`,
+        boxShadow: `0 0 34px ${color}55`,
+        padding: "26px 30px",
+        color: FG,
+        fontSize: vertical ? 31 : 30,
+        fontWeight: 950,
+      }}>
+        必须补：总人数 / 中位数 / 净结果
+      </div>
+    </div>
+  );
+};
+
+const CashflowTracks: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? BLUE;
+  const tracks = ["AI 课", "加盟", "供应链"];
+  const chunks = tracks.map((track, i) => ({
+    track,
+    nodes: scene.items.filter((_, idx) => idx % 3 === i).slice(0, 4),
+  }));
+  return (
+    <div style={{ width: vertical ? 900 : 1360, height: vertical ? 820 : 510, fontFamily: SANS }}>
+      {chunks.map((track, ti) => (
+        <div key={track.track} style={{
+          position: "relative",
+          height: vertical ? 245 : 142,
+          marginBottom: vertical ? 22 : 22,
+          borderLeft: `8px solid ${[BLUE, GOLD, RED][ti]}`,
+          background: ti % 2 ? "rgba(244,239,228,0.92)" : "rgba(29,36,42,0.92)",
+          color: ti % 2 ? INK : FG,
+          boxShadow: "0 22px 58px rgba(0,0,0,0.34)",
+          padding: vertical ? "22px 26px" : "18px 28px",
+        }}>
+          <div style={{ fontSize: vertical ? 31 : 27, color: [BLUE, GOLD, RED][ti], fontWeight: 950, marginBottom: 16 }}>{track.track}</div>
+          <div style={{ display: "flex", gap: vertical ? 14 : 18, flexWrap: "wrap", alignItems: "center" }}>
+            {(track.nodes.length ? track.nodes : scene.items.slice(ti, ti + 3)).map((node, i) => (
+              <div key={`${node}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  minWidth: vertical ? 160 : 170,
+                  padding: vertical ? "13px 16px" : "12px 18px",
+                  background: ti % 2 ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: 6,
+                  fontSize: vertical ? 26 : 25,
+                  fontWeight: 900,
+                }}>{node}</div>
+                {i < track.nodes.length - 1 && <div style={{ color, fontSize: 28, fontWeight: 950 }}>→</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ContractZoom: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? RED;
+  const items = scene.items.slice(0, 6);
+  return (
+    <div style={{
+      position: "relative",
+      width: vertical ? 900 : 1360,
+      height: vertical ? 820 : 520,
+      background: "#efe7d6",
+      color: INK,
+      borderRadius: 8,
+      boxShadow: "0 28px 90px rgba(0,0,0,0.44)",
+      fontFamily: SANS,
+      overflow: "hidden",
+      padding: vertical ? 44 : 52,
+    }}>
+      <div style={{ fontSize: vertical ? 44 : 46, fontWeight: 950, marginBottom: 30 }}>服务协议 / 退款条款</div>
+      {items.map((item, i) => (
+        <div key={item} style={{
+          position: "relative",
+          height: vertical ? 92 : 58,
+          marginBottom: vertical ? 15 : 12,
+          borderBottom: "1px solid rgba(30,24,18,0.18)",
+          fontSize: vertical ? 31 : 27,
+          fontWeight: 850,
+          display: "flex",
+          alignItems: "center",
+        }}>
+          <span>{item}</span>
+          {(i === 0 || i === 3 || item.includes("不退") || item.includes("合同")) && (
+            <div style={{
+              position: "absolute",
+              left: vertical ? 0 : 430,
+              right: vertical ? 0 : 40,
+              top: 7,
+              bottom: 7,
+              border: `5px solid ${color}`,
+              boxShadow: `0 0 20px ${color}44`,
+            }} />
+          )}
+        </div>
+      ))}
+      <div style={{
+        position: "absolute",
+        right: vertical ? 42 : 54,
+        bottom: vertical ? 42 : 44,
+        padding: "18px 26px",
+        background: "#171717",
+        color: "#fff",
+        fontSize: vertical ? 30 : 28,
+        fontWeight: 950,
+      }}>大字承诺，看小字条件</div>
+    </div>
+  );
+};
+
+const BoundaryLadder: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? BLUE;
+  return (
+    <div style={{ width: vertical ? 900 : 1280, height: vertical ? 820 : 500, fontFamily: SANS }}>
+      {scene.items.map((item, i) => (
+        <div key={item} style={{
+          marginLeft: vertical ? 0 : i * 90,
+          marginTop: vertical ? 26 : i === 0 ? 0 : -12,
+          width: vertical ? 850 : 840,
+          height: vertical ? 150 : 96,
+          background: i < 2 ? "rgba(244,239,228,0.94)" : "rgba(31,36,41,0.96)",
+          color: i < 2 ? INK : FG,
+          borderLeft: `10px solid ${[GREEN, BLUE, GOLD, RED][i] ?? color}`,
+          boxShadow: "0 20px 56px rgba(0,0,0,0.34)",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 34px",
+          fontSize: vertical ? 34 : 34,
+          fontWeight: 950,
+        }}>
+          <span style={{ color: [GREEN, BLUE, GOLD, RED][i] ?? color, marginRight: 24 }}>{String(i + 1).padStart(2, "0")}</span>
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ChecklistBoard: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? BLUE;
+  return (
+    <div style={{
+      width: vertical ? 900 : 1260,
+      minHeight: vertical ? 620 : 430,
+      display: "grid",
+      gridTemplateColumns: vertical ? "1fr" : "repeat(2, 1fr)",
+      gap: 18,
+      fontFamily: SANS,
+    }}>
+      {scene.items.map((item, i) => (
+        <div key={item} style={{
+          background: i % 2 ? "rgba(31,36,42,0.95)" : "rgba(244,239,228,0.95)",
+          color: i % 2 ? FG : INK,
+          borderRadius: 8,
+          border: `1px solid ${color}66`,
+          boxShadow: "0 18px 50px rgba(0,0,0,0.32)",
+          padding: vertical ? "26px 30px" : "22px 28px",
+          fontSize: vertical ? 32 : 30,
+          fontWeight: 900,
+          display: "flex",
+          alignItems: "center",
+          gap: 18,
+        }}>
+          <span style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: color,
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 22,
+          }}>{i + 1}</span>
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const EvidenceCollage: React.FC<{ scene: Scene; vertical?: boolean; withPresenter?: boolean }> = ({ scene, vertical, withPresenter }) => {
   const color = scene.accent ?? BLUE;
   const items = scene.items.slice(0, vertical ? 5 : 6);
@@ -501,6 +754,12 @@ const TableScene: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, ver
 };
 
 const SceneBody: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  if (scene.id === 6) return <BoundaryLadder scene={scene} vertical={vertical} />;
+  if (scene.id === 10 || scene.id === 19 || scene.id === 20) return <ScreenshotWall scene={scene} vertical={vertical} />;
+  if ([23, 24, 26, 28, 31].includes(scene.id)) return <CashflowTracks scene={scene} vertical={vertical} />;
+  if (scene.id === 30 || scene.id === 36) return <ContractZoom scene={scene} vertical={vertical} />;
+  if (scene.kind === "flow") return <FlowTimeline scene={scene} vertical={vertical} />;
+  if (scene.kind === "question") return <ChecklistBoard scene={scene} vertical={vertical} />;
   if (scene.kind === "compare") return <CompareScene scene={scene} vertical={vertical} />;
   if (scene.kind === "table") return <TableScene scene={scene} vertical={vertical} />;
   return <EvidenceCollage scene={scene} vertical={vertical} withPresenter={scene.kind === "title" || scene.kind === "grid"} />;
