@@ -123,6 +123,7 @@ data/我/              # 你的 B 站账号数据是私人
 projects/active/      # 正在进行的私人项目
 projects/**/audio/*.wav
 projects/**/audio/*.mp3
+projects/**/audio/mix_work/
 
 # 临时工具源码（不下传 — 用完即删）
 tools/weflow-src/

@@ -173,17 +173,39 @@ visual-cards.md G04
 
 ### 4. 加入口播音频
 
-待做：
+已做：
 
-- 根据 `script.md` 录音或 TTS。
-- 生成台词级 timing。
-- 用真实 timing 替换现在按 storyboard 估算的 `start/end`。
+- 使用 Nahida so-vits 批量生成口播。
+- 使用 Remotion 场景边界插入停顿。
+- 生成低频音乐床并和口播混合。
 
-建议输出：
+当前本地产物：
 
 ```text
-projects/information-gap-business/narration.wav
-projects/information-gap-business/timings.json
+projects/information-gap-business/audio/information-gap-nahida-sovits.wav
+projects/information-gap-business/audio/information-gap-nahida-sovits-mix.wav
+projects/information-gap-business/audio/information-gap-nahida-sovits-mix-preview-90s.mp3
+```
+
+混音命令：
+
+```powershell
+python .\tools\audio_xiaolin_mix.py `
+  --voice .\projects\information-gap-business\audio\information-gap-nahida-sovits.wav `
+  --scenes .\tools\remotion-hello\src\informationGap.tsx `
+  --out .\projects\information-gap-business\audio\information-gap-nahida-sovits-mix.wav `
+  --work .\projects\information-gap-business\audio\mix_work
+```
+
+脚本规则：
+
+```text
+1. 从 informationGap.tsx 读取 38 个场景边界。
+2. 按当前口播长度缩放场景时间。
+3. 普通场景切换插入短停顿。
+4. 章节切换、标题卡、问题卡、关键案例卡插入长停顿。
+5. 生成原创低频音乐床，和口播轻量混合。
+6. 导出完整 wav 和 90 秒 mp3 试听。
 ```
 
 ### 5. 加字幕
