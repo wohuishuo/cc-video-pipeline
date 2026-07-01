@@ -41,7 +41,7 @@
 
 6. `EvidenceDeskScatter`：桌面上散落合同/截图/付款页。
 7. `ScreenshotWall`：收益截图/反馈截图铺满，然后压数据框。
-8. `ContractZoom`：大字承诺后推入合同小字。
+8. `FulfillmentMismatch`：直播间展示、页面规格、实际收到三列对照。
 9. `PhoneScroll`：手机聊天/直播页纵向滚动。
 10. `ReceiptStack`：账单、发票、分期记录一张张叠上来。
 11. `WebsiteTeardown`：销售页分区框选：标题、案例、付款按钮、免责声明。

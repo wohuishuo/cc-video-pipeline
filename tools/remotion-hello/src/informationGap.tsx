@@ -64,15 +64,15 @@ const scenes: Scene[] = [
   { id: 27, start: 1320, end: 1370, chapter: "07 风险转移", kind: "title", title: "卖方赚不赚钱，\n是否依赖你最终成功？", items: ["抽成 / 分佣", "学费 / 设备 / 续费"], accent: GOLD },
   { id: 28, start: 1370, end: 1425, chapter: "07 风险转移", kind: "compare", title: "失败结果 / 已收费用", items: ["没学会 → 课程费", "没接单 → 工具费", "店倒闭 → 设备原料", "没就业 → 培训分期", "没通过 → 条件链"], accent: RED },
   { id: 29, start: 1425, end: 1475, chapter: "07 风险转移", kind: "flow", title: "控制越少，退出越难", items: ["货源", "物流", "广告账户", "订单系统", "素材/API", "提现规则"], accent: GREEN },
-  { id: 30, start: 1475, end: 1525, chapter: "07 风险转移", kind: "table", title: "大字承诺 / 小字条件", items: ["不过全退", "全勤", "打卡", "作业完成率", "模考次数", "服务费不退"], accent: RED },
+  { id: 30, start: 1475, end: 1525, chapter: "07 风险转移", kind: "table", title: "展示品 / 到手品 / 解释口径", items: ["直播间展示", "下单页面", "到手实物", "售后解释", "补差价", "退款记录"], accent: RED },
   { id: 31, start: 1525, end: 1590, chapter: "07 风险转移", kind: "compare", title: "卖方拿走 / 买方留下", items: ["学费 / 加盟费 / 设备费", "贷款 / 库存 / 房租", "平台规则 / 时间成本 / 退款流程"], accent: GOLD },
   { id: 32, start: 1590, end: 1620, chapter: "08 五问", kind: "title", title: "付款前问 5 个问题", items: ["中位数", "失败者", "后续费用", "合同", "失败时已赚"], accent: BLUE },
   { id: 33, start: 1620, end: 1645, chapter: "08 五问", kind: "question", title: "不算最好案例，中位数是多少？", items: ["全部人", "中位数", "扣掉成本"], accent: BLUE },
   { id: 34, start: 1645, end: 1670, chapter: "08 五问", kind: "question", title: "失败者占多少？主要怎么失败？", items: ["学习", "流量", "客户", "工具", "平台", "退款"], accent: RED },
   { id: 35, start: 1670, end: 1695, chapter: "08 五问", kind: "question", title: "除了当前价格，后面还要付什么？", items: ["工具", "设备", "原料", "月费", "抽成", "服务费"], accent: GOLD },
-  { id: 36, start: 1695, end: 1725, chapter: "08 五问", kind: "question", title: "承诺能不能写进合同？", items: ["收益", "官方合作", "成功案例", "退款条件"], accent: BLUE },
+  { id: 36, start: 1695, end: 1725, chapter: "08 五问", kind: "question", title: "交付清单能不能逐项确认？", items: ["展示画面", "型号规格", "数量重量", "售后口径"], accent: BLUE },
   { id: 37, start: 1725, end: 1765, chapter: "08 五问", kind: "question", title: "我失败时，它已经赚了什么？", items: ["学费", "加盟费", "设备原料", "软件", "广告", "续费"], accent: RED },
-  { id: 38, start: 1765, end: 1800, chapter: "END", kind: "flow", title: "把销售页翻译成账面", items: ["机会 → 账单", "案例 → 概率", "扶持 → 控制接口", "零风险 → 合同条件"], accent: GOLD },
+  { id: 38, start: 1765, end: 1800, chapter: "END", kind: "flow", title: "把销售页翻译成账面", items: ["机会 → 账单", "案例 → 概率", "扶持 → 控制接口", "展示 → 交付清单"], accent: GOLD },
 ];
 
 const fadeIn = (frame: number, from = 0, len = 12) =>
@@ -524,6 +524,84 @@ const CashflowTracks: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene,
   );
 };
 
+const FulfillmentMismatch: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+  const color = scene.accent ?? RED;
+  const cols = [
+    { title: "直播间拍到", items: ["样品特写", "主播演示", "下单口令"], bg: "#1f262c", fg: FG },
+    { title: "页面写到", items: ["套餐图", "规格表", "售后入口"], bg: "#efe7d6", fg: INK },
+    { title: "实际收到", items: ["批次不同", "赠品变更", "补差价"], bg: "#2b201e", fg: FG },
+  ];
+  return (
+    <div style={{
+      position: "relative",
+      width: vertical ? 900 : 1360,
+      height: vertical ? 820 : 520,
+      fontFamily: SANS,
+      display: "grid",
+      gridTemplateColumns: vertical ? "1fr" : "repeat(3, 1fr)",
+      gap: vertical ? 18 : 22,
+    }}>
+      {cols.map((col, ci) => (
+        <div key={col.title} style={{
+          position: "relative",
+          background: col.bg,
+          color: col.fg,
+          borderRadius: 8,
+          boxShadow: "0 28px 90px rgba(0,0,0,0.44)",
+          border: `1px solid ${ci === 2 ? color : "rgba(255,255,255,0.18)"}`,
+          overflow: "hidden",
+          padding: vertical ? 32 : 34,
+          minHeight: vertical ? 240 : 520,
+        }}>
+          <div style={{ fontSize: vertical ? 33 : 34, fontWeight: 950, color: ci === 2 ? color : ci === 1 ? INK : BLUE, marginBottom: 28 }}>
+            {col.title}
+          </div>
+          {col.items.map((item, i) => (
+            <div key={item} style={{
+              height: vertical ? 48 : 64,
+              marginBottom: 12,
+              borderBottom: "1px solid rgba(255,255,255,0.18)",
+              fontSize: vertical ? 30 : 30,
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+            }}>{item}</div>
+          ))}
+          <div style={{
+            position: "absolute",
+            left: 28,
+            right: 28,
+            bottom: 28,
+            height: vertical ? 78 : 108,
+            border: ci === 2 ? `6px solid ${color}` : "1px solid rgba(255,255,255,0.14)",
+            background: ci === 0 ? "rgba(255,255,255,0.08)" : ci === 1 ? "rgba(0,0,0,0.06)" : "rgba(217,74,58,0.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: vertical ? 26 : 27,
+            fontWeight: 950,
+          }}>
+            {ci === 0 ? "镜头里的一份" : ci === 1 ? "页面上的一份" : "到手后的一份"}
+          </div>
+        </div>
+      ))}
+      <div style={{
+        position: "absolute",
+        left: vertical ? 30 : 350,
+        right: vertical ? 30 : 350,
+        bottom: vertical ? -88 : -72,
+        padding: "18px 26px",
+        background: "#171717",
+        color: "#fff",
+        fontSize: vertical ? 28 : 28,
+        fontWeight: 950,
+        textAlign: "center",
+        boxShadow: "0 18px 50px rgba(0,0,0,0.45)",
+      }}>三处材料无法逐项对齐</div>
+    </div>
+  );
+};
+
 const ContractZoom: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
   const color = scene.accent ?? RED;
   const items = scene.items.slice(0, 6);
@@ -540,7 +618,7 @@ const ContractZoom: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, v
       overflow: "hidden",
       padding: vertical ? 44 : 52,
     }}>
-      <div style={{ fontSize: vertical ? 44 : 46, fontWeight: 950, marginBottom: 30 }}>服务协议 / 退款条款</div>
+      <div style={{ fontSize: vertical ? 44 : 46, fontWeight: 950, marginBottom: 30 }}>页面承诺 / 可核验清单</div>
       {items.map((item, i) => (
         <div key={item} style={{
           position: "relative",
@@ -553,7 +631,7 @@ const ContractZoom: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, v
           alignItems: "center",
         }}>
           <span>{item}</span>
-          {(i === 0 || i === 3 || item.includes("不退") || item.includes("合同")) && (
+          {(i === 0 || i === 3 || item.includes("规格") || item.includes("口径")) && (
             <div style={{
               position: "absolute",
               left: vertical ? 0 : 430,
@@ -575,7 +653,7 @@ const ContractZoom: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, v
         color: "#fff",
         fontSize: vertical ? 30 : 28,
         fontWeight: 950,
-      }}>大字承诺，看小字条件</div>
+      }}>页面怎么说，到手怎么核</div>
     </div>
   );
 };
@@ -757,7 +835,8 @@ const SceneBody: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vert
   if (scene.id === 6) return <BoundaryLadder scene={scene} vertical={vertical} />;
   if (scene.id === 10 || scene.id === 19 || scene.id === 20) return <ScreenshotWall scene={scene} vertical={vertical} />;
   if ([23, 24, 26, 28, 31].includes(scene.id)) return <CashflowTracks scene={scene} vertical={vertical} />;
-  if (scene.id === 30 || scene.id === 36) return <ContractZoom scene={scene} vertical={vertical} />;
+  if (scene.id === 30) return <FulfillmentMismatch scene={scene} vertical={vertical} />;
+  if (scene.id === 36) return <ContractZoom scene={scene} vertical={vertical} />;
   if (scene.kind === "flow") return <FlowTimeline scene={scene} vertical={vertical} />;
   if (scene.kind === "question") return <ChecklistBoard scene={scene} vertical={vertical} />;
   if (scene.kind === "compare") return <CompareScene scene={scene} vertical={vertical} />;
