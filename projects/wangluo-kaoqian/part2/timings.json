@@ -1,0 +1,447 @@
+{
+  "part_no": 2,
+  "part_title": "数据链路层 Data Link Layer",
+  "total": 394.89,
+  "entries": [
+    {
+      "id": "D1",
+      "title_en": "Go-Back-N Window Size",
+      "title_zh": "GBN 窗口大小",
+      "question_en": "Suppose go-back-N protocol uses 4-bit sequence number, the maximum window size is ______. A. 1　B. 7　C. 8　D. 15　E. 16",
+      "answer": "D. 15",
+      "conclusion": "GBN 用 n 位序号，最大发送窗口 = 2ⁿ - 1。4位时 = 2⁴ - 1 = 15。",
+      "table": {
+        "header": [
+          "协议",
+          "最大发送窗口",
+          "最大接收窗口"
+        ],
+        "rows": [
+          [
+            "GBN",
+            "**2ⁿ - 1**",
+            "1"
+          ],
+          [
+            "SR",
+            "**2^(n-1)**",
+            "2^(n-1)"
+          ]
+        ]
+      },
+      "start": 0.0,
+      "end": 24.02,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Suppose go-back-N protocol uses 4-bit sequence number, the maximum window size is ______. A. 1　B. 7　C. 8　D. 15　E. 16",
+          "start": 0.0,
+          "end": 11.52
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 D. 15。GBN 用 n 位序号，最大发送窗口 = 2ⁿ - 1。4位时 = 2⁴ - 1 = 15。",
+          "start": 11.77,
+          "end": 23.77
+        }
+      ]
+    },
+    {
+      "id": "D2",
+      "title_en": "Selective Repeat Window",
+      "title_zh": "SR 滑动窗口",
+      "question_en": "Suppose selective repeat protocol uses 3-bit sequence number. If receiving window size is 3, the maximum size of sending window is ______. A. 5　B. 6　C. 7　D. 8",
+      "answer": "A. 5",
+      "conclusion": "SR 协议中，发送窗口 + 接收窗口 ≤ 2ⁿ，所以发送窗口 ≤ 2³ - 3 = 5。",
+      "table": null,
+      "start": 24.37,
+      "end": 50.23,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Suppose selective repeat protocol uses 3-bit sequence number. If receiving window size is 3, the maximum size of sending window is ______. A. 5　B. 6　C. 7　D. 8",
+          "start": 24.37,
+          "end": 38.05
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 A. 5。SR 协议中，发送窗口 + 接收窗口 ≤ 2ⁿ，所以发送窗口 ≤ 2³ - 3 = 5。",
+          "start": 38.3,
+          "end": 49.98
+        }
+      ]
+    },
+    {
+      "id": "D3",
+      "title_en": "Sliding Window for Moon Link",
+      "title_zh": "月球链路序号位数",
+      "question_en": "Suppose you are designing a sliding window protocol for a 1-Mbps point-to-point link to the moon, which has a one-way latency of 1.25 seconds. Assuming that each frame carries 1 KB of data, what is the minimum number of bits you need for the sequence number? A. 6　B. 7　C. 8　D. 9",
+      "answer": "D. 9（GBN）/ 10（SR）",
+      "conclusion": "RTT=2.5s，一个RTT内可发约305帧，GBN需要窗口≥305，取2⁹=512，需要9位。",
+      "table": null,
+      "start": 50.58,
+      "end": 94.52,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Suppose you are designing a sliding window protocol for a 1-Mbps point-to-point link to the moon, which has a one-way latency of 1.25 seconds. Assuming that each frame carries 1 KB of data, what is the minimum number of bits you need for the sequence number? A. 6　B. 7　C. 8　D. 9",
+          "start": 50.58,
+          "end": 75.22
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 D. 9（GBN）/ 10（SR）。RTT=2.5s，一个RTT内可发约305帧，GBN需要窗口≥305，取2⁹=512，需要9位。",
+          "start": 75.47,
+          "end": 94.27
+        }
+      ]
+    },
+    {
+      "id": "D4",
+      "title_en": "CRC",
+      "title_zh": "循环冗余校验",
+      "question_en": "In Cyclic Redundancy Checking, CRC is the ______. A. Divisor　B. Quotient　C. Dividend　D. Remainder",
+      "answer": "D. Remainder（余数）",
+      "conclusion": "CRC 校验码就是模2除法的余数（Remainder），附在消息末尾一起发送。",
+      "table": {
+        "header": [
+          "角色",
+          "含义"
+        ],
+        "rows": [
+          [
+            "Dividend（被除数）",
+            "原始消息左移n位后的值"
+          ],
+          [
+            "Divisor（除数）",
+            "生成多项式"
+          ],
+          [
+            "Quotient（商）",
+            "不用"
+          ],
+          [
+            "**Remainder（余数）**",
+            "✅ CRC 校验码"
+          ]
+        ]
+      },
+      "start": 94.87,
+      "end": 116.17,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "In Cyclic Redundancy Checking, CRC is the ______. A. Divisor　B. Quotient　C. Dividend　D. Remainder",
+          "start": 94.87,
+          "end": 105.19
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 D. Remainder（余数）。CRC 校验码就是模2除法的余数（Remainder），附在消息末尾一起发送。",
+          "start": 105.44,
+          "end": 115.92
+        }
+      ]
+    },
+    {
+      "id": "D5",
+      "title_en": "Error Correction Codes",
+      "title_zh": "纠错码",
+      "question_en": "Which codes can be used to correct errors? (Choose two.) 1. Binary convolutional codes　2. Parity　3. Hamming codes　4. Cyclic Redundancy Checks",
+      "answer": "1. Binary convolutional codes + 3. Hamming codes",
+      "conclusion": "Hamming 码和卷积码可以纠错；CRC 和奇偶校验只能检错，不能纠错。",
+      "table": {
+        "header": [
+          "编码",
+          "检错",
+          "纠错"
+        ],
+        "rows": [
+          [
+            "Parity（奇偶校验）",
+            "✅ 单比特",
+            "❌"
+          ],
+          [
+            "CRC",
+            "✅ 强",
+            "❌"
+          ],
+          [
+            "**Hamming**",
+            "✅",
+            "✅"
+          ],
+          [
+            "**Binary Convolutional**",
+            "✅",
+            "✅"
+          ]
+        ]
+      },
+      "start": 116.52,
+      "end": 144.22,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which codes can be used to correct errors? (Choose two.) 1. Binary convolutional codes　2. Parity　3. Hamming codes　4. Cyclic Redundancy Checks",
+          "start": 116.52,
+          "end": 130.44
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 1. Binary convolutional codes + 3. Hamming codes。Hamming 码和卷积码可以纠错；CRC 和奇偶校验只能检错，不能纠错。",
+          "start": 130.69,
+          "end": 143.97
+        }
+      ]
+    },
+    {
+      "id": "D6",
+      "title_en": "Ethernet MAC Protocol",
+      "title_zh": "以太网MAC协议",
+      "question_en": "The MAC protocol for Ethernet is ______. A. CSMA/CD　B. Token Bus　C. Token Ring　D. MACA/MACAW",
+      "answer": "A. CSMA/CD",
+      "conclusion": "以太网用 CSMA/CD——先听后发，边发边监听，检测到冲突立即停止。",
+      "table": {
+        "header": [
+          "协议",
+          "用途"
+        ],
+        "rows": [
+          [
+            "**CSMA/CD**",
+            "✅ 有线以太网（IEEE 802.3）"
+          ],
+          [
+            "Token Bus",
+            "令牌总线，工业网络"
+          ],
+          [
+            "Token Ring",
+            "令牌环，IBM旧标准"
+          ],
+          [
+            "MACA/MACAW",
+            "无线网络，解决隐藏终端问题"
+          ]
+        ]
+      },
+      "start": 144.57,
+      "end": 167.95,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "The MAC protocol for Ethernet is ______. A. CSMA/CD　B. Token Bus　C. Token Ring　D. MACA/MACAW",
+          "start": 144.57,
+          "end": 156.01
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 A. CSMA/CD。以太网用 CSMA/CD——先听后发，边发边监听，检测到冲突立即停止。",
+          "start": 156.26,
+          "end": 167.7
+        }
+      ]
+    },
+    {
+      "id": "D7",
+      "title_en": "Collision Domain vs Broadcast Domain",
+      "title_zh": "冲突域 vs 广播域",
+      "question_en": "In a switched network, the number of collision domains is ______ the number of broadcast domains. A. =　B. <　C. >　D. none of above",
+      "answer": "C. >（冲突域数量 > 广播域数量）",
+      "conclusion": "交换机每个端口是一个冲突域，但整台交换机默认只有一个广播域。所以冲突域数 > 广播域数。",
+      "table": null,
+      "start": 168.3,
+      "end": 194.24,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "In a switched network, the number of collision domains is ______ the number of broadcast domains. A. =　B. <　C. >　D. none of above",
+          "start": 168.3,
+          "end": 177.74
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 C. >（冲突域数量 > 广播域数量）。交换机每个端口是一个冲突域，但整台交换机默认只有一个广播域。所以冲突域数 > 广播域数。",
+          "start": 177.99,
+          "end": 193.99
+        }
+      ]
+    },
+    {
+      "id": "D8",
+      "title_en": "Switch Table Learning",
+      "title_zh": "交换机地址学习",
+      "question_en": "Each switch will update its switch table by learning the ______ address when ______ a frame. 1. Source MAC, sending　2. Source MAC, receiving　3. Destination MAC, sending　4. Destination MAC, receiving",
+      "answer": "3. Source MAC, receiving（收帧时读源MAC）",
+      "conclusion": "交换机收到帧时，读取帧的源MAC地址，记录\"源MAC → 入端口\"的映射。",
+      "table": null,
+      "start": 194.59,
+      "end": 227.25,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Each switch will update its switch table by learning the ______ address when ______ a frame. 1. Source MAC, sending　2. Source MAC, receiving　3. Destination MAC, sending　4. Destination MAC, receiving",
+          "start": 194.59,
+          "end": 212.35
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 3. Source MAC, receiving（收帧时读源MAC）。交换机收到帧时，读取帧的源MAC地址，记录\"源MAC → 入端口\"的映射。",
+          "start": 212.6,
+          "end": 227.0
+        }
+      ]
+    },
+    {
+      "id": "D9",
+      "title_en": "Cut-Through Switch",
+      "title_zh": "直通式交换机",
+      "question_en": "Once the cut-through Ethernet switch detects the first ______ bytes of an Ethernet frame at the input port, it immediately starts forwarding process.",
+      "answer": "6（字节）",
+      "conclusion": "直通式交换机只需读前6字节（目的MAC地址）就立即开始转发，延迟极低。",
+      "table": null,
+      "start": 227.6,
+      "end": 252.34,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Once the cut-through Ethernet switch detects the first ______ bytes of an Ethernet frame at the input port, it immediately starts forwarding process.",
+          "start": 227.6,
+          "end": 239.52
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 6（字节）。直通式交换机只需读前6字节（目的MAC地址）就立即开始转发，延迟极低。",
+          "start": 239.77,
+          "end": 252.09
+        }
+      ]
+    },
+    {
+      "id": "D10",
+      "title_en": "Promiscuous Mode",
+      "title_zh": "混杂模式",
+      "question_en": "In ______ all frames are given to the computer, not to those addressed. 1. Special Mode　2. Promiscuous mode　3. Miscues mode　4. Normal mode",
+      "answer": "2. Promiscuous mode（混杂模式）",
+      "conclusion": "混杂模式下网卡接收所有经过的帧，不管目的地址是否是自己，常用于抓包工具（如 Wireshark）。",
+      "table": null,
+      "start": 252.69,
+      "end": 281.43,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "In ______ all frames are given to the computer, not to those addressed. 1. Special Mode　2. Promiscuous mode　3. Miscues mode　4. Normal mode",
+          "start": 252.69,
+          "end": 266.61
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2. Promiscuous mode（混杂模式）。混杂模式下网卡接收所有经过的帧，不管目的地址是否是自己，常用于抓包工具（如 Wireshark）。",
+          "start": 266.86,
+          "end": 281.18
+        }
+      ]
+    },
+    {
+      "id": "D11",
+      "title_en": "CSMA/CD Maximum Distance",
+      "title_zh": "最大距离与速率的关系",
+      "question_en": "In a CSMA/CD network with a data rate of 10 Mbps, the maximum distance between any station pair is 2500 m. What should be the maximum distance if we increase the data rate to 100 Mbps? To 1 Gbps? To 10 Gbps?",
+      "answer": "100 Mbps → 250 m；1 Gbps → 25 m；10 Gbps → 2.5 m",
+      "conclusion": "速率提高N倍，最大距离缩短N倍。",
+      "table": null,
+      "start": 281.78,
+      "end": 313.24,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "In a CSMA/CD network with a data rate of 10 Mbps, the maximum distance between any station pair is 2500 m. What should be the maximum distance if we increase the data rate to 100 Mbps? To 1 Gbps? To 10 Gbps?",
+          "start": 281.78,
+          "end": 300.66
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 100 Mbps → 250 m；1 Gbps → 25 m；10 Gbps → 2.5 m。速率提高N倍，最大距离缩短N倍。",
+          "start": 300.91,
+          "end": 312.99
+        }
+      ]
+    },
+    {
+      "id": "D12",
+      "title_en": "PPP NCP Functions",
+      "title_zh": "PPP的NCP功能",
+      "question_en": "Which two functions are provided by the NCP during a PPP connection? (Choose two.) 1. negotiating options for the IP protocol 2. managing authentication of the peer routers 3. enhancing security by providing callback over PPP 4. bringing the network layer protocol or protocols up and down",
+      "answer": "1 和 4",
+      "conclusion": "NCP（网络控制协议）负责：协商IP协议参数 + 控制网络层协议的启停。认证是LCP/PAP/CHAP的事，不是NCP的。",
+      "table": null,
+      "start": 313.59,
+      "end": 354.41,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which two functions are provided by the NCP during a PPP connection? (Choose two.) 1. negotiating options for the IP protocol 2. managing authentication of the peer routers 3. enhancing security by providing callback over PPP 4. bringing the network layer protocol or protocols up and down",
+          "start": 313.59,
+          "end": 335.51
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 1 和 4。NCP（网络控制协议）负责：协商IP协议参数 + 控制网络层协议的启停。认证是LCP/PAP/CHAP的事，不是NCP的。",
+          "start": 335.76,
+          "end": 354.16
+        }
+      ]
+    },
+    {
+      "id": "D13",
+      "title_en": "VLAN Trunk Tagging",
+      "title_zh": "VLAN干道标记",
+      "question_en": "Which method does a connected trunk port use to tag VLAN traffic? 1. IEEE 802.1W　2. IEEE 802.1Q　3. IEEE 802.1D　4. IEEE 802.1p",
+      "answer": "2. IEEE 802.1Q",
+      "conclusion": "802.1Q 是 VLAN 帧标记的标准，在以太网帧中插入4字节VLAN标签（含12位VLAN ID）。",
+      "table": {
+        "header": [
+          "标准",
+          "用途"
+        ],
+        "rows": [
+          [
+            "802.1Q",
+            "✅ VLAN 标记"
+          ],
+          [
+            "802.1D",
+            "生成树协议 STP"
+          ],
+          [
+            "802.1W",
+            "快速生成树 RSTP"
+          ],
+          [
+            "802.1p",
+            "QoS 优先级标记"
+          ]
+        ]
+      },
+      "start": 354.76,
+      "end": 394.54,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which method does a connected trunk port use to tag VLAN traffic? 1. IEEE 802.1W　2. IEEE 802.1Q　3. IEEE 802.1D　4. IEEE 802.1p",
+          "start": 354.76,
+          "end": 377.08
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2. IEEE 802.1Q。802.1Q 是 VLAN 帧标记的标准，在以太网帧中插入4字节VLAN标签（含12位VLAN ID）。",
+          "start": 377.33,
+          "end": 394.29
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,233 @@
+{
+  "part_no": 1,
+  "part_title": "物理层 Physical Layer",
+  "total": 181.07,
+  "entries": [
+    {
+      "id": "P1",
+      "title_en": "Shannon's Formula",
+      "title_zh": "香农公式",
+      "question_en": "Shannon's major result is that the maximum data rate of a noisy channel whose bandwidth is H Hz, and whose signal-to-noise ratio is S/N, is given by ______.",
+      "answer": "H × log₂(1 + S/N)",
+      "conclusion": "有噪声信道的最大速率 = H × log₂(1 + S/N)，这是物理极限，任何编码都突破不了。",
+      "table": null,
+      "start": 0.0,
+      "end": 26.18,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Shannon's major result is that the maximum data rate of a noisy channel whose bandwidth is H Hz, and whose signal-to-noise ratio is S/N, is given by ______.",
+          "start": 0.0,
+          "end": 11.92
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 H × log₂(1 + S/N)。有噪声信道的最大速率 = H × log₂(1 + S/N)，这是物理极限，任何编码都突破不了。",
+          "start": 12.17,
+          "end": 25.93
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title_en": "Nyquist Formula",
+      "title_zh": "奈奎斯特定理",
+      "question_en": "A noiseless 4-kHz channel is sampled every 1 msec. What is the maximum data rate?",
+      "answer": "8000 bps",
+      "conclusion": "无噪声信道最大码元速率 = 2H Baud；数据率 = 2H × log₂(M) bps。",
+      "table": null,
+      "start": 26.53,
+      "end": 44.79,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "A noiseless 4-kHz channel is sampled every 1 msec. What is the maximum data rate?",
+          "start": 26.53,
+          "end": 33.01
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 8000 bps。无噪声信道最大码元速率 = 2H Baud；数据率 = 2H × log₂(M) bps。",
+          "start": 33.26,
+          "end": 44.54
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title_en": "Digital Modulation Types",
+      "title_zh": "数字调制类型",
+      "question_en": "ASK, PSK, FSK and QAM are examples of ______. A. Digital to Digital　B. Digital to Analog　C. Analog to Analog　D. Analog to Digital",
+      "answer": "B. Digital to Analog",
+      "conclusion": "ASK/PSK/FSK/QAM 都是把数字信号调制到模拟载波上，即数字→模拟。",
+      "table": {
+        "header": [
+          "缩写",
+          "中文",
+          "调制方式"
+        ],
+        "rows": [
+          [
+            "ASK",
+            "幅移键控",
+            "幅度表示0/1"
+          ],
+          [
+            "PSK",
+            "相移键控",
+            "相位表示0/1"
+          ],
+          [
+            "FSK",
+            "频移键控",
+            "频率表示0/1"
+          ],
+          [
+            "QAM",
+            "正交幅度调制",
+            "幅度+相位同时调"
+          ]
+        ]
+      },
+      "start": 45.14,
+      "end": 76.76,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "ASK, PSK, FSK and QAM are examples of ______. A. Digital to Digital　B. Digital to Analog　C. Analog to Analog　D. Analog to Digital",
+          "start": 45.14,
+          "end": 64.18
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 B. Digital to Analog。ASK/PSK/FSK/QAM 都是把数字信号调制到模拟载波上，即数字→模拟。",
+          "start": 64.43,
+          "end": 76.51
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title_en": "Signal Attenuation",
+      "title_zh": "信号衰减",
+      "question_en": "The loss in signal power as light travels down the fiber is called ______. A. Attenuation　B. Scattering　C. Propagation　D. Interruption",
+      "answer": "A. Attenuation（衰减）",
+      "conclusion": "光信号在光纤中传播时功率下降叫衰减（Attenuation），不是散射、不是中断。",
+      "table": {
+        "header": [
+          "选项",
+          "含义"
+        ],
+        "rows": [
+          [
+            "Attenuation",
+            "✅ 功率沿路径持续减小"
+          ],
+          [
+            "Scattering",
+            "散射：光子碰到微粒改变方向"
+          ],
+          [
+            "Propagation",
+            "传播：泛指信号移动，不专指损耗"
+          ],
+          [
+            "Interruption",
+            "中断：信号完全断掉"
+          ]
+        ]
+      },
+      "start": 77.11,
+      "end": 100.65,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "The loss in signal power as light travels down the fiber is called ______. A. Attenuation　B. Scattering　C. Propagation　D. Interruption",
+          "start": 77.11,
+          "end": 88.39
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 A. Attenuation（衰减）。光信号在光纤中传播时功率下降叫衰减（Attenuation），不是散射、不是中断。",
+          "start": 88.64,
+          "end": 100.4
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title_en": "Bandwidth Utilization",
+      "title_zh": "带宽利用技术",
+      "question_en": "The techniques for efficient utilization of bandwidth includes ______. 1. Encoding　2. Sampling　3. High bandwidth　4. Demultiplexing　5. Multiplexing",
+      "answer": "5. Multiplexing（多路复用）",
+      "conclusion": "高效利用带宽的核心技术是多路复用——把多路信号共用一条物理链路。",
+      "table": null,
+      "start": 101.0,
+      "end": 131.98,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "The techniques for efficient utilization of bandwidth includes ______. 1. Encoding　2. Sampling　3. High bandwidth　4. Demultiplexing　5. Multiplexing",
+          "start": 101.0,
+          "end": 117.72
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 5. Multiplexing（多路复用）。高效利用带宽的核心技术是多路复用——把多路信号共用一条物理链路。",
+          "start": 117.97,
+          "end": 131.73
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "title_en": "Manchester Encoding",
+      "title_zh": "曼彻斯特编码",
+      "question_en": "The bit stream corresponding to the Manchester output waveform on a port pin below is ____. (no spaces)",
+      "answer": "01011000",
+      "conclusion": "曼彻斯特编码每位中间必有跳变：高→低 = 1，低→高 = 0（IEEE 802.3标准）。",
+      "table": null,
+      "start": 132.33,
+      "end": 155.23,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "The bit stream corresponding to the Manchester output waveform on a port pin below is ____. (no spaces)",
+          "start": 132.33,
+          "end": 140.57
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 01011000。曼彻斯特编码每位中间必有跳变：高→低 = 1，低→高 = 0（IEEE 802.3标准）。",
+          "start": 140.82,
+          "end": 154.98
+        }
+      ]
+    },
+    {
+      "id": "P7",
+      "title_en": "Narrow Band Channel",
+      "title_zh": "窄带信道",
+      "question_en": "Which of the following types of channels moves data relatively slowly? A. wide band channel　B. voice band channel　C. narrow band channel　D. all of above",
+      "answer": "C. narrow band channel（窄带信道）",
+      "conclusion": "窄带信道带宽最小，由 Nyquist/Shannon 公式，带宽越小速率上限越低。",
+      "table": null,
+      "start": 155.58,
+      "end": 180.72,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which of the following types of channels moves data relatively slowly? A. wide band channel　B. voice band channel　C. narrow band channel　D. all of above",
+          "start": 155.58,
+          "end": 168.3
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 C. narrow band channel（窄带信道）。窄带信道带宽最小，由 Nyquist/Shannon 公式，带宽越小速率上限越低。",
+          "start": 168.55,
+          "end": 180.47
+        }
+      ]
+    }
+  ]
+}
