@@ -149,3 +149,25 @@ tools/tts-mvp/voices/**/_aliyun_index.json
 !tools/tts-mvp/voices/.gitkeep
 !tools/tts-mvp/tts.py
 !tools/tts-mvp/README.md
+
+# Nahida so-vits local voice conversion
+# Keep docs/scripts, never commit checkpoints, generated audio, or cloned upstream repos.
+nahida/**/*.pth
+nahida/**/*.pt
+nahida/**/*.zip
+nahida/**/*.wav
+nahida/**/*.mp3
+nahida/sovits/input/
+nahida/sovits/outputs/
+nahida/sovits/logs/
+nahida/sovits/.mplconfig/
+!nahida/README.md
+!nahida/sovits/configs/
+!nahida/sovits/configs/**/
+!nahida/sovits/configs/**/*.json
+projects/so-vits-svc/
+projects/qwen3-tts-xpu-v5-fork/
+
+# Scratch / external app data
+projects/_cos_triage/
+projects/_jianying_data/

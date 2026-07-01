@@ -1,0 +1,4 @@
+interface:
+  display_name: "本地 TTS 配音"
+  short_description: "纳西妲克隆、多语言配音与 Intel XPU 实验路由"
+  default_prompt: "Use $local-tts-dub to synthesize this script with the safest available local TTS route."

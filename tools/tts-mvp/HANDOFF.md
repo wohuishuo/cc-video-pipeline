@@ -51,12 +51,35 @@ C:\Users\艾莉\Videos\cc视频剪辑\tools\tts-mvp\
 
 ## 3. 工具脚本 (全部已入 git)
 
+### 3.0 MVP 架构（2026-06-14 重构为可复用核心）
+
+为了**给别的项目也用**，抽成可插拔双引擎 + HTTP 服务：
+
+```
+ttslib/            可复用核心包
+  engines/base.py  TTSEngine 抽象（load/synth_preset/synth_clone/list_speakers/capabilities）
+  engines/qwen.py  Qwen3-TTS 适配器（CustomVoice 预设 + Base 克隆，各懒加载一次）
+  engines/sovits.py GPT-SoVITS 适配槽（接口留好，推理未接，接入步骤写在文件顶部）
+  registry.py      get_engine("qwen" | "gpt-sovits")
+  align.py         SRT/逐行 解析 + 时间对齐 + ffmpeg mux（dub 与 server 共用）
+  langmap.py       语种/音色别名
+server.py          FastAPI HTTP 服务，模型常驻（POST /tts /clone, GET /health /voices）
+client_example.py  别的项目调用示例（urllib 零依赖）
+```
+
+**两种复用方式**：① 跨项目/跨语言 → 起 `server.py`，HTTP 调（不用共享 venv，模型只加载一次常驻）；
+② 同 venv Python 项目 → `from ttslib import get_engine` 进程内调。
+均已实测：/health loaded=true、/voices=9、POST /tts 落盘 OK；dub.py 经 ttslib 重构后 5.6s 出对齐 wav。
+
 ### 3.1 根目录工具
 
 | 文件 | 用途 | 用法 |
 |---|---|---|
-| `tts.py` | 预设音色配音 (9 选 1, 10 国语言) | `python tts.py --text "..." --lang zh --speaker vivian --out out.wav` |
-| `cross_clone.py` | 跨语言 VoiceClone (用 ref + ref_text 克隆到目标语种) | `python cross_clone.py --ref ref.wav --ref_text "..." --text "..." --lang Russian --out out.wav` |
+| `server.py` | **HTTP 服务（跨项目复用入口）** | `python server.py [--engine qwen] [--port 8757]` |
+| `dub.py` | **整段/SRT 配音 + 视频换音**（基于 ttslib） | `python dub.py --srt x.srt --lang ja --speaker anna --video in.mp4` |
+| `client_example.py` | 别的项目怎么调 HTTP | 参考用 |
+| `tts.py` | 预设音色配音（早期 CLI，仍可用） | `python tts.py --text "..." --lang zh --speaker vivian --out out.wav` |
+| `cross_clone.py` | 跨语言 VoiceClone（早期 CLI，仍可用） | `python cross_clone.py --ref ref.wav --ref_text "..." --text "..." --lang Russian --out out.wav` |
 | `fetch_voice.py` | 通用下载 (GitHub/HF/ModelScope/URL) | `python fetch_voice.py hf erythrocyte/... --out voices/...` |
 
 ### 3.2 scripts/ 工具 (8 个)
@@ -202,7 +225,10 @@ $py = "C:\Users\艾莉\Videos\cc视频剪辑\tools\tts-mvp\.venv\Scripts\python.
 
 1. **听 4 个 clone wav** —— 客观指标差但听感可能 OK
 2. **换 1.7B Base 模型** —— `Qwen/Qwen3-TTS-12Hz-1.7B-Base`, 慢 2-3x 但更准
-3. **接 P2 剪辑流水线** —— `tts.py`/`cross_clone.py` 出 wav 后, 用 ffmpeg + h264_qsv 合成视频
+3. ~~**接 P2 剪辑流水线**~~ ✅ **已完成 (2026-06-14)** —— `dub.py` 把单句 wav 补成
+   "整条视频换音": 模型只加载一次, 逐句合成后按 SRT/逐行时间轴对齐 (间隙补静音/
+   超长 atempo 加速/偏短拉伸), mux 回视频 (画面 stream-copy)。支持预设音色与
+   `--clone` 跨语言克隆。已实测 2 行中文稿 → 6.7s 对齐 wav 通过。用法见 README。
 4. **等 XPU bug 修** —— 速度上去了再调
 5. **更多角色** —— 跑 `extract_7z.py` 抽其他角色 (甘雨/胡桃/可莉/八重神子/...)
 6. **日语音频继续下** —— `voices/nahida_jp/raw/` 后台 streaming 任务还在跑, 应该还在累积

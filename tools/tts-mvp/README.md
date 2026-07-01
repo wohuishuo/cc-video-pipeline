@@ -1,7 +1,57 @@
-# TTS MVP — Qwen3-TTS 本地配音
+# TTS MVP — 本地 TTS 复用核心（Qwen3-TTS + GPT-SoVITS 槽）
 
-> **独立 MVP**，跟 .venv / remotion-hello / jianying-mcp 平级，
-> 不污染现有 P0-P2 流水线。给 cos 跳舞/Vlog/科普口播做 AI 配音。
+> **独立 MVP**，跟 .venv / remotion-hello / jianying-mcp 平级，不污染现有 P0-P2 流水线。
+> 给本项目（cos/Vlog/科普配音）**和别的项目**共用：引擎可插拔，HTTP 接口跨项目调。
+
+## 架构（可插拔双引擎 + HTTP 服务）
+
+```
+ttslib/                  ← 可复用核心（别的项目 import 它，或走 HTTP）
+  engines/
+    base.py              ← TTSEngine 抽象：load / synth_preset / synth_clone / list_speakers
+    qwen.py              ← Qwen3-TTS 适配器（CustomVoice 预设 + Base 克隆，各加载一次）
+    sovits.py            ← GPT-SoVITS 适配槽（接口留好，推理待接，见文件内步骤）
+  registry.py            ← get_engine("qwen" | "gpt-sovits")
+  align.py               ← SRT/逐行 解析 + 时间对齐 + ffmpeg mux
+  langmap.py             ← 语种/音色别名归一
+server.py                ← FastAPI HTTP 服务（模型常驻，POST /tts /clone）
+client_example.py        ← 别的项目怎么调（urllib，零依赖）
+dub.py                   ← 整段/SRT 配音 + 视频换音（基于 ttslib）
+tts.py / cross_clone.py  ← 早期单句 CLI（仍可用；新代码走 ttslib/server）
+```
+
+## 跨项目复用：起一个 HTTP 服务即可
+
+别的项目**不用共享 venv、不用每次加载模型**（模型常驻，省掉每次 25s）：
+
+```powershell
+# 本项目这边起服务（启动加载一次后常驻）
+.\.venv\Scripts\python.exe server.py            # 默认 qwen, http://127.0.0.1:8757
+```
+
+```python
+# 别的项目（任意 venv / 任意语言）这样调：
+import urllib.request, json
+req = urllib.request.Request("http://127.0.0.1:8757/tts",
+    data=json.dumps({"text":"你好","lang":"zh","speaker":"vivian"}).encode(),
+    headers={"Content-Type":"application/json"})
+open("out.wav","wb").write(urllib.request.urlopen(req).read())   # 直接拿 wav 字节
+```
+
+接口：`GET /health` · `GET /voices` · `POST /tts {text,lang,speaker,instruct?}` ·
+`POST /clone {text,lang,ref_audio,ref_text,ref_lang?}`。两个 POST 加 `?save=路径` 可让
+服务端直接落盘返回 `{path,duration,sr}`。完整示例见 `client_example.py`。
+
+> 同 venv 的 Python 项目也可直接 `from ttslib import get_engine` 进程内调用。
+
+## 切引擎
+
+`server.py --engine qwen`（现可用）/ `--engine gpt-sovits`（接口已留，待接入完整权重）。
+GPT-SoVITS 接入步骤写在 `ttslib/engines/sovits.py` 顶部——主打少样本高保真克隆，
+和 Qwen 的开箱预设音色互补，所以做成可切换。
+
+---
+
 
 ## 当前状态
 
@@ -182,9 +232,41 @@ ffmpeg -i projects\cos-2026-07\video.mp4 -i projects\cos-2026-07\voice.wav `
   --local_dir models\Qwen3-TTS-12Hz-0.6B-CustomVoice
 ```
 
+## 整段配音 / 视频换音（dub.py）— ✅ 已完成
+
+`tts.py`/`cross_clone.py` 只出单句 wav，`dub.py` 把它补成"整条视频换音"：
+**模型只加载一次**，逐句合成后按时间轴对齐（间隙补静音/超长加速/偏短拉伸），mux 回视频。
+
+```powershell
+$py = ".\.venv\Scripts\python.exe"
+
+# 1) 逐行稿子配音（口播/科普）—— 顺序拼 + 句间停顿
+$py .\dub.py --lines script.txt --lang zh --speaker vivian --gap 0.35 --out outputs\narration.wav
+
+# 2) SRT 时间对齐换音（本地化现有视频）
+$py .\dub.py --srt in.ja.srt --lang ja --speaker anna --video in.mp4
+#   -> in_ja_dub.mp4（画面 stream-copy，只换音轨）
+
+# 3) 跨语言克隆 + 视频换音（纳西妲声线说日语，对齐到视频）
+$py .\dub.py --srt in.ja.srt --lang ja --clone `
+  --ref voices\纳西妲_zh\ready\vo_dialog_LLZAQ004_nahida_01.wav `
+  --ref_text "这次太感谢你们了，请好好休息。" --ref_lang zh `
+  --video in.mp4
+```
+
+| 参数 | 说明 |
+|---|---|
+| `--srt` / `--lines` | 二选一：SRT 时间对齐 / 逐行稿子顺序拼 |
+| `--video` | 给了就 mux 回视频（不给只出对齐音轨 wav） |
+| `--speaker` | 预设音色；或 `--clone --ref --ref_text` 走克隆 |
+| `--gap` | 逐行模式句间停顿秒（默认 0.35） |
+| `--keep-temp` | 保留分句 wav 供检查 |
+
+> 已实测：2 行中文稿 → 6.7s 对齐 wav，模型单次加载，对齐正确。
+
 ## TODO
 
 - [ ] 实测 XPU vs CPU 速度，填进性能表
-- [ ] 加 `--batch` 模式（按行读 stdin 出多段）
-- [ ] 接 VoiceClone：找一段纳西妲参考音频 → `voices/nahida_jp/` → 用 `generate_voice_clone` API
+- [x] ~~整段/SRT 配音 + 视频换音~~ → `dub.py` 已完成
+- [x] ~~接 VoiceClone~~ → `cross_clone.py` + `dub.py --clone`
 - [ ] 评估 1.7B 模型（更高质量，CPU 上慢 2x）

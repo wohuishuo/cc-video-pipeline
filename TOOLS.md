@@ -23,7 +23,9 @@
 | 让 CCD 重启后能用 B站工具 | 已配好，重启即可 | bilibili-mcp 已写入配置 |
 | 检查环境是否正常 | `setup.ps1` | 自检 ffmpeg/venv/QSV 全绿 |
 | 用代码生成视频动画 | Remotion (`tools/remotion-hello/`) | React 组件 → mp4 |
+| 纳西妲/多语言本地配音 | `local-tts-dub` skill | 稳定 CPU 生产版 + Transformers 5/XPU 实验路由 |
 | 查 Remotion 适合做什么 | `tools/remotion-eval.md` | 评估笔记 |
+| 做小Lin风格知识/读书视频 | `docs/workflows/xiaolin-style-video.md` | 从选题→稿子→视觉支撑→剪辑的总 SOP |
 
 ---
 

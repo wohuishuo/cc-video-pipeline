@@ -8,10 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 启动前必读
 
-先看 [TOOLS.md](TOOLS.md) 了解所有工具。每次对话开始时说：
-> "项目根在 C:\Users\艾莉\Videos\cc视频剪辑，工具速查 TOOLS.md，cookie 在 reference\cookies.txt，环境自检跑 setup.ps1"
+先看 [TOOLS.md](TOOLS.md) 了解所有工具的使用方式。
 
 **接手新机器/重装时**：先看 [INSTALL_HISTORY.md](INSTALL_HISTORY.md) 知道已装什么，**别重复装**。
+
+**每次开始工作时**：跑 `.\tools\setup.ps1` 做环境自检（ffmpeg/venv/QSV 全绿才算正常）
 
 ## 环境硬约束——必须遵守
 
@@ -41,6 +42,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | AI（转录/NLP） | Python 3.12 venv | `.\tools\.venv\Scripts\python.exe .\tools\xxx.py` |
 | 动画生成 | Node + React | `cd tools\remotion-hello; npm run ...` |
 
+## 常见操作速查
+
+| 操作 | 命令 |
+|---|---|
+| 环境自检 | `.\tools\setup.ps1` |
+| 分析参考视频（一键） | `.\.claude\skills\ref-analyze\scripts\p0_pipeline.ps1 -Url "..." -Slug "up-选题"` |
+| 下载 B站视频 | `.\.claude\skills\ref-analyze\scripts\fetch.ps1 -Url "..." -Slug "..."` |
+| 静音切除 | `.\.claude\skills\edit-ffmpeg\scripts\silence_cut.ps1 -Video "in.mp4" -Out "out.mp4"` |
+| 横屏转竖屏 | `.\.claude\skills\edit-ffmpeg\scripts\to_vertical.ps1 -Video "in.mp4" -Out "out.mp4" -Mode blur` |
+| 语音转文字 | `.\tools\.venv\Scripts\python.exe .\tools\transcribe_dispatch.py "audio.wav" --lang auto` |
+
 ## Skill 的两种形态
 
 **有脚本的**（自动化运行）: ref-analyze, edit-ffmpeg
@@ -48,15 +60,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 "骨架"并非不能用——这些是内容创作 skill，由 Claude 按 SKILL.md 中的模板和规范直接输出结果。P1 skill 等本身是"AI 写东西"，不需要外部脚本。
 
+**脚本位置**：所有 `.ps1` 脚本在 `.claude/skills/<skill>/scripts/` 下。`.agents/skills/` 是旧备份，勿直接使用。
+
 ## reference/ 目录的生命周期
 
 ```
 reference/<slug>/
-  video.mp4                ← fetch.ps1 下载
+  video.mp4                ← .claude/skills/ref-analyze/scripts/fetch.ps1 下载
   audio.wav                ← fetch.ps1 自动提
-  audio.json / audio.srt   ← transcribe_dispatch.py 产出
-  cuts.txt / rms.txt       ← probe.ps1 产出
-  frames/*.jpg             ← extract_frames.ps1 产出
+  audio.json / audio.srt   ← tools/transcribe_dispatch.py 产出
+  cuts.txt / rms.txt       ← .claude/skills/ref-analyze/scripts/probe.ps1 产出
+  frames/*.jpg             ← .claude/skills/ref-analyze/scripts/extract_frames.ps1 产出
   analysis.md              ← Claude 读上面文件后手写
 ```
 
