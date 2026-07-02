@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+changed="$(git diff --cached --name-only)"
+case "$changed" in
+  *.githooks/pre-commit*|*tools/audio_xiaolin_mix.py*|*tools/remotion-hello/src/informationGap.tsx*|*tools/audit_information_gap.py*)
+    PY="tools/.venv/Scripts/python.exe"
+    if [ ! -x "$PY" ]; then
+      PY="python"
+    fi
+    "$PY" tools/audit_information_gap.py \
+      --voice projects/information-gap-business/audio/information-gap-nahida-sovits.wav \
+      --mixed projects/information-gap-business/audio/information-gap-nahida-sovits-mix.wav \
+      --remotion tools/remotion-hello/src/informationGap.tsx
+    ;;
+esac

@@ -1,6 +1,7 @@
 import argparse
 import re
 import subprocess
+import sys
 import wave
 from pathlib import Path
 
@@ -47,7 +48,25 @@ def make_silence(path: Path, seconds: float, sr: int = 44100) -> None:
 
 
 def render_music(path: Path, seconds: float) -> None:
-    # Audible restrained bed: low drone, soft upper tone, filtered texture.
+    music_script = Path(__file__).with_name("music_bed.py")
+    if music_script.exists():
+        run([
+            sys.executable,
+            str(music_script),
+            "--duration",
+            f"{seconds:.3f}",
+            "--mood",
+            "dark",
+            "--bpm",
+            "78",
+            "--gain",
+            "0.88",
+            "--out",
+            str(path),
+        ])
+        return
+
+    # Fallback: audible restrained bed with low pulse and filtered texture.
     run([
         "ffmpeg", "-y",
         "-f", "lavfi",
@@ -59,10 +78,10 @@ def render_music(path: Path, seconds: float) -> None:
         "-f", "lavfi",
         "-i", f"anoisesrc=color=pink:sample_rate=44100:duration={seconds:.3f}:amplitude=0.03",
         "-filter_complex",
-        "[0:a]volume=0.10[bass];"
-        "[1:a]volume=0.035[mid];"
-        "[2:a]volume=0.012,atempo=1.0[air];"
-        "[3:a]lowpass=f=1800,highpass=f=160,volume=0.05[noise];"
+        "[0:a]volume=0.22[bass];"
+        "[1:a]volume=0.08[mid];"
+        "[2:a]volume=0.04,atempo=1.0[air];"
+        "[3:a]lowpass=f=1800,highpass=f=160,volume=0.12[noise];"
         "[bass][mid][air][noise]amix=inputs=4:duration=first,"
         "afade=t=in:st=0:d=2,"
         "afade=t=out:st={:.3f}:d=3,"
@@ -79,6 +98,7 @@ def main() -> None:
     parser.add_argument("--scenes", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--work", default="")
+    parser.add_argument("--pause-profile", choices=["none", "legacy"], default="none")
     args = parser.parse_args()
 
     voice = Path(args.voice).resolve()
@@ -92,66 +112,68 @@ def main() -> None:
     scenes = parse_scenes(scenes_path)
     scale = dur / 1800.0
 
-    concat_lines = []
-    last = 0.0
-    segment_index = 0
-    silence_cache: dict[float, Path] = {}
+    if args.pause_profile == "none":
+        paused_voice = work / "voice_no_added_pauses.wav"
+        run(["ffmpeg", "-y", "-i", str(voice), "-c:a", "pcm_s16le", str(paused_voice)])
+    else:
+        concat_lines = []
+        last = 0.0
+        segment_index = 0
+        silence_cache: dict[float, Path] = {}
 
-    def silence_file(seconds: float) -> Path:
-        key = round(seconds, 2)
-        if key not in silence_cache:
-            p = work / f"silence_{key:.2f}.wav"
-            make_silence(p, key)
-            silence_cache[key] = p
-        return silence_cache[key]
+        def silence_file(seconds: float) -> Path:
+            key = round(seconds, 2)
+            if key not in silence_cache:
+                p = work / f"silence_{key:.2f}.wav"
+                make_silence(p, key)
+                silence_cache[key] = p
+            return silence_cache[key]
 
-    boundaries = []
-    for scene in scenes[1:]:
-        boundary = scene["start"] * scale
-        prev = scenes[scene["id"] - 2]
-        pause = 0.18
-        if scene["chapter"] != prev["chapter"]:
-            pause = 0.85
-        if prev["kind"] in {"title", "question"} or scene["kind"] in {"title", "question"}:
-            pause = max(pause, 0.55)
-        if scene["id"] in {4, 5, 10, 14, 18, 27, 30, 32, 38}:
-            pause = max(pause, 0.9)
-        if scene["start"] < 45:
-            pause = 0.0
-        boundaries.append((boundary, pause))
+        boundaries = []
+        for scene in scenes[1:]:
+            boundary = scene["start"] * scale
+            prev = scenes[scene["id"] - 2]
+            pause = 0.18
+            if scene["chapter"] != prev["chapter"]:
+                pause = 0.85
+            if prev["kind"] in {"title", "question"} or scene["kind"] in {"title", "question"}:
+                pause = max(pause, 0.55)
+            if scene["id"] in {4, 5, 10, 14, 18, 27, 30, 32, 38}:
+                pause = max(pause, 0.9)
+            boundaries.append((boundary, pause))
 
-    for boundary, pause in boundaries:
-        if boundary <= last + 0.05 or boundary >= dur:
-            continue
-        segment = work / f"voice_seg_{segment_index:03d}.wav"
+        for boundary, pause in boundaries:
+            if boundary <= last + 0.05 or boundary >= dur:
+                continue
+            segment = work / f"voice_seg_{segment_index:03d}.wav"
+            run([
+                "ffmpeg", "-y",
+                "-i", str(voice),
+                "-ss", f"{last:.3f}",
+                "-to", f"{boundary:.3f}",
+                "-c:a", "pcm_s16le",
+                str(segment),
+            ])
+            concat_lines.append(f"file '{segment.as_posix()}'")
+            if pause > 0.001:
+                concat_lines.append(f"file '{silence_file(pause).as_posix()}'")
+            segment_index += 1
+            last = boundary
+
+        tail = work / f"voice_seg_{segment_index:03d}.wav"
         run([
             "ffmpeg", "-y",
             "-i", str(voice),
             "-ss", f"{last:.3f}",
-            "-to", f"{boundary:.3f}",
             "-c:a", "pcm_s16le",
-            str(segment),
+            str(tail),
         ])
-        concat_lines.append(f"file '{segment.as_posix()}'")
-        if pause > 0.001:
-            concat_lines.append(f"file '{silence_file(pause).as_posix()}'")
-        segment_index += 1
-        last = boundary
+        concat_lines.append(f"file '{tail.as_posix()}'")
 
-    tail = work / f"voice_seg_{segment_index:03d}.wav"
-    run([
-        "ffmpeg", "-y",
-        "-i", str(voice),
-        "-ss", f"{last:.3f}",
-        "-c:a", "pcm_s16le",
-        str(tail),
-    ])
-    concat_lines.append(f"file '{tail.as_posix()}'")
-
-    concat = work / "voice_with_pauses.concat.txt"
-    concat.write_text("\n".join(concat_lines), encoding="utf-8")
-    paused_voice = work / "voice_with_pauses.wav"
-    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-c:a", "pcm_s16le", str(paused_voice)])
+        concat = work / "voice_with_pauses.concat.txt"
+        concat.write_text("\n".join(concat_lines), encoding="utf-8")
+        paused_voice = work / "voice_with_pauses.wav"
+        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-c:a", "pcm_s16le", str(paused_voice)])
 
     final_dur = wav_duration(paused_voice)
     music = work / "music_bed.wav"
@@ -162,9 +184,9 @@ def main() -> None:
         "-i", str(paused_voice),
         "-i", str(music),
         "-filter_complex",
-        "[0:a]acompressor=threshold=-18dB:ratio=2.2:attack=8:release=120,volume=1.05[v];"
-        "[1:a]volume=0.95[m];"
-        "[v][m]amix=inputs=2:duration=first:weights=1 0.75,alimiter=limit=0.95[out]",
+        "[0:a]aformat=channel_layouts=stereo,acompressor=threshold=-18dB:ratio=2.1:attack=8:release=120,volume=1.02[v];"
+        "[1:a]aformat=channel_layouts=stereo,volume=0.72[m];"
+        "[v][m]amix=inputs=2:duration=first:weights=1 0.9,alimiter=limit=0.95[out]",
         "-map", "[out]",
         "-c:a", "pcm_s16le",
         str(out),

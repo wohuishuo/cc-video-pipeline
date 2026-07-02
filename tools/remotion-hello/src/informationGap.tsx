@@ -379,7 +379,7 @@ const SceneTitle: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, ver
           color: FG,
           textAlign: vertical ? "left" : "center",
           textShadow: `0 4px 0 rgba(0,0,0,0.34), 0 0 44px ${color}55`,
-          whiteSpace: "nowrap",
+          whiteSpace: "normal",
         }}>
           {line}
         </div>
@@ -796,29 +796,29 @@ type OpeningBeat = {
 type TimedOpeningBeat = OpeningBeat & { start: number; end: number };
 
 const openingGlobalBeats: TimedOpeningBeat[] = [
-  { start: 0, end: 1.7, kind: "concept", title: "你刷到过这种东西吗？", kicker: "OPEN 01", items: ["9.9 体验课", "1 元鸡蛋", "低价加盟", "高薪兼职"], accent: BLUE },
-  { start: 1.7, end: 5.2, kind: "phone", title: "9.9 体验课", kicker: "直播间 / AI 剪辑课", items: ["限时 9.9", "三天学会", "学完接单"], accent: GOLD },
-  { start: 5.2, end: 8.9, kind: "form", title: "一块钱领鸡蛋", kicker: "到店 / 登记 / 加群", items: ["姓名", "年龄", "电话", "微信群二维码"], accent: GREEN },
-  { start: 8.9, end: 13.7, kind: "contract", title: "奶茶加盟展", kicker: "扶持名额 / 今天签约", items: ["设备", "选址", "装修", "开业推广"], accent: GOLD },
-  { start: 13.7, end: 18.8, kind: "chat", title: "高薪兼职", kicker: "招聘页 / 面试聊天", items: ["不限经验", "居家办公", "月入过万", "先培训"], accent: RED },
-  { start: 18.8, end: 22.4, kind: "network", title: "四个入口，动作一样", kicker: "入口不是终点", items: ["点击", "留资", "加群", "付款", "签合同", "培训"], accent: BLUE },
-  { start: 22.4, end: 26.0, kind: "question", title: "麻烦的是：\n它不是一眼假", kicker: "关键句", items: ["课上了", "群建了", "合同签了"], accent: RED },
-  { start: 26.0, end: 31.6, kind: "materials", title: "材料可以很完整", kicker: "直播 / 老师 / 合同 / 案例", items: ["直播", "老师", "合同", "成功案例", "付款链接"], accent: BLUE },
-  { start: 31.6, end: 35.8, kind: "question", title: "先不问：\n它是不是骗局", kicker: "问题换掉", items: ["不猜动机", "只看账单", "只看交付"], accent: GOLD },
-  { start: 35.8, end: 45.2, kind: "question", title: "如果我没赚到钱，\n它已经赚了什么？", kicker: "主问题", items: ["学费", "加盟费", "设备", "软件"], accent: RED },
+  { start: 0, end: 3, kind: "concept", title: "你刷到过这种东西吗？", kicker: "OPEN 01", items: ["9.9 体验课", "1 元鸡蛋", "低价加盟", "高薪兼职"], accent: BLUE },
+  { start: 3, end: 10, kind: "phone", title: "9.9 体验课", kicker: "直播间 / AI 剪辑课", items: ["限时 9.9", "三天学会", "学完接单"], accent: GOLD },
+  { start: 10, end: 17, kind: "form", title: "一块钱领鸡蛋", kicker: "到店 / 登记 / 加群", items: ["姓名", "年龄", "电话", "微信群二维码"], accent: GREEN },
+  { start: 17, end: 25, kind: "contract", title: "奶茶加盟展", kicker: "扶持名额 / 今天签约", items: ["设备", "选址", "装修", "开业推广"], accent: GOLD },
+  { start: 25, end: 34, kind: "chat", title: "高薪兼职", kicker: "招聘页 / 面试聊天", items: ["不限经验", "居家办公", "月入过万", "先培训"], accent: RED },
+  { start: 34, end: 39, kind: "question", title: "麻烦的是：\n它不是一眼假", kicker: "关键句", items: ["课上了", "群建了", "合同签了"], accent: RED },
+  { start: 39, end: 47, kind: "materials", title: "材料可以很完整", kicker: "直播 / 老师 / 合同 / 案例", items: ["直播", "老师", "合同", "成功案例", "付款链接"], accent: BLUE },
+  { start: 47, end: 58, kind: "question", title: "先不问：\n它是不是骗局", kicker: "问题换掉", items: ["不猜动机", "只看账单", "只看交付"], accent: GOLD },
+  { start: 58, end: 68, kind: "question", title: "如果我没赚到钱，\n它已经赚了什么？", kicker: "主问题", items: ["学费", "加盟费", "设备", "软件"], accent: RED },
+  { start: 68, end: 80, kind: "network", title: "四个入口，\n同一条收费链", kicker: "合并结构", items: ["免费课", "成功案例", "低价加盟", "直播展示", "工具设备", "续费"], accent: BLUE },
 ];
 
 const openingCaptions = [
-  { start: 0.0, end: 1.7, text: "你刷到过这种东西吗？" },
-  { start: 1.7, end: 5.2, text: "9 块 9 的体验课，三天学会 AI 剪辑，学完就能接单。" },
-  { start: 5.2, end: 8.9, text: "一块钱领鸡蛋，顺便登记姓名、年龄、电话，再加微信群。" },
-  { start: 8.9, end: 13.7, text: "加盟展上说今天签约，设备、选址、装修、推广都能安排。" },
-  { start: 13.7, end: 18.8, text: "招聘软件上写高薪兼职，不限经验，居家办公，月入过万。" },
-  { start: 18.8, end: 22.4, text: "聊到最后，对方说你基础差一点，先培训，之后再安排项目。" },
-  { start: 22.4, end: 26.0, text: "这些东西最麻烦的地方，不是它们一眼假。" },
-  { start: 26.0, end: 31.6, text: "恰恰相反，它们常常有直播、老师、合同、成功案例和付款链接。" },
-  { start: 31.6, end: 35.8, text: "所以这期视频，我们先不问：它到底是不是骗局。" },
-  { start: 35.8, end: 45.2, text: "我们只问一个更具体的问题：如果我没赚到钱，它已经赚了什么？" },
+  { start: 0, end: 3, text: "你刷到过这种东西吗？" },
+  { start: 3, end: 10, text: "9 块 9 的体验课，三天学会 AI 剪辑，学完就能接单。" },
+  { start: 10, end: 17, text: "一块钱领鸡蛋，顺便登记姓名、年龄、电话，再加微信群。" },
+  { start: 17, end: 25, text: "加盟展上说今天签约，设备、选址、装修、推广都能安排。" },
+  { start: 25, end: 34, text: "招聘软件上写高薪兼职，不限经验，居家办公，月入过万。" },
+  { start: 34, end: 39, text: "这些东西最麻烦的地方，不是它们一眼假。" },
+  { start: 39, end: 47, text: "恰恰相反，它们常常有直播、老师、合同、成功案例和付款链接。" },
+  { start: 47, end: 58, text: "所以这期视频，我们先不问：它到底是不是骗局。" },
+  { start: 58, end: 68, text: "我们只问一个更具体的问题：如果我没赚到钱，它已经赚了什么？" },
+  { start: 68, end: 80, text: "这个问题一问出来，很多生意的现金流就会清楚。" },
 ];
 
 const OpeningLabel: React.FC<{ children: string; color: string; small?: boolean }> = ({ children, color, small }) => (
@@ -1245,18 +1245,20 @@ const OpeningVisual: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boo
   return <OpeningConcept beat={beat} frame={frame} vertical={vertical} />;
 };
 
-const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean; globalStartFrame: number }> = ({
+const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean; globalStartFrame: number; sceneScale: number }> = ({
   scene,
   vertical,
   showLowerCaption,
   globalStartFrame,
+  sceneScale,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const globalFrame = globalStartFrame + frame;
   const seconds = globalFrame / fps;
-  const beat = openingGlobalBeats.find((candidate) => seconds >= candidate.start && seconds < candidate.end) ?? openingGlobalBeats[openingGlobalBeats.length - 1];
-  const beatFrame = globalFrame - Math.round(beat.start * fps);
+  const baseSeconds = seconds / sceneScale;
+  const beat = openingGlobalBeats.find((candidate) => baseSeconds >= candidate.start && baseSeconds < candidate.end) ?? openingGlobalBeats[openingGlobalBeats.length - 1];
+  const beatFrame = globalFrame - Math.round(beat.start * sceneScale * fps);
   const cutFlash = interpolate(beatFrame, [0, 5], [0.22, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill>
@@ -1301,9 +1303,9 @@ const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCa
   );
 };
 
-const CaptionLayer: React.FC<{ vertical?: boolean }> = ({ vertical }) => {
+const CaptionLayer: React.FC<{ vertical?: boolean; sceneScale: number }> = ({ vertical, sceneScale }) => {
   const frame = useCurrentFrame();
-  const seconds = frame / FPS;
+  const seconds = (frame / FPS) / sceneScale;
   const caption = openingCaptions.find((item) => seconds >= item.start && seconds < item.end);
   if (!caption) return null;
   return (
@@ -1415,6 +1417,157 @@ const DossierScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaptio
   const color = scene.accent ?? BLUE;
   const presenterSide = scene.kind === "compare" || scene.kind === "table" ? "left" : "right";
   const needsLargePresenter = scene.kind === "compare" || scene.kind === "table";
+  const isQuestionStage = scene.kind === "question" || scene.chapter.startsWith("KEY") || scene.id >= 32;
+  const isFlowStage = scene.kind === "flow";
+  const isDataStage = scene.kind === "table" || [23, 24, 26, 28, 30, 31, 36].includes(scene.id);
+  const isWallStage = scene.kind === "grid" || [10, 19, 20].includes(scene.id);
+
+  if (isQuestionStage) {
+    return (
+      <AbsoluteFill>
+        <BackdropTexture scene={scene} vertical={vertical} />
+        <Header scene={scene} vertical={vertical} />
+        <div style={{
+          position: "absolute",
+          inset: vertical ? "210px 66px 210px" : "150px 170px 135px",
+          display: "grid",
+          gridTemplateRows: "auto 1fr",
+          alignItems: "center",
+          justifyItems: "center",
+          gap: vertical ? 28 : 24,
+        }}>
+          <div style={{
+            maxWidth: vertical ? 900 : 1280,
+            textAlign: "center",
+            borderTop: `7px solid ${color}`,
+            borderBottom: "1px solid rgba(255,255,255,0.16)",
+            padding: vertical ? "34px 0 26px" : "26px 0 22px",
+            background: "linear-gradient(180deg, rgba(0,0,0,0.38), rgba(0,0,0,0.08))",
+          }}>
+            <SceneTitle scene={scene} vertical={vertical} />
+          </div>
+          <SceneBody scene={scene} vertical={vertical} />
+        </div>
+        <PresenterWindow compact vertical={vertical} />
+        <div style={{
+          position: "absolute",
+          left: vertical ? 58 : 88,
+          top: vertical ? 104 : 88,
+          width: vertical ? 92 : 118,
+          height: 5,
+          background: color,
+          boxShadow: `0 0 24px ${color}`,
+        }} />
+        {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
+      </AbsoluteFill>
+    );
+  }
+
+  if (isFlowStage) {
+    const titleRight = !vertical && scene.id % 2 === 1;
+    return (
+      <AbsoluteFill>
+        <BackdropTexture scene={scene} vertical={vertical} />
+        <Header scene={scene} vertical={vertical} />
+        <div style={{
+          position: "absolute",
+          left: vertical ? 64 : titleRight ? undefined : 92,
+          right: vertical ? undefined : titleRight ? 92 : undefined,
+          top: vertical ? 150 : 112,
+          width: vertical ? 880 : 620,
+          borderLeft: titleRight ? undefined : `8px solid ${color}`,
+          borderRight: titleRight ? `8px solid ${color}` : undefined,
+          paddingLeft: titleRight ? undefined : 28,
+          paddingRight: titleRight ? 28 : undefined,
+        }}>
+          <SceneTitle scene={scene} vertical={vertical} />
+        </div>
+        <div style={{
+          position: "absolute",
+          left: vertical ? 38 : 210,
+          right: vertical ? 38 : 110,
+          bottom: vertical ? 190 : 118,
+          display: "flex",
+          justifyContent: "center",
+        }}>
+          <SceneBody scene={scene} vertical={vertical} />
+        </div>
+        <PresenterWindow compact vertical={vertical} />
+        {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
+      </AbsoluteFill>
+    );
+  }
+
+  if (isDataStage) {
+    const railRight = !vertical && scene.id % 2 === 0;
+    return (
+      <AbsoluteFill>
+        <BackdropTexture scene={scene} vertical={vertical} />
+        <Header scene={scene} vertical={vertical} />
+        <div style={{
+          position: "absolute",
+          left: vertical ? 62 : railRight ? undefined : 86,
+          right: vertical ? undefined : railRight ? 86 : undefined,
+          top: vertical ? 190 : 145,
+          bottom: vertical ? undefined : 132,
+          width: vertical ? 860 : 440,
+          padding: vertical ? "24px 0 20px 28px" : "32px 0 32px 34px",
+          borderLeft: railRight ? undefined : `10px solid ${color}`,
+          borderRight: railRight ? `10px solid ${color}` : undefined,
+          background: railRight
+            ? "linear-gradient(270deg, rgba(0,0,0,0.48), rgba(0,0,0,0.05))"
+            : "linear-gradient(90deg, rgba(0,0,0,0.48), rgba(0,0,0,0.05))",
+        }}>
+          <div style={{ fontFamily: SANS, color, fontSize: vertical ? 25 : 24, fontWeight: 950, letterSpacing: 2, marginBottom: 22 }}>
+            DATA / {String(scene.id).padStart(2, "0")}
+          </div>
+          <SceneTitle scene={scene} vertical={vertical} />
+        </div>
+        <div style={{
+          position: "absolute",
+          left: vertical ? 50 : railRight ? 80 : 575,
+          right: vertical ? 50 : railRight ? 575 : 80,
+          top: vertical ? 510 : 250,
+          display: "flex",
+          justifyContent: "center",
+        }}>
+          <SceneBody scene={scene} vertical={vertical} />
+        </div>
+        {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
+      </AbsoluteFill>
+    );
+  }
+
+  if (isWallStage) {
+    return (
+      <AbsoluteFill>
+        <BackdropTexture scene={scene} vertical={vertical} />
+        <Header scene={scene} vertical={vertical} />
+        <div style={{
+          position: "absolute",
+          left: vertical ? 64 : 92,
+          right: vertical ? 64 : 92,
+          top: vertical ? 150 : 112,
+          display: "grid",
+          gridTemplateColumns: vertical ? "1fr" : "0.45fr 1fr",
+          gap: vertical ? 18 : 46,
+          alignItems: "center",
+        }}>
+          <div style={{
+            borderTop: `7px solid ${color}`,
+            paddingTop: 24,
+            background: "linear-gradient(180deg, rgba(0,0,0,0.28), transparent)",
+          }}>
+            <SceneTitle scene={scene} vertical={vertical} />
+          </div>
+          <SceneBody scene={scene} vertical={vertical} />
+        </div>
+        <PresenterWindow compact vertical={vertical} />
+        {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
+      </AbsoluteFill>
+    );
+  }
+
   return (
     <AbsoluteFill>
       <BackdropTexture scene={scene} vertical={vertical} />
@@ -1484,14 +1637,15 @@ const TitleCollageScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerC
   );
 };
 
-const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean; globalStartFrame: number }> = ({
+const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean; globalStartFrame: number; sceneScale: number }> = ({
   scene,
   vertical,
   showLowerCaption,
   globalStartFrame,
+  sceneScale,
 }) => {
   if (scene.id <= 4) {
-    return <OpeningBeatScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} globalStartFrame={globalStartFrame} />;
+    return <OpeningBeatScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} globalStartFrame={globalStartFrame} sceneScale={sceneScale} />;
   }
   if (scene.kind === "title" || scene.id <= 5) {
     return <TitleCollageScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
@@ -1500,7 +1654,7 @@ const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?:
 };
 
 export const informationGapBaseSeconds = 1800;
-export const informationGapNarrationSeconds = 1379.368;
+export const informationGapNarrationSeconds = 1358.568;
 
 export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: number; withAudio?: boolean; showLowerCaption?: boolean }> = ({
   vertical = false,
@@ -1522,11 +1676,11 @@ export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: nu
             from={from}
             durationInFrames={Math.round((scene.end - scene.start) * sceneScale * FPS) + 8}
           >
-            <SceneCard scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} globalStartFrame={from} />
+            <SceneCard scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} globalStartFrame={from} sceneScale={sceneScale} />
           </Sequence>
         );
       })}
-      <CaptionLayer vertical={vertical} />
+      <CaptionLayer vertical={vertical} sceneScale={sceneScale} />
     </AbsoluteFill>
   );
 };
