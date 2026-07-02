@@ -21,6 +21,7 @@ tools/remotion-hello/src/informationGap.tsx
 ```text
 information-gap
 information-gap-vertical
+information-gap-audio
 ```
 
 规格：
@@ -29,6 +30,7 @@ information-gap-vertical
 |---|---:|---:|---:|
 | `information-gap` | 1920x1080 | 1800 秒 | 30 |
 | `information-gap-vertical` | 1080x1920 | 1800 秒 | 30 |
+| `information-gap-audio` | 1920x1080 | 1400.63 秒 | 30 |
 
 ## 已验证命令
 
@@ -49,6 +51,7 @@ npx remotion compositions src/root.tsx
 ```text
 information-gap             30      1920x1080      54000
 information-gap-vertical    30      1080x1920      54000
+information-gap-audio       30      1920x1080      42019
 ```
 
 导出静帧：
@@ -185,6 +188,7 @@ visual-cards.md G04
 projects/information-gap-business/audio/information-gap-nahida-sovits.wav
 projects/information-gap-business/audio/information-gap-nahida-sovits-mix.wav
 projects/information-gap-business/audio/information-gap-nahida-sovits-mix-preview-90s.mp3
+tools/remotion-hello/public/audio/information-gap-nahida-sovits-mix.wav
 ```
 
 混音命令：
@@ -206,6 +210,32 @@ python .\tools\audio_xiaolin_mix.py `
 4. 章节切换、标题卡、问题卡、关键案例卡插入长停顿。
 5. 生成原创低频音乐床，和口播轻量混合。
 6. 导出完整 wav 和 90 秒 mp3 试听。
+```
+
+把混音接入 Remotion：
+
+```powershell
+New-Item -ItemType Directory -Force .\tools\remotion-hello\public\audio | Out-Null
+Copy-Item .\projects\information-gap-business\audio\information-gap-nahida-sovits-mix.wav `
+  .\tools\remotion-hello\public\audio\information-gap-nahida-sovits-mix.wav -Force
+```
+
+渲染 30 秒声画预览：
+
+```powershell
+cd C:\Users\艾莉\Videos\cc视频剪辑\tools\remotion-hello
+npx remotion render src/root.tsx information-gap-audio audio-preview-30s.mp4 --frames=0-899 --codec=h264
+```
+
+已验证：
+
+```text
+tools/remotion-hello/audio-preview-30s.mp4
+duration=30.058667
+video=h264
+audio=aac
+mean_volume=-25.1 dB
+max_volume=-10.0 dB
 ```
 
 ### 5. 加字幕

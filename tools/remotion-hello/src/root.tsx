@@ -3,7 +3,12 @@ import { Composition } from "remotion";
 import { HelloWorld } from "./index";
 import { GuZhenRen } from "./guzhenren";
 import { ExamReview } from "./examReview";
-import { InformationGap, informationGapDurationFrames } from "./informationGap";
+import {
+  InformationGap,
+  informationGapDurationFrames,
+  informationGapNarrationDurationFrames,
+  informationGapNarrationSeconds,
+} from "./informationGap";
 import timings1 from "../../../projects/wangluo-kaoqian/part1/timings.json";
 import timings2 from "../../../projects/wangluo-kaoqian/part2/timings.json";
 
@@ -63,6 +68,15 @@ const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={{ vertical: true }}
+      />
+      <Composition
+        id="information-gap-audio"
+        component={InformationGap}
+        durationInFrames={informationGapNarrationDurationFrames}
+        fps={FPS}
+        width={1920}
+        height={1080}
+        defaultProps={{ timelineSeconds: informationGapNarrationSeconds, withAudio: true }}
       />
     </>
   );

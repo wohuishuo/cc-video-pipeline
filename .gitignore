@@ -65,6 +65,8 @@ tools/remotion-hello/out.mp4
 tools/remotion-hello/out.webm
 tools/remotion-hello/*.mp4
 tools/remotion-hello/*.webm
+tools/remotion-hello/public/audio/*.wav
+tools/remotion-hello/public/audio/*.mp3
 
 # 临时文件
 $TEMP/

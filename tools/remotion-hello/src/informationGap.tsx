@@ -1,9 +1,11 @@
 import {
   AbsoluteFill,
+  Audio,
   Easing,
   interpolate,
   Sequence,
   spring,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -924,16 +926,25 @@ const SceneCard: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vert
   return <DossierScene scene={scene} vertical={vertical} />;
 };
 
-export const InformationGap: React.FC<{ vertical?: boolean }> = ({ vertical = false }) => {
-  const totalFrames = 1800 * FPS;
+export const informationGapBaseSeconds = 1800;
+export const informationGapNarrationSeconds = 1400.618118;
+
+export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: number; withAudio?: boolean }> = ({
+  vertical = false,
+  timelineSeconds = informationGapBaseSeconds,
+  withAudio = false,
+}) => {
+  const totalFrames = Math.ceil(timelineSeconds * FPS);
+  const sceneScale = timelineSeconds / informationGapBaseSeconds;
   return (
     <AbsoluteFill style={{ background: BG }}>
       <Progress totalFrames={totalFrames} />
+      {withAudio && <Audio src={staticFile("audio/information-gap-nahida-sovits-mix.wav")} />}
       {scenes.map((scene) => (
         <Sequence
           key={scene.id}
-          from={Math.round(scene.start * FPS)}
-          durationInFrames={Math.round((scene.end - scene.start) * FPS) + 8}
+          from={Math.round(scene.start * sceneScale * FPS)}
+          durationInFrames={Math.round((scene.end - scene.start) * sceneScale * FPS) + 8}
         >
           <SceneCard scene={scene} vertical={vertical} />
         </Sequence>
@@ -942,4 +953,5 @@ export const InformationGap: React.FC<{ vertical?: boolean }> = ({ vertical = fa
   );
 };
 
-export const informationGapDurationFrames = 1800 * FPS;
+export const informationGapDurationFrames = informationGapBaseSeconds * FPS;
+export const informationGapNarrationDurationFrames = Math.ceil(informationGapNarrationSeconds * FPS);
