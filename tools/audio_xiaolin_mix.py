@@ -160,8 +160,8 @@ def main() -> None:
         "-i", str(music),
         "-filter_complex",
         "[0:a]acompressor=threshold=-18dB:ratio=2.2:attack=8:release=120,volume=1.05[v];"
-        "[1:a]volume=0.34[m];"
-        "[v][m]amix=inputs=2:duration=first:weights=1 0.34,alimiter=limit=0.95[out]",
+        "[1:a]volume=0.56[m];"
+        "[v][m]amix=inputs=2:duration=first:weights=1 0.55,alimiter=limit=0.95[out]",
         "-map", "[out]",
         "-c:a", "pcm_s16le",
         str(out),

@@ -116,8 +116,11 @@ const Header: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertica
 
 const BackdropTexture: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
   const frame = useCurrentFrame();
-  const drift = interpolate(frame, [0, 160], [0, vertical ? 18 : 26], { extrapolateRight: "clamp" });
-  const labels = ["登记表", "合同条款", "付款页", "收益截图", "群公告", "分期账单"];
+  const drift = Math.sin(frame / 55) * (vertical ? 18 : 26);
+  const slowDrift = Math.sin(frame / 90) * (vertical ? 10 : 16);
+  const gridShift = `${frame % 44}px ${Math.round((frame * 0.35) % 44)}px`;
+  const fallbackLabels = ["登记表", "合同条款", "付款页", "收益截图", "群公告", "分期账单"];
+  const labels = [...scene.items, ...fallbackLabels].slice(0, 6);
   return (
     <AbsoluteFill style={{
       background: `
@@ -150,6 +153,7 @@ const BackdropTexture: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene
             color: i % 2 ? "#dfe9f2" : "#2b241d",
             fontSize: vertical ? 28 : 30,
             fontWeight: 900,
+            scale: 1 + Math.sin((frame + i * 19) / 120) * 0.01,
           }}>
             {label}
             <div style={{ marginTop: 22, height: 9, width: "76%", background: "currentColor", opacity: 0.22 }} />
@@ -163,7 +167,20 @@ const BackdropTexture: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene
         inset: 0,
         backgroundImage: "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
         backgroundSize: "44px 44px",
+        backgroundPosition: gridShift,
         opacity: 0.22,
+      }} />
+      <div style={{
+        position: "absolute",
+        left: vertical ? -120 : -220,
+        top: vertical ? 220 : 120,
+        width: vertical ? 380 : 620,
+        height: vertical ? 5 : 6,
+        background: `linear-gradient(90deg, transparent, ${(scene.accent ?? BLUE)}88, transparent)`,
+        opacity: 0.28,
+        translate: `${slowDrift * 6}px ${drift * 3}px`,
+        rotate: "-18deg",
+        boxShadow: `0 0 34px ${(scene.accent ?? BLUE)}66`,
       }} />
     </AbsoluteFill>
   );
@@ -766,6 +783,526 @@ const EvidenceCollage: React.FC<{ scene: Scene; vertical?: boolean; withPresente
   );
 };
 
+type OpeningBeatKind = "concept" | "phone" | "form" | "contract" | "chat" | "network" | "materials" | "question";
+
+type OpeningBeat = {
+  kind: OpeningBeatKind;
+  seconds: number;
+  title: string;
+  kicker: string;
+  items: string[];
+  accent: string;
+};
+
+const openingBeatPlans: Record<number, OpeningBeat[]> = {
+  1: [
+    { kind: "concept", seconds: 2.35, title: "你刷到过这种东西吗？", kicker: "OPEN 01", items: ["9.9 体验课", "1 元鸡蛋", "低价加盟", "高薪兼职"], accent: BLUE },
+    { kind: "phone", seconds: 2.25, title: "9.9 只是入口", kicker: "直播间 / 体验课", items: ["限时 9.9", "评论区留 1", "进群领资料"], accent: GOLD },
+    { kind: "form", seconds: 2.2, title: "低价换登记", kicker: "社区活动 / 表单", items: ["姓名", "电话", "住址", "社群"], accent: GREEN },
+    { kind: "question", seconds: 1.2, title: "它先拿到什么？", kicker: "问题先放这里", items: ["点击", "留资", "加群"], accent: RED },
+  ],
+  2: [
+    { kind: "contract", seconds: 2.4, title: "低价加盟", kicker: "合同桌面", items: ["加盟费", "设备", "原料", "装修"], accent: GOLD },
+    { kind: "chat", seconds: 2.35, title: "高薪兼职", kicker: "招聘页 / 聊天框", items: ["面试", "能力不足", "培训合同", "分期"], accent: RED },
+    { kind: "network", seconds: 3.1, title: "四个入口，动作一样", kicker: "点击到付款", items: ["点击", "停留", "留资", "加群", "付款", "续费"], accent: BLUE },
+    { kind: "phone", seconds: 2.35, title: "第一笔钱不完整", kicker: "页面只显示当前价", items: ["体验价", "基础课", "工具费"], accent: GREEN },
+    { kind: "question", seconds: 1.4, title: "后面接什么？", kicker: "先看现金流", items: ["谁收钱", "收几次", "退出要什么"], accent: GOLD },
+  ],
+  3: [
+    { kind: "materials", seconds: 3.0, title: "材料可以很完整", kicker: "直播 / 老师 / 合同 / 案例", items: ["直播", "老师", "合同", "成功案例", "付款链接"], accent: BLUE },
+    { kind: "network", seconds: 3.0, title: "但关键数字没出现", kicker: "案例不是概率", items: ["总人数", "中位数", "失败者", "净利润"], accent: RED },
+    { kind: "contract", seconds: 2.8, title: "合同写的是责任", kicker: "承诺旁边看条件", items: ["退款条件", "交付清单", "续费维护", "违约条款"], accent: GOLD },
+    { kind: "form", seconds: 2.45, title: "页面写到，不等于到手对齐", kicker: "展示 / 下单 / 到手", items: ["样品特写", "套餐图", "批次不同"], accent: GREEN },
+    { kind: "question", seconds: 3.1, title: "如果我失败了，\n它已经赚了什么？", kicker: "主问题", items: ["学费", "设备", "原料", "软件"], accent: RED },
+  ],
+};
+
+const OpeningLabel: React.FC<{ children: string; color: string; small?: boolean }> = ({ children, color, small }) => (
+  <div style={{
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: small ? 42 : 52,
+    padding: small ? "0 16px" : "0 22px",
+    background: "rgba(255,255,255,0.08)",
+    border: `1px solid ${color}88`,
+    color: small ? "#efe8da" : color,
+    fontFamily: SANS,
+    fontSize: small ? 21 : 27,
+    fontWeight: 950,
+    boxShadow: `0 0 28px ${color}22`,
+  }}>
+    {children}
+  </div>
+);
+
+const OpeningTitle: React.FC<{ beat: OpeningBeat; vertical?: boolean; align?: "left" | "center" }> = ({ beat, vertical, align = "left" }) => (
+  <div style={{ fontFamily: SANS, color: FG, textAlign: align }}>
+    <div style={{
+      color: beat.accent,
+      fontSize: vertical ? 22 : 22,
+      fontWeight: 950,
+      letterSpacing: 2,
+      marginBottom: vertical ? 16 : 18,
+    }}>{beat.kicker}</div>
+    {beat.title.split("\n").map((line) => (
+      <div key={line} style={{
+        fontSize: vertical ? 64 : 76,
+        lineHeight: 1.04,
+        fontWeight: 950,
+        textShadow: `0 5px 0 rgba(0,0,0,0.36), 0 0 44px ${beat.accent}44`,
+        whiteSpace: vertical ? "normal" : "nowrap",
+      }}>{line}</div>
+    ))}
+  </div>
+);
+
+const OpeningPhone: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const y = Math.sin(frame / 28) * 10;
+  return (
+    <div style={{
+      position: "absolute",
+      left: vertical ? 88 : 180,
+      top: vertical ? 265 : 172,
+      width: vertical ? 455 : 420,
+      height: vertical ? 710 : 650,
+      borderRadius: 40,
+      background: "#101418",
+      border: "10px solid #252b31",
+      boxShadow: "0 40px 120px rgba(0,0,0,0.58)",
+      padding: 28,
+      translate: `0 ${y}px`,
+      fontFamily: SANS,
+      color: FG,
+    }}>
+      <div style={{ height: 44, borderRadius: 20, background: "#07090b", margin: "0 auto 28px", width: "42%" }} />
+      <div style={{ background: "#efe7d6", color: INK, borderRadius: 12, padding: 22, height: vertical ? 515 : 455 }}>
+        <div style={{ color: beat.accent, fontSize: 24, fontWeight: 950 }}>LIVE</div>
+        <div style={{ marginTop: 22, fontSize: vertical ? 48 : 46, fontWeight: 950, lineHeight: 1.05 }}>{beat.items[0]}</div>
+        <div style={{ marginTop: 22, height: 92, background: "#1f262d", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 950 }}>
+          {beat.items[1] ?? "进群"}
+        </div>
+        {(beat.items.slice(2).length ? beat.items.slice(2) : ["领取资料", "付款链接"]).map((item, i) => (
+          <div key={item} style={{
+            marginTop: 18,
+            height: 48,
+            display: "flex",
+            alignItems: "center",
+            borderBottom: "1px solid rgba(25,20,16,0.18)",
+            fontSize: 25,
+            fontWeight: 850,
+            opacity: fadeIn(frame, 8 + i * 5, 8),
+          }}>{item}</div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const OpeningForm: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const scan = interpolate(frame % 80, [0, 80], [0, vertical ? 545 : 420]);
+  return (
+    <div style={{
+      position: "absolute",
+      left: vertical ? 72 : 148,
+      top: vertical ? 310 : 170,
+      width: vertical ? 720 : 845,
+      height: vertical ? 620 : 510,
+      background: CARD,
+      color: INK,
+      border: `1px solid ${beat.accent}88`,
+      boxShadow: "0 36px 110px rgba(0,0,0,0.46)",
+      fontFamily: SANS,
+      padding: vertical ? 36 : 42,
+      rotate: "-2deg",
+    }}>
+      <div style={{ color: beat.accent, fontSize: 24, fontWeight: 950, marginBottom: 26 }}>{beat.kicker}</div>
+      <div style={{ fontSize: vertical ? 48 : 52, fontWeight: 950, marginBottom: 28 }}>{beat.title}</div>
+      {beat.items.map((item, i) => (
+        <div key={item} style={{
+          height: vertical ? 75 : 63,
+          display: "grid",
+          gridTemplateColumns: "150px 1fr",
+          alignItems: "center",
+          borderTop: "1px solid rgba(25,20,16,0.16)",
+          fontSize: vertical ? 30 : 28,
+          fontWeight: 850,
+        }}>
+          <span style={{ color: MUTED }}>{String(i + 1).padStart(2, "0")}</span>
+          <span>{item}</span>
+        </div>
+      ))}
+      <div style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: scan,
+        height: 4,
+        background: beat.accent,
+        opacity: 0.55,
+        boxShadow: `0 0 30px ${beat.accent}`,
+      }} />
+    </div>
+  );
+};
+
+const OpeningContract: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const zoom = interpolate(frame, [0, 22], [0.96, 1], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  return (
+    <div style={{
+      position: "absolute",
+      left: vertical ? 58 : 138,
+      top: vertical ? 260 : 132,
+      width: vertical ? 840 : 1050,
+      height: vertical ? 690 : 600,
+      scale: zoom,
+      fontFamily: SANS,
+    }}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={{
+          position: "absolute",
+          left: vertical ? 30 + i * 42 : 40 + i * 185,
+          top: vertical ? 56 + i * 58 : 38 + i * 42,
+          width: vertical ? 610 : 635,
+          height: vertical ? 480 : 475,
+          background: i === 1 ? "#efe7d6" : "#f8f2e6",
+          color: INK,
+          boxShadow: "0 34px 100px rgba(0,0,0,0.42)",
+          border: "1px solid rgba(35,28,20,0.18)",
+          rotate: `${[-6, 1, 7][i]}deg`,
+          padding: 34,
+          opacity: i === 0 ? 0.74 : 1,
+        }}>
+          <div style={{ color: beat.accent, fontSize: 23, fontWeight: 950 }}>{i === 2 ? "费用清单" : beat.kicker}</div>
+          <div style={{ marginTop: 20, fontSize: 42, lineHeight: 1.05, fontWeight: 950 }}>{i === 2 ? beat.title : "合作协议"}</div>
+          {beat.items.slice(0, 4).map((item, row) => (
+            <div key={item} style={{ marginTop: 22, height: 34, borderBottom: "1px solid rgba(25,20,16,0.18)", fontSize: 24, fontWeight: 850 }}>
+              {item}
+            </div>
+          ))}
+          {i === 2 && (
+            <div style={{
+              position: "absolute",
+              right: 34,
+              bottom: 34,
+              width: 160,
+              height: 82,
+              border: `8px solid ${RED}`,
+              color: RED,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 26,
+              fontWeight: 950,
+              rotate: "-8deg",
+            }}>另计</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const OpeningChat: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const items = beat.items.length ? beat.items : ["面试", "培训合同", "分期"];
+  return (
+    <div style={{
+      position: "absolute",
+      inset: vertical ? "260px 62px 150px" : "140px 150px 120px",
+      display: "grid",
+      gridTemplateColumns: vertical ? "1fr" : "0.95fr 1.05fr",
+      gap: 38,
+      fontFamily: SANS,
+      color: FG,
+    }}>
+      <div style={{ background: "#11161b", border: "1px solid rgba(255,255,255,0.16)", boxShadow: "0 36px 100px rgba(0,0,0,0.48)", padding: 34 }}>
+        <div style={{ color: beat.accent, fontSize: 24, fontWeight: 950, marginBottom: 28 }}>{beat.kicker}</div>
+        {items.map((item, i) => (
+          <div key={item} style={{
+            marginLeft: i % 2 ? 90 : 0,
+            marginBottom: 22,
+            padding: "18px 24px",
+            maxWidth: vertical ? 610 : 520,
+            background: i % 2 ? "#efe7d6" : "#26313a",
+            color: i % 2 ? INK : FG,
+            fontSize: vertical ? 31 : 31,
+            fontWeight: 900,
+            opacity: fadeIn(frame, 5 + i * 6, 8),
+          }}>{item}</div>
+        ))}
+      </div>
+      <div style={{ position: "relative", background: CARD, color: INK, boxShadow: "0 36px 100px rgba(0,0,0,0.48)", padding: 42 }}>
+        <div style={{ fontSize: vertical ? 54 : 64, lineHeight: 1.05, fontWeight: 950 }}>{beat.title}</div>
+        {["月入过万", "推荐就业", "零基础可做"].map((item, i) => (
+          <div key={item} style={{
+            marginTop: i === 0 ? 34 : 18,
+            width: i === 1 ? "72%" : "88%",
+            height: 52,
+            borderBottom: "1px solid rgba(25,20,16,0.18)",
+            display: "flex",
+            alignItems: "center",
+            color: i === 0 ? RED : INK,
+            fontSize: 30,
+            fontWeight: 900,
+            opacity: fadeIn(frame, 8 + i * 5, 8),
+          }}>{item}</div>
+        ))}
+        <div style={{ position: "absolute", left: 42, right: 42, bottom: 44, height: 112, border: `6px solid ${RED}`, display: "flex", alignItems: "center", justifyContent: "center", color: RED, fontSize: 32, fontWeight: 950 }}>
+          培训合同 / 分期账单
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const OpeningNetwork: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const centerX = vertical ? 540 : 960;
+  const centerY = vertical ? 620 : 520;
+  const positions = vertical
+    ? [[170, 340], [690, 330], [140, 760], [710, 795], [320, 935], [540, 220]]
+    : [[330, 260], [770, 190], [1270, 270], [430, 740], [920, 790], [1360, 650]];
+  return (
+    <div style={{ position: "absolute", inset: 0, fontFamily: SANS }}>
+      <svg style={{ position: "absolute", inset: 0, opacity: 0.92 }}>
+        {positions.slice(0, beat.items.length).map(([x, y], i) => (
+          <line key={i} x1={x} y1={y} x2={centerX} y2={centerY} stroke={beat.accent} strokeWidth={5} strokeDasharray="16 12" opacity={fadeIn(frame, 5 + i * 3, 8)} />
+        ))}
+      </svg>
+      <div style={{
+        position: "absolute",
+        left: centerX - (vertical ? 165 : 190),
+        top: centerY - (vertical ? 72 : 86),
+        width: vertical ? 330 : 380,
+        height: vertical ? 144 : 172,
+        background: "#0d1116",
+        color: FG,
+        border: `3px solid ${beat.accent}`,
+        boxShadow: `0 0 56px ${beat.accent}66, 0 30px 90px rgba(0,0,0,0.5)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        fontSize: vertical ? 42 : 48,
+        lineHeight: 1.05,
+        fontWeight: 950,
+      }}>{beat.title}</div>
+      {beat.items.map((item, i) => {
+        const [x, y] = positions[i] ?? positions[0];
+        return (
+          <div key={item} style={{
+            position: "absolute",
+            left: x - (vertical ? 105 : 120),
+            top: y - 36,
+            minWidth: vertical ? 210 : 240,
+            minHeight: 72,
+            padding: "0 22px",
+            background: i % 2 ? CARD : "#202a32",
+            color: i % 2 ? INK : FG,
+            border: `1px solid ${beat.accent}66`,
+            boxShadow: "0 22px 62px rgba(0,0,0,0.42)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: vertical ? 28 : 29,
+            fontWeight: 950,
+            opacity: fadeIn(frame, 5 + i * 4, 8),
+          }}>{item}</div>
+        );
+      })}
+    </div>
+  );
+};
+
+const OpeningMaterials: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => (
+  <div style={{
+    position: "absolute",
+    inset: vertical ? "230px 64px 135px" : "135px 120px 110px",
+    display: "grid",
+    gridTemplateColumns: vertical ? "1fr" : "0.9fr 1.1fr",
+    gap: 42,
+    alignItems: "center",
+    fontFamily: SANS,
+  }}>
+    <OpeningTitle beat={beat} vertical={vertical} />
+    <div style={{ position: "relative", height: vertical ? 620 : 620 }}>
+      {beat.items.map((item, i) => (
+        <div key={item} style={{
+          position: "absolute",
+          left: vertical ? 95 + (i % 2) * 270 : [20, 300, 590, 185, 470][i],
+          top: vertical ? 30 + Math.floor(i / 2) * 190 : [35, 0, 52, 305, 342][i],
+          width: vertical ? 250 : 300,
+          height: vertical ? 165 : 195,
+          background: i % 2 ? CARD : "#202a32",
+          color: i % 2 ? INK : FG,
+          border: `1px solid ${beat.accent}66`,
+          boxShadow: "0 30px 80px rgba(0,0,0,0.42)",
+          padding: 24,
+          rotate: `${[-5, 3, -2, 5, -4][i]}deg`,
+          opacity: fadeIn(frame, 6 + i * 4, 8),
+        }}>
+          <div style={{ color: beat.accent, fontSize: 21, fontWeight: 950 }}>材料 {String(i + 1).padStart(2, "0")}</div>
+          <div style={{ marginTop: 24, fontSize: vertical ? 32 : 34, fontWeight: 950 }}>{item}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const OpeningQuestion: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const pulse = 1 + Math.sin(frame / 18) * 0.012;
+  return (
+    <div style={{
+      position: "absolute",
+      inset: 0,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: SANS,
+      color: FG,
+      textAlign: "center",
+      padding: vertical ? "0 70px" : "0 190px",
+      background: "radial-gradient(circle at 50% 50%, rgba(217,74,58,0.2), transparent 48%)",
+    }}>
+      <OpeningLabel color={beat.accent}>{beat.kicker}</OpeningLabel>
+      <div style={{
+        marginTop: 34,
+        fontSize: vertical ? 76 : 92,
+        lineHeight: 1.05,
+        fontWeight: 950,
+        textShadow: `0 5px 0 rgba(0,0,0,0.44), 0 0 70px ${beat.accent}66`,
+        scale: pulse,
+      }}>
+        {beat.title.split("\n").map((line) => <div key={line}>{line}</div>)}
+      </div>
+      <div style={{ marginTop: 42, display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
+        {beat.items.map((item) => <OpeningLabel key={item} color={beat.accent} small>{item}</OpeningLabel>)}
+      </div>
+    </div>
+  );
+};
+
+const OpeningConcept: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  const positions = vertical
+    ? [[110, 330], [650, 330], [95, 800], [655, 800]]
+    : [[250, 260], [1330, 255], [345, 760], [1270, 760]];
+  return (
+    <div style={{ position: "absolute", inset: 0, fontFamily: SANS }}>
+      <div style={{
+        position: "absolute",
+        left: vertical ? 86 : 260,
+        right: vertical ? 86 : 260,
+        top: vertical ? 465 : 325,
+        textAlign: "center",
+      }}>
+        <OpeningTitle beat={beat} vertical={vertical} align="center" />
+        <div style={{
+          margin: "34px auto 0",
+          width: vertical ? 520 : 720,
+          height: 8,
+          background: `linear-gradient(90deg, transparent, ${beat.accent}, ${GOLD}, transparent)`,
+          boxShadow: `0 0 26px ${beat.accent}66`,
+        }} />
+      </div>
+      {beat.items.map((item, i) => {
+        const [left, top] = positions[i] ?? positions[0];
+        return (
+          <div key={item} style={{
+            position: "absolute",
+            left,
+            top: top + Math.sin((frame + i * 20) / 30) * 8,
+            width: vertical ? 260 : 310,
+            height: vertical ? 96 : 112,
+            background: i % 2 ? CARD : "#202a32",
+            color: i % 2 ? INK : FG,
+            border: `2px solid ${beat.accent}77`,
+            boxShadow: "0 28px 80px rgba(0,0,0,0.44)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: vertical ? 30 : 34,
+            fontWeight: 950,
+            opacity: fadeIn(frame, 6 + i * 4, 8),
+          }}>{item}</div>
+        );
+      })}
+    </div>
+  );
+};
+
+const OpeningVisual: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boolean }> = ({ beat, frame, vertical }) => {
+  if (beat.kind === "phone") return <OpeningPhone beat={beat} frame={frame} vertical={vertical} />;
+  if (beat.kind === "form") return <OpeningForm beat={beat} frame={frame} vertical={vertical} />;
+  if (beat.kind === "contract") return <OpeningContract beat={beat} frame={frame} vertical={vertical} />;
+  if (beat.kind === "chat") return <OpeningChat beat={beat} frame={frame} vertical={vertical} />;
+  if (beat.kind === "network") return <OpeningNetwork beat={beat} frame={frame} vertical={vertical} />;
+  if (beat.kind === "materials") return <OpeningMaterials beat={beat} frame={frame} vertical={vertical} />;
+  if (beat.kind === "question") return <OpeningQuestion beat={beat} frame={frame} vertical={vertical} />;
+  return <OpeningConcept beat={beat} frame={frame} vertical={vertical} />;
+};
+
+const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const beats = openingBeatPlans[scene.id] ?? openingBeatPlans[1];
+  const seconds = frame / fps;
+  let cursor = 0;
+  let beat = beats[beats.length - 1];
+  let beatStart = 0;
+  for (const candidate of beats) {
+    if (seconds < cursor + candidate.seconds) {
+      beat = candidate;
+      beatStart = cursor;
+      break;
+    }
+    cursor += candidate.seconds;
+    beatStart = cursor;
+  }
+  const beatFrame = frame - Math.round(beatStart * fps);
+  const cutFlash = interpolate(beatFrame, [0, 5], [0.22, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill>
+      <BackdropTexture scene={{ ...scene, title: beat.title, items: beat.items, accent: beat.accent }} vertical={vertical} />
+      <div style={{
+        position: "absolute",
+        top: vertical ? 70 : 45,
+        left: vertical ? 56 : 72,
+        right: vertical ? 56 : 72,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        fontFamily: SANS,
+        fontSize: vertical ? 23 : 22,
+        fontWeight: 950,
+        letterSpacing: 2,
+        color: MUTED,
+      }}>
+        <span style={{ color: beat.accent }}>{scene.chapter}</span>
+        <span>{String(scene.id).padStart(2, "0")} / OPEN</span>
+      </div>
+      <OpeningVisual beat={beat} frame={beatFrame} vertical={vertical} />
+      {(beat.kind === "concept" || beat.kind === "network" || beat.kind === "materials") && <PresenterWindow compact vertical={vertical} />}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: beat.accent,
+        opacity: cutFlash,
+        pointerEvents: "none",
+      }} />
+      <div style={{
+        position: "absolute",
+        left: vertical ? 58 : 74,
+        bottom: vertical ? 54 : 48,
+        width: vertical ? 280 : 380,
+        height: 5,
+        background: `linear-gradient(90deg, ${beat.accent}, transparent)`,
+        opacity: 0.85,
+      }} />
+      {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
+    </AbsoluteFill>
+  );
+};
+
 const CompareScene: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
   const frame = useCurrentFrame();
   const mid = Math.ceil(scene.items.length / 2);
@@ -920,6 +1457,9 @@ const TitleCollageScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerC
 };
 
 const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
+  if (scene.id <= 3) {
+    return <OpeningBeatScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
+  }
   if (scene.kind === "title" || scene.id <= 5) {
     return <TitleCollageScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
   }
