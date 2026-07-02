@@ -6,11 +6,25 @@ from pathlib import Path
 
 def extract_spoken(path: Path) -> list[str]:
     lines = []
+    skipped_prefixes = (
+        "范围：",
+        "范围:",
+        "原则：",
+        "原则:",
+        "预估时长：",
+        "预估时长:",
+        "用途：",
+        "用途:",
+        "注意：",
+        "注意:",
+    )
     for raw in path.read_text(encoding="utf-8").splitlines():
         text = raw.strip()
         if not text:
             continue
         if text.startswith(("#", "|", "---", "```", "【")):
+            continue
+        if text.startswith(skipped_prefixes):
             continue
         if text[:1].isdigit() and ("：" in text[:6] or ":" in text[:6]):
             continue

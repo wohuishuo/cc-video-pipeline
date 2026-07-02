@@ -846,7 +846,7 @@ const SceneBody: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vert
   return <EvidenceCollage scene={scene} vertical={vertical} withPresenter={scene.kind === "title" || scene.kind === "grid"} />;
 };
 
-const DossierScene: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+const DossierScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
   const color = scene.accent ?? BLUE;
   const presenterSide = scene.kind === "compare" || scene.kind === "table" ? "left" : "right";
   const needsLargePresenter = scene.kind === "compare" || scene.kind === "table";
@@ -883,12 +883,12 @@ const DossierScene: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, v
         background: color,
         boxShadow: `0 0 24px ${color}`,
       }} />
-      <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />
+      {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
     </AbsoluteFill>
   );
 };
 
-const TitleCollageScene: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+const TitleCollageScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
   const frame = useCurrentFrame();
   const y = interpolate(frame, [0, 18], [28, 0], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
   return (
@@ -914,25 +914,26 @@ const TitleCollageScene: React.FC<{ scene: Scene; vertical?: boolean }> = ({ sce
         </div>
       </div>
       <PresenterWindow compact vertical={vertical} />
-      <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />
+      {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
     </AbsoluteFill>
   );
 };
 
-const SceneCard: React.FC<{ scene: Scene; vertical?: boolean }> = ({ scene, vertical }) => {
+const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
   if (scene.kind === "title" || scene.id <= 5) {
-    return <TitleCollageScene scene={scene} vertical={vertical} />;
+    return <TitleCollageScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
   }
-  return <DossierScene scene={scene} vertical={vertical} />;
+  return <DossierScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
 };
 
 export const informationGapBaseSeconds = 1800;
-export const informationGapNarrationSeconds = 1400.618118;
+export const informationGapNarrationSeconds = 1380.098;
 
-export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: number; withAudio?: boolean }> = ({
+export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: number; withAudio?: boolean; showLowerCaption?: boolean }> = ({
   vertical = false,
   timelineSeconds = informationGapBaseSeconds,
   withAudio = false,
+  showLowerCaption = false,
 }) => {
   const totalFrames = Math.ceil(timelineSeconds * FPS);
   const sceneScale = timelineSeconds / informationGapBaseSeconds;
@@ -946,7 +947,7 @@ export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: nu
           from={Math.round(scene.start * sceneScale * FPS)}
           durationInFrames={Math.round((scene.end - scene.start) * sceneScale * FPS) + 8}
         >
-          <SceneCard scene={scene} vertical={vertical} />
+          <SceneCard scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />
         </Sequence>
       ))}
     </AbsoluteFill>

@@ -30,7 +30,7 @@ information-gap-audio
 |---|---:|---:|---:|
 | `information-gap` | 1920x1080 | 1800 秒 | 30 |
 | `information-gap-vertical` | 1080x1920 | 1800 秒 | 30 |
-| `information-gap-audio` | 1920x1080 | 1400.63 秒 | 30 |
+| `information-gap-audio` | 1920x1080 | 1380.10 秒 | 30 |
 
 ## 已验证命令
 
@@ -51,7 +51,7 @@ npx remotion compositions src/root.tsx
 ```text
 information-gap             30      1920x1080      54000
 information-gap-vertical    30      1080x1920      54000
-information-gap-audio       30      1920x1080      42019
+information-gap-audio       30      1920x1080      41403
 ```
 
 导出静帧：
@@ -179,6 +179,7 @@ visual-cards.md G04
 已做：
 
 - 使用 Nahida so-vits 批量生成口播。
+- TTS 抽稿会跳过 `范围/原则/预估时长/画面提示` 等生产备注。
 - 使用 Remotion 场景边界插入停顿。
 - 生成低频音乐床并和口播混合。
 
@@ -224,18 +225,17 @@ Copy-Item .\projects\information-gap-business\audio\information-gap-nahida-sovit
 
 ```powershell
 cd C:\Users\艾莉\Videos\cc视频剪辑\tools\remotion-hello
-npx remotion render src/root.tsx information-gap-audio audio-preview-30s.mp4 --frames=0-899 --codec=h264
+npx remotion render src/root.tsx information-gap-audio audio-preview-30s-fixed.mp4 --frames=0-899 --codec=h264
 ```
 
 已验证：
 
 ```text
-tools/remotion-hello/audio-preview-30s.mp4
+tools/remotion-hello/audio-preview-30s-fixed.mp4
 duration=30.058667
 video=h264
 audio=aac
-mean_volume=-25.1 dB
-max_volume=-10.0 dB
+底部伪字幕已关闭；正式字幕必须等台词级 timing 后再加。
 ```
 
 ### 5. 加字幕
