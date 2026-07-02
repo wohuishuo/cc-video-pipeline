@@ -787,35 +787,39 @@ type OpeningBeatKind = "concept" | "phone" | "form" | "contract" | "chat" | "net
 
 type OpeningBeat = {
   kind: OpeningBeatKind;
-  seconds: number;
   title: string;
   kicker: string;
   items: string[];
   accent: string;
 };
 
-const openingBeatPlans: Record<number, OpeningBeat[]> = {
-  1: [
-    { kind: "concept", seconds: 2.35, title: "你刷到过这种东西吗？", kicker: "OPEN 01", items: ["9.9 体验课", "1 元鸡蛋", "低价加盟", "高薪兼职"], accent: BLUE },
-    { kind: "phone", seconds: 2.25, title: "9.9 只是入口", kicker: "直播间 / 体验课", items: ["限时 9.9", "评论区留 1", "进群领资料"], accent: GOLD },
-    { kind: "form", seconds: 2.2, title: "低价换登记", kicker: "社区活动 / 表单", items: ["姓名", "电话", "住址", "社群"], accent: GREEN },
-    { kind: "question", seconds: 1.2, title: "它先拿到什么？", kicker: "问题先放这里", items: ["点击", "留资", "加群"], accent: RED },
-  ],
-  2: [
-    { kind: "contract", seconds: 2.4, title: "低价加盟", kicker: "合同桌面", items: ["加盟费", "设备", "原料", "装修"], accent: GOLD },
-    { kind: "chat", seconds: 2.35, title: "高薪兼职", kicker: "招聘页 / 聊天框", items: ["面试", "能力不足", "培训合同", "分期"], accent: RED },
-    { kind: "network", seconds: 3.1, title: "四个入口，动作一样", kicker: "点击到付款", items: ["点击", "停留", "留资", "加群", "付款", "续费"], accent: BLUE },
-    { kind: "phone", seconds: 2.35, title: "第一笔钱不完整", kicker: "页面只显示当前价", items: ["体验价", "基础课", "工具费"], accent: GREEN },
-    { kind: "question", seconds: 1.4, title: "后面接什么？", kicker: "先看现金流", items: ["谁收钱", "收几次", "退出要什么"], accent: GOLD },
-  ],
-  3: [
-    { kind: "materials", seconds: 3.0, title: "材料可以很完整", kicker: "直播 / 老师 / 合同 / 案例", items: ["直播", "老师", "合同", "成功案例", "付款链接"], accent: BLUE },
-    { kind: "network", seconds: 3.0, title: "但关键数字没出现", kicker: "案例不是概率", items: ["总人数", "中位数", "失败者", "净利润"], accent: RED },
-    { kind: "contract", seconds: 2.8, title: "合同写的是责任", kicker: "承诺旁边看条件", items: ["退款条件", "交付清单", "续费维护", "违约条款"], accent: GOLD },
-    { kind: "form", seconds: 2.45, title: "页面写到，不等于到手对齐", kicker: "展示 / 下单 / 到手", items: ["样品特写", "套餐图", "批次不同"], accent: GREEN },
-    { kind: "question", seconds: 3.1, title: "如果我失败了，\n它已经赚了什么？", kicker: "主问题", items: ["学费", "设备", "原料", "软件"], accent: RED },
-  ],
-};
+type TimedOpeningBeat = OpeningBeat & { start: number; end: number };
+
+const openingGlobalBeats: TimedOpeningBeat[] = [
+  { start: 0, end: 1.7, kind: "concept", title: "你刷到过这种东西吗？", kicker: "OPEN 01", items: ["9.9 体验课", "1 元鸡蛋", "低价加盟", "高薪兼职"], accent: BLUE },
+  { start: 1.7, end: 5.2, kind: "phone", title: "9.9 体验课", kicker: "直播间 / AI 剪辑课", items: ["限时 9.9", "三天学会", "学完接单"], accent: GOLD },
+  { start: 5.2, end: 8.9, kind: "form", title: "一块钱领鸡蛋", kicker: "到店 / 登记 / 加群", items: ["姓名", "年龄", "电话", "微信群二维码"], accent: GREEN },
+  { start: 8.9, end: 13.7, kind: "contract", title: "奶茶加盟展", kicker: "扶持名额 / 今天签约", items: ["设备", "选址", "装修", "开业推广"], accent: GOLD },
+  { start: 13.7, end: 18.8, kind: "chat", title: "高薪兼职", kicker: "招聘页 / 面试聊天", items: ["不限经验", "居家办公", "月入过万", "先培训"], accent: RED },
+  { start: 18.8, end: 22.4, kind: "network", title: "四个入口，动作一样", kicker: "入口不是终点", items: ["点击", "留资", "加群", "付款", "签合同", "培训"], accent: BLUE },
+  { start: 22.4, end: 26.0, kind: "question", title: "麻烦的是：\n它不是一眼假", kicker: "关键句", items: ["课上了", "群建了", "合同签了"], accent: RED },
+  { start: 26.0, end: 31.6, kind: "materials", title: "材料可以很完整", kicker: "直播 / 老师 / 合同 / 案例", items: ["直播", "老师", "合同", "成功案例", "付款链接"], accent: BLUE },
+  { start: 31.6, end: 35.8, kind: "question", title: "先不问：\n它是不是骗局", kicker: "问题换掉", items: ["不猜动机", "只看账单", "只看交付"], accent: GOLD },
+  { start: 35.8, end: 45.2, kind: "question", title: "如果我没赚到钱，\n它已经赚了什么？", kicker: "主问题", items: ["学费", "加盟费", "设备", "软件"], accent: RED },
+];
+
+const openingCaptions = [
+  { start: 0.0, end: 1.7, text: "你刷到过这种东西吗？" },
+  { start: 1.7, end: 5.2, text: "9 块 9 的体验课，三天学会 AI 剪辑，学完就能接单。" },
+  { start: 5.2, end: 8.9, text: "一块钱领鸡蛋，顺便登记姓名、年龄、电话，再加微信群。" },
+  { start: 8.9, end: 13.7, text: "加盟展上说今天签约，设备、选址、装修、推广都能安排。" },
+  { start: 13.7, end: 18.8, text: "招聘软件上写高薪兼职，不限经验，居家办公，月入过万。" },
+  { start: 18.8, end: 22.4, text: "聊到最后，对方说你基础差一点，先培训，之后再安排项目。" },
+  { start: 22.4, end: 26.0, text: "这些东西最麻烦的地方，不是它们一眼假。" },
+  { start: 26.0, end: 31.6, text: "恰恰相反，它们常常有直播、老师、合同、成功案例和付款链接。" },
+  { start: 31.6, end: 35.8, text: "所以这期视频，我们先不问：它到底是不是骗局。" },
+  { start: 35.8, end: 45.2, text: "我们只问一个更具体的问题：如果我没赚到钱，它已经赚了什么？" },
+];
 
 const OpeningLabel: React.FC<{ children: string; color: string; small?: boolean }> = ({ children, color, small }) => (
   <div style={{
@@ -1241,24 +1245,18 @@ const OpeningVisual: React.FC<{ beat: OpeningBeat; frame: number; vertical?: boo
   return <OpeningConcept beat={beat} frame={frame} vertical={vertical} />;
 };
 
-const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
+const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean; globalStartFrame: number }> = ({
+  scene,
+  vertical,
+  showLowerCaption,
+  globalStartFrame,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const beats = openingBeatPlans[scene.id] ?? openingBeatPlans[1];
-  const seconds = frame / fps;
-  let cursor = 0;
-  let beat = beats[beats.length - 1];
-  let beatStart = 0;
-  for (const candidate of beats) {
-    if (seconds < cursor + candidate.seconds) {
-      beat = candidate;
-      beatStart = cursor;
-      break;
-    }
-    cursor += candidate.seconds;
-    beatStart = cursor;
-  }
-  const beatFrame = frame - Math.round(beatStart * fps);
+  const globalFrame = globalStartFrame + frame;
+  const seconds = globalFrame / fps;
+  const beat = openingGlobalBeats.find((candidate) => seconds >= candidate.start && seconds < candidate.end) ?? openingGlobalBeats[openingGlobalBeats.length - 1];
+  const beatFrame = globalFrame - Math.round(beat.start * fps);
   const cutFlash = interpolate(beatFrame, [0, 5], [0.22, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill>
@@ -1300,6 +1298,36 @@ const OpeningBeatScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerCa
       }} />
       {showLowerCaption && <LowerCaption text={scene.subtitle ?? scene.title} vertical={vertical} />}
     </AbsoluteFill>
+  );
+};
+
+const CaptionLayer: React.FC<{ vertical?: boolean }> = ({ vertical }) => {
+  const frame = useCurrentFrame();
+  const seconds = frame / FPS;
+  const caption = openingCaptions.find((item) => seconds >= item.start && seconds < item.end);
+  if (!caption) return null;
+  return (
+    <div style={{
+      position: "absolute",
+      left: vertical ? 70 : 260,
+      right: vertical ? 70 : 260,
+      bottom: vertical ? 70 : 48,
+      minHeight: vertical ? 98 : 66,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      textAlign: "center",
+      fontFamily: SANS,
+      fontSize: vertical ? 38 : 42,
+      lineHeight: 1.22,
+      color: "#fff",
+      fontWeight: 950,
+      textShadow: "0 4px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 0 0 16px rgba(0,0,0,0.9)",
+      padding: "0 18px",
+      pointerEvents: "none",
+    }}>
+      {caption.text}
+    </div>
   );
 };
 
@@ -1456,9 +1484,14 @@ const TitleCollageScene: React.FC<{ scene: Scene; vertical?: boolean; showLowerC
   );
 };
 
-const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean }> = ({ scene, vertical, showLowerCaption }) => {
-  if (scene.id <= 3) {
-    return <OpeningBeatScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
+const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?: boolean; globalStartFrame: number }> = ({
+  scene,
+  vertical,
+  showLowerCaption,
+  globalStartFrame,
+}) => {
+  if (scene.id <= 4) {
+    return <OpeningBeatScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} globalStartFrame={globalStartFrame} />;
   }
   if (scene.kind === "title" || scene.id <= 5) {
     return <TitleCollageScene scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />;
@@ -1467,7 +1500,7 @@ const SceneCard: React.FC<{ scene: Scene; vertical?: boolean; showLowerCaption?:
 };
 
 export const informationGapBaseSeconds = 1800;
-export const informationGapNarrationSeconds = 1380.098;
+export const informationGapNarrationSeconds = 1379.368;
 
 export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: number; withAudio?: boolean; showLowerCaption?: boolean }> = ({
   vertical = false,
@@ -1481,15 +1514,19 @@ export const InformationGap: React.FC<{ vertical?: boolean; timelineSeconds?: nu
     <AbsoluteFill style={{ background: BG }}>
       <Progress totalFrames={totalFrames} />
       {withAudio && <Audio src={staticFile("audio/information-gap-nahida-sovits-mix.wav")} />}
-      {scenes.map((scene) => (
-        <Sequence
-          key={scene.id}
-          from={Math.round(scene.start * sceneScale * FPS)}
-          durationInFrames={Math.round((scene.end - scene.start) * sceneScale * FPS) + 8}
-        >
-          <SceneCard scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} />
-        </Sequence>
-      ))}
+      {scenes.map((scene) => {
+        const from = Math.round(scene.start * sceneScale * FPS);
+        return (
+          <Sequence
+            key={scene.id}
+            from={from}
+            durationInFrames={Math.round((scene.end - scene.start) * sceneScale * FPS) + 8}
+          >
+            <SceneCard scene={scene} vertical={vertical} showLowerCaption={showLowerCaption} globalStartFrame={from} />
+          </Sequence>
+        );
+      })}
+      <CaptionLayer vertical={vertical} />
     </AbsoluteFill>
   );
 };

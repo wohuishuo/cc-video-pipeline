@@ -47,7 +47,7 @@ def make_silence(path: Path, seconds: float, sr: int = 44100) -> None:
 
 
 def render_music(path: Path, seconds: float) -> None:
-    # Original restrained bed: low drone, soft upper tone, filtered texture.
+    # Audible restrained bed: low drone, soft upper tone, filtered texture.
     run([
         "ffmpeg", "-y",
         "-f", "lavfi",
@@ -116,6 +116,8 @@ def main() -> None:
             pause = max(pause, 0.55)
         if scene["id"] in {4, 5, 10, 14, 18, 27, 30, 32, 38}:
             pause = max(pause, 0.9)
+        if scene["start"] < 45:
+            pause = 0.0
         boundaries.append((boundary, pause))
 
     for boundary, pause in boundaries:
@@ -131,7 +133,8 @@ def main() -> None:
             str(segment),
         ])
         concat_lines.append(f"file '{segment.as_posix()}'")
-        concat_lines.append(f"file '{silence_file(pause).as_posix()}'")
+        if pause > 0.001:
+            concat_lines.append(f"file '{silence_file(pause).as_posix()}'")
         segment_index += 1
         last = boundary
 
@@ -160,8 +163,8 @@ def main() -> None:
         "-i", str(music),
         "-filter_complex",
         "[0:a]acompressor=threshold=-18dB:ratio=2.2:attack=8:release=120,volume=1.05[v];"
-        "[1:a]volume=0.56[m];"
-        "[v][m]amix=inputs=2:duration=first:weights=1 0.55,alimiter=limit=0.95[out]",
+        "[1:a]volume=0.95[m];"
+        "[v][m]amix=inputs=2:duration=first:weights=1 0.75,alimiter=limit=0.95[out]",
         "-map", "[out]",
         "-c:a", "pcm_s16le",
         str(out),
