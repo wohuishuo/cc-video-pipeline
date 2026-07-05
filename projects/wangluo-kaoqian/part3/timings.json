@@ -1,0 +1,577 @@
+{
+  "part_no": 3,
+  "part_title": "网络层 Network Layer",
+  "total": 788.36,
+  "entries": [
+    {
+      "id": "N1",
+      "title_en": "ARP vs RARP",
+      "title_zh": "",
+      "question_en": "______ solves the problem of finding out which Ethernet address corresponds to a given IP address. A. ARP　B. RARP　C. BOOTP　D. DHCP",
+      "answer": "A. ARP（地址解析协议）",
+      "conclusion": "ARP = 已知IP → 求MAC；RARP = 已知MAC → 求IP。",
+      "table": {
+        "header": [
+          "协议",
+          "输入",
+          "输出",
+          "用途"
+        ],
+        "rows": [
+          [
+            "**ARP**",
+            "IP地址",
+            "MAC地址",
+            "✅ 局域网内通信必用"
+          ],
+          [
+            "RARP",
+            "MAC地址",
+            "IP地址",
+            "早期无盘工作站"
+          ],
+          [
+            "DHCP",
+            "—",
+            "IP+配置",
+            "动态分配IP"
+          ],
+          [
+            "BOOTP",
+            "MAC",
+            "IP（静态）",
+            "DHCP前身"
+          ]
+        ]
+      },
+      "start": 0.0,
+      "end": 25.38,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "______ solves the problem of finding out which Ethernet address corresponds to a given IP address. A. ARP　B. RARP　C. BOOTP　D. DHCP",
+          "start": 0.0,
+          "end": 13.92
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 A. ARP（地址解析协议）。ARP = 已知IP → 求MAC；RARP = 已知MAC → 求IP。",
+          "start": 14.17,
+          "end": 25.13
+        }
+      ]
+    },
+    {
+      "id": "N2",
+      "title_en": "IP Fragmentation Offset",
+      "title_zh": "IP分片偏移",
+      "question_en": "Consider sending a 4000-byte IP datagram packet (header length is 20 bytes) into a link that has an MTU of 1500 bytes. The fragment offset fields of the IP header in first packet transmitted over the link is ______.",
+      "answer": "0",
+      "conclusion": "第一个分片的片偏移字段永远是0，因为它从原始数据的起始位置开始。",
+      "table": null,
+      "start": 25.73,
+      "end": 51.35,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Consider sending a 4000-byte IP datagram packet (header length is 20 bytes) into a link that has an MTU of 1500 bytes. The fragment offset fields of the IP header in first packet transmitted over the link is ______.",
+          "start": 25.73,
+          "end": 41.57
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 0。第一个分片的片偏移字段永远是0，因为它从原始数据的起始位置开始。",
+          "start": 41.82,
+          "end": 51.1
+        }
+      ]
+    },
+    {
+      "id": "N3",
+      "title_en": "IP Fragmentation — Identification Field",
+      "title_zh": "",
+      "question_en": "In IPv4 header, the ______ field is needed to allow the destination host to determine which datagram a newly arrived fragment belongs to. 1. fragment offset　2. source IP address　3. identification　4. time to live",
+      "answer": "3. Identification（标识字段）",
+      "conclusion": "同一原始数据报的所有分片有相同的 Identification 值，目的端靠它把分片重组在一起。",
+      "table": null,
+      "start": 51.7,
+      "end": 85.8,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "In IPv4 header, the ______ field is needed to allow the destination host to determine which datagram a newly arrived fragment belongs to. 1. fragment offset　2. source IP address　3. identification　4. time to live",
+          "start": 51.7,
+          "end": 70.42
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 3. Identification（标识字段）。同一原始数据报的所有分片有相同的 Identification 值，目的端靠它把分片重组在一起。",
+          "start": 70.67,
+          "end": 85.55
+        }
+      ]
+    },
+    {
+      "id": "N4",
+      "title_en": "IP Fragment Offset Values",
+      "title_zh": "分片偏移值计算",
+      "question_en": "Suppose a router receives an IP packet containing 600 data bytes and has to forward the packet to a network with MTU of 200 bytes. Assume that IP header is 20 bytes long. What are fragment offset values for divided packets? 1. 22, 44, 66, 88　2. 22, 44, 66　3. 0, 22, 44　4. 0, 22, 44, 66",
+      "answer": "3. 0, 22, 44",
+      "conclusion": "计算：每片最多数据 = 200-20 = 180 字节。 第1片：数据0~179，偏移 = 0÷8 = 0 第2片：数据180~359，偏移 = 180÷8 = 22.5 → 实际取 176字节（22×8），偏移字段=22 第3片：数据352~599（剩余248字节），偏移 = 352÷8 = 44 共3片，偏移分别为 0, 22, 44。",
+      "table": null,
+      "start": 86.15,
+      "end": 160.17,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Suppose a router receives an IP packet containing 600 data bytes and has to forward the packet to a network with MTU of 200 bytes. Assume that IP header is 20 bytes long. What are fragment offset values for divided packets? 1. 22, 44, 66, 88　2. 22, 44, 66　3. 0, 22, 44　4. 0, 22, 44, 66",
+          "start": 86.15,
+          "end": 118.71
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 3. 0, 22, 44。计算：每片最多数据 = 200-20 = 180 字节。 第1片：数据0~179，偏移 = 0÷8 = 0 第2片：数据180~359，偏移 = 180÷8 = 22.5 → 实际取 176字节（22×8），偏移字段=22 第3片：数据352~599（剩余248字节），偏移 = 352÷8 = 44 共3片，偏移分别为 0, 22, 44。",
+          "start": 118.96,
+          "end": 159.92
+        }
+      ]
+    },
+    {
+      "id": "N5",
+      "title_en": "RIP Routing Update",
+      "title_zh": "RIP路由更新",
+      "question_en": "Suppose RIP routing protocol is used. Router D's routing table has: Dest=Z, Next hop=B, Hops=7. Router D receives from router A: Dest=Z, Next hop=C, Hops=4. What is D's new routing table entry for Z?",
+      "answer": "Next hop = A，Hops = 5",
+      "conclusion": "D 收到 A 的信息\"到Z经C需4跳\"，D 到 A 自身需1跳，所以总共 4+1=5 跳，比原来的7跳少，更新。下一跳是 A（不是C，因为是A告诉我们的）。",
+      "table": null,
+      "start": 160.52,
+      "end": 205.1,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Suppose RIP routing protocol is used. Router D's routing table has: Dest=Z, Next hop=B, Hops=7. Router D receives from router A: Dest=Z, Next hop=C, Hops=4. What is D's new routing table entry for Z?",
+          "start": 160.52,
+          "end": 182.52
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 Next hop = A，Hops = 5。D 收到 A 的信息\"到Z经C需4跳\"，D 到 A 自身需1跳，所以总共 4+1=5 跳，比原来的7跳少，更新。下一跳是 A（不是C，因为是A告诉我们的）。",
+          "start": 182.77,
+          "end": 204.85
+        }
+      ]
+    },
+    {
+      "id": "N6",
+      "title_en": "Router: Routing vs Forwarding",
+      "title_zh": "",
+      "question_en": "A router has two processes inside it. One of them is responsible for filling in and updating the routing tables. This process is ______. A. routing　B. forwarding　C. processing　D. queuing",
+      "answer": "A. routing（路由）",
+      "conclusion": "维护路由表 = routing（路由进程）；按路由表转发数据包 = forwarding（转发进程）。",
+      "table": {
+        "header": [
+          "进程",
+          "英文",
+          "职责"
+        ],
+        "rows": [
+          [
+            "**路由进程**",
+            "**Routing**",
+            "✅ 运行路由算法，填写和更新路由表"
+          ],
+          [
+            "转发进程",
+            "Forwarding",
+            "查路由表，把包从入端口送出端口"
+          ]
+        ]
+      },
+      "start": 205.45,
+      "end": 233.87,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "A router has two processes inside it. One of them is responsible for filling in and updating the routing tables. This process is ______. A. routing　B. forwarding　C. processing　D. queuing",
+          "start": 205.45,
+          "end": 221.93
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 A. routing（路由）。维护路由表 = routing（路由进程）；按路由表转发数据包 = forwarding（转发进程）。",
+          "start": 222.18,
+          "end": 233.62
+        }
+      ]
+    },
+    {
+      "id": "N7",
+      "title_en": "Route Aggregation",
+      "title_zh": "路由聚合",
+      "question_en": "A router has just received the following new IP addresses: 57.6.96.0/21, 57.6.104.0/21, 57.6.112.0/21, and 57.6.120.0/21. If all of them use the same outgoing line, they be aggregated to ______.",
+      "answer": "57.6.96.0/19",
+      "conclusion": "计算（看第三字节二进制）： ` = 0110 0000 = 0110 1000 = 0111 0000 = 0111 1000 ` 前3位相同（011），掩码 = 8+8+3 = /19，网络地址取最小 = 57.6.96.0/19",
+      "table": null,
+      "start": 234.22,
+      "end": 287.76,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "A router has just received the following new IP addresses: 57.6.96.0/21, 57.6.104.0/21, 57.6.112.0/21, and 57.6.120.0/21. If all of them use the same outgoing line, they be aggregated to ______.",
+          "start": 234.22,
+          "end": 258.78
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 57.6.96.0/19。计算（看第三字节二进制）： ` = 0110 0000 = 0110 1000 = 0111 0000 = 0111 1000 ` 前3位相同（011），掩码 = 8+8+3 = /19，网络地址取最小 = 57.6.96.0/19",
+          "start": 259.03,
+          "end": 287.51
+        }
+      ]
+    },
+    {
+      "id": "N8",
+      "title_en": "Route Aggregation",
+      "title_zh": "200.23.x.x",
+      "question_en": "The IP addresses 200.23.16.0/23, 200.23.18.0/23, 200.23.20.0/23 and 200.23.22.0/23 can be aggregated into ______. (Choose two.) 1. 200.23.16.0/20　2. 200.23.16.0/22　3. 200.23.8.0/21　4. 200.23.16.0/21",
+      "answer": "1 和 4（200.23.16.0/20 和 200.23.16.0/21）",
+      "conclusion": "计算（第三字节）： ` = 0001 0000 = 0001 0010 = 0001 0100 = 0001 0110 ` 前5位相同（00010）→ /21；前4位也相同（0001）→ /20（更大的块也包含这四个）",
+      "table": null,
+      "start": 288.11,
+      "end": 359.09,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "The IP addresses 200.23.16.0/23, 200.23.18.0/23, 200.23.20.0/23 and 200.23.22.0/23 can be aggregated into ______. (Choose two.) 1. 200.23.16.0/20　2. 200.23.16.0/22　3. 200.23.8.0/21　4. 200.23.16.0/21",
+          "start": 288.11,
+          "end": 327.71
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 1 和 4（200.23.16.0/20 和 200.23.16.0/21）。计算（第三字节）： ` = 0001 0000 = 0001 0010 = 0001 0100 = 0001 0110 ` 前5位相同（00010）→ /21；前4位也相同（0001）→ /20（更大的块也包含这四个）",
+          "start": 327.96,
+          "end": 358.84
+        }
+      ]
+    },
+    {
+      "id": "N9",
+      "title_en": "Route Aggregation — Incorrect Statement",
+      "title_zh": "",
+      "question_en": "Which of the following is incorrect about Route Aggregation? 1. Route aggregation is a technique used to decrease the number of routes in the routing table 2. Route aggregation will slow down the process of routing table lookups on the router 3. Route aggregation is accomplished by configuring the routing protocol to advertise the summary route 4. Contiguous blocks of specific routes may be summarized",
+      "answer": "2（错误说法）",
+      "conclusion": "路由聚合会让路由表更小，查找更快，而不是\"变慢\"。选项2是错的。",
+      "table": null,
+      "start": 359.44,
+      "end": 402.66,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which of the following is incorrect about Route Aggregation? 1. Route aggregation is a technique used to decrease the number of routes in the routing table 2. Route aggregation will slow down the process of routing table lookups on the router 3. Route aggregation is accomplished by configuring the routing protocol to advertise the summary route 4. Contiguous blocks of specific routes may be summarized",
+          "start": 359.44,
+          "end": 389.12
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2（错误说法）。路由聚合会让路由表更小，查找更快，而不是\"变慢\"。选项2是错的。",
+          "start": 389.37,
+          "end": 402.41
+        }
+      ]
+    },
+    {
+      "id": "N10",
+      "title_en": "Default Route",
+      "title_zh": "默认路由",
+      "question_en": "Which route allows a router to forward packets even though its routing table contains no specific route to the destination? 1. 0.0.0.0/32　2. 127.0.0.0/8　3. 127.0.0.1/32　4. none　5. 0.0.0.0/0",
+      "answer": "5. 0.0.0.0/0",
+      "conclusion": "0.0.0.0/0 是默认路由，前缀长度为0，匹配任何地址，当没有更具体的路由时使用。",
+      "table": null,
+      "start": 403.01,
+      "end": 442.39,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which route allows a router to forward packets even though its routing table contains no specific route to the destination? 1. 0.0.0.0/32　2. 127.0.0.0/8　3. 127.0.0.1/32　4. none　5. 0.0.0.0/0",
+          "start": 403.01,
+          "end": 430.77
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 5. 0.0.0.0/0。0.0.0.0/0 是默认路由，前缀长度为0，匹配任何地址，当没有更具体的路由时使用。",
+          "start": 431.02,
+          "end": 442.14
+        }
+      ]
+    },
+    {
+      "id": "N11",
+      "title_en": "IP Packet Delivery Characteristics",
+      "title_zh": "IP包交付特性",
+      "question_en": "Which of the following describe the IP packet delivery layer? (Choose two.) 1. Best Effort　2. Reliable　3. Connectionless　4. Streaming",
+      "answer": "1. Best Effort + 3. Connectionless",
+      "conclusion": "IP 是无连接（Connectionless）、尽力而为（Best Effort）的服务，不保证可靠交付，不保序。",
+      "table": null,
+      "start": 442.74,
+      "end": 473.16,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which of the following describe the IP packet delivery layer? (Choose two.) 1. Best Effort　2. Reliable　3. Connectionless　4. Streaming",
+          "start": 442.74,
+          "end": 456.26
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 1. Best Effort + 3. Connectionless。IP 是无连接（Connectionless）、尽力而为（Best Effort）的服务，不保证可靠交付，不保序。",
+          "start": 456.51,
+          "end": 472.91
+        }
+      ]
+    },
+    {
+      "id": "N12",
+      "title_en": "TTL Field Purpose",
+      "title_zh": "TTL字段用途",
+      "question_en": "What is the use of the Time To Live (TTL) field in the IP header? 1. How long a routing entry remains in the routing table before being renewed 2. To count how many Layer 3 devices have passed an IP packet 3. To keep track of the number of virtual routers traffic may use 4. To limit the lifetime of a IP datagram and to prevent indefinite looping",
+      "answer": "4. To limit the lifetime of a IP datagram and to prevent indefinite looping",
+      "conclusion": "TTL 的作用是防止数据报在网络中无限循环——每经过一个路由器TTL减1，减到0就丢弃。",
+      "table": null,
+      "start": 473.51,
+      "end": 519.13,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "What is the use of the Time To Live (TTL) field in the IP header? 1. How long a routing entry remains in the routing table before being renewed 2. To count how many Layer 3 devices have passed an IP packet 3. To keep track of the number of virtual routers traffic may use 4. To limit the lifetime of a IP datagram and to prevent indefinite looping",
+          "start": 473.51,
+          "end": 500.15
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 4. To limit the lifetime of a IP datagram and to prevent indefinite looping。TTL 的作用是防止数据报在网络中无限循环——每经过一个路由器TTL减1，减到0就丢弃。",
+          "start": 500.4,
+          "end": 518.88
+        }
+      ]
+    },
+    {
+      "id": "N13",
+      "title_en": "Traceroute — Incorrect Statement",
+      "title_zh": "",
+      "question_en": "Which of the following is incorrect about the traceroute or tracert utility? 1. It uses TCP segments carried in an IP packet 2. It uses the TTL field to determine intermediate routers 3. It traces out the path taken by IP packets to a given destination 4. It can verify connectivity between endpoints",
+      "answer": "1（错误的说法）",
+      "conclusion": "traceroute 用的是 UDP 或 ICMP，不是 TCP。选项1错误。",
+      "table": null,
+      "start": 519.48,
+      "end": 554.78,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which of the following is incorrect about the traceroute or tracert utility? 1. It uses TCP segments carried in an IP packet 2. It uses the TTL field to determine intermediate routers 3. It traces out the path taken by IP packets to a given destination 4. It can verify connectivity between endpoints",
+          "start": 519.48,
+          "end": 544.04
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 1（错误的说法）。traceroute 用的是 UDP 或 ICMP，不是 TCP。选项1错误。",
+          "start": 544.29,
+          "end": 554.53
+        }
+      ]
+    },
+    {
+      "id": "N14",
+      "title_en": "BGP Transport Protocol",
+      "title_zh": "BGP的传输协议",
+      "question_en": "BGP runs on the top of ______. 1. RIP　2. TCP　3. UDP　4. IP",
+      "answer": "2. TCP",
+      "conclusion": "BGP（边界网关协议）运行在 TCP 之上（端口179），因为需要可靠传输。",
+      "table": {
+        "header": [
+          "路由协议",
+          "传输层"
+        ],
+        "rows": [
+          [
+            "RIP",
+            "UDP（端口520）"
+          ],
+          [
+            "OSPF",
+            "直接在IP上（协议号89）"
+          ],
+          [
+            "**BGP**",
+            "**TCP（端口179）**"
+          ]
+        ]
+      },
+      "start": 555.13,
+      "end": 577.79,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "BGP runs on the top of ______. 1. RIP　2. TCP　3. UDP　4. IP",
+          "start": 555.13,
+          "end": 565.45
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2. TCP。BGP（边界网关协议）运行在 TCP 之上（端口179），因为需要可靠传输。",
+          "start": 565.7,
+          "end": 577.54
+        }
+      ]
+    },
+    {
+      "id": "N15",
+      "title_en": "Default Gateway Issue",
+      "title_zh": "默认网关问题",
+      "question_en": "A computer can access devices on the same network but cannot access devices on other networks. What is the probable cause? 1. The computer has an invalid IP address. 2. The computer has an incorrect subnet mask. 3. The cable is not connected properly to the NIC. 4. The computer has an invalid default gateway address.",
+      "answer": "4. The computer has an invalid default gateway address",
+      "conclusion": "同网段能通（ARP直接找到）、跨网段不通 → 默认网关地址错了。",
+      "table": null,
+      "start": 578.14,
+      "end": 626.16,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "A computer can access devices on the same network but cannot access devices on other networks. What is the probable cause? 1. The computer has an invalid IP address. 2. The computer has an incorrect subnet mask. 3. The cable is not connected properly to the NIC. 4. The computer has an invalid default gateway address.",
+          "start": 578.14,
+          "end": 613.5
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 4. The computer has an invalid default gateway address。同网段能通（ARP直接找到）、跨网段不通 → 默认网关地址错了。",
+          "start": 613.75,
+          "end": 625.91
+        }
+      ]
+    },
+    {
+      "id": "N16",
+      "title_en": "Dynamic Routing Protocol Tasks",
+      "title_zh": "动态路由协议的任务",
+      "question_en": "What two tasks do dynamic routing protocols perform? (Choose two.) 1. assign IP addressing　2. update and maintain routing tables　3. propagate host default gateways　4. network discovery",
+      "answer": "2 和 4（维护路由表 + 网络发现）",
+      "conclusion": "动态路由协议做两件事：自动发现网络拓扑 + 持续更新路由表。分配IP是DHCP的事。",
+      "table": null,
+      "start": 626.51,
+      "end": 660.45,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "What two tasks do dynamic routing protocols perform? (Choose two.) 1. assign IP addressing　2. update and maintain routing tables　3. propagate host default gateways　4. network discovery",
+          "start": 626.51,
+          "end": 646.11
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2 和 4（维护路由表 + 网络发现）。动态路由协议做两件事：自动发现网络拓扑 + 持续更新路由表。分配IP是DHCP的事。",
+          "start": 646.36,
+          "end": 660.2
+        }
+      ]
+    },
+    {
+      "id": "N17",
+      "title_en": "Flooding Routing",
+      "title_zh": "洪泛路由",
+      "question_en": "In military applications where large number of routers may be blown to bits at any instant, ______ is used. 1. Shortest path first　2. Flooding　3. First come first serve　4. RIP",
+      "answer": "2. Flooding（洪泛）",
+      "conclusion": "军事场景路由器随时被摧毁，用洪泛路由——不需要路由表，把包从所有端口转发出去，只要有一条路通，包就到达。",
+      "table": null,
+      "start": 660.8,
+      "end": 695.62,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "In military applications where large number of routers may be blown to bits at any instant, ______ is used. 1. Shortest path first　2. Flooding　3. First come first serve　4. RIP",
+          "start": 660.8,
+          "end": 678.56
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2. Flooding（洪泛）。军事场景路由器随时被摧毁，用洪泛路由——不需要路由表，把包从所有端口转发出去，只要有一条路通，包就到达。",
+          "start": 678.81,
+          "end": 695.37
+        }
+      ]
+    },
+    {
+      "id": "N18",
+      "title_en": "Proxy ARP",
+      "title_zh": "代理ARP",
+      "question_en": "Suppose the router is enabled proxy ARP, Host 4 broadcast ARP request to resolve Host 1's Ethernet address. What's the Ethernet address through ARP resolution?",
+      "answer": "E4（路由器连接EE网络的接口MAC地址）",
+      "conclusion": "代理ARP时，路由器代替跨网段主机回答ARP，返回的是路由器自己接口的MAC，不是目标主机的MAC。",
+      "table": null,
+      "start": 695.97,
+      "end": 727.67,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Suppose the router is enabled proxy ARP, Host 4 broadcast ARP request to resolve Host 1's Ethernet address. What's the Ethernet address through ARP resolution?",
+          "start": 695.97,
+          "end": 711.17
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 E4（路由器连接EE网络的接口MAC地址）。代理ARP时，路由器代替跨网段主机回答ARP，返回的是路由器自己接口的MAC，不是目标主机的MAC。",
+          "start": 711.42,
+          "end": 727.42
+        }
+      ]
+    },
+    {
+      "id": "N19",
+      "title_en": "DHCP + DNS for Internet Access",
+      "title_zh": "",
+      "question_en": "Which two services are required to enable a computer to receive dynamic IP addresses and access the Internet using names? (Choose two.) 1. WWW　2. DHCP　3. ARP　4. HTTP　5. DNS",
+      "answer": "2. DHCP + 5. DNS",
+      "conclusion": "DHCP 负责动态分配IP地址；DNS 负责把域名翻译成IP地址。两者缺一不可。",
+      "table": null,
+      "start": 728.02,
+      "end": 760.52,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "Which two services are required to enable a computer to receive dynamic IP addresses and access the Internet using names? (Choose two.) 1. WWW　2. DHCP　3. ARP　4. HTTP　5. DNS",
+          "start": 728.02,
+          "end": 743.94
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 2. DHCP + 5. DNS。DHCP 负责动态分配IP地址；DNS 负责把域名翻译成IP地址。两者缺一不可。",
+          "start": 744.19,
+          "end": 760.27
+        }
+      ]
+    },
+    {
+      "id": "N20",
+      "title_en": "ARP for IP Conflict Prevention",
+      "title_zh": "ARP防IP冲突",
+      "question_en": "After obtaining the IP address, to prevent the IP conflict the client may use ______. 1. ARP　2. ICMP　3. DHCP　4. RIP",
+      "answer": "1. ARP",
+      "conclusion": "客户端获得IP后，发送 Gratuitous ARP（免费ARP）广播自己的IP，若有人回应则说明IP冲突。",
+      "table": null,
+      "start": 760.87,
+      "end": 788.01,
+      "segments": [
+        {
+          "lang": "en",
+          "text": "After obtaining the IP address, to prevent the IP conflict the client may use ______. 1. ARP　2. ICMP　3. DHCP　4. RIP",
+          "start": 760.87,
+          "end": 774.39
+        },
+        {
+          "lang": "zh",
+          "text": "答案是 1. ARP。客户端获得IP后，发送 Gratuitous ARP（免费ARP）广播自己的IP，若有人回应则说明IP冲突。",
+          "start": 774.64,
+          "end": 787.76
+        }
+      ]
+    }
+  ]
+}

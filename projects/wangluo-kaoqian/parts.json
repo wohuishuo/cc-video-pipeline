@@ -1,0 +1,1228 @@
+[
+  {
+    "part_no": 1,
+    "part_title": "物理层 Physical Layer",
+    "entries": [
+      {
+        "id": "P1",
+        "title_en": "Shannon's Formula",
+        "title_zh": "香农公式",
+        "question_en": "Shannon's major result is that the maximum data rate of a noisy channel whose bandwidth is H Hz, and whose signal-to-noise ratio is S/N, is given by ______.",
+        "answer": "H × log₂(1 + S/N)",
+        "conclusion": "有噪声信道的最大速率 = H × log₂(1 + S/N)，这是物理极限，任何编码都突破不了。",
+        "basis": "香农定理把带宽和信噪比两个变量结合，给出理论上限。信噪比越高、带宽越宽，上限越大。",
+        "example": "4000 Hz 信道，30 dB 信噪比（S/N = 10^(30/10) = 1000）→ 最大速率 = 4000 × log₂(1001) ≈ 39,868 bps。",
+        "table": null
+      },
+      {
+        "id": "P2",
+        "title_en": "Nyquist Formula",
+        "title_zh": "奈奎斯特定理",
+        "question_en": "A noiseless 4-kHz channel is sampled every 1 msec. What is the maximum data rate?",
+        "answer": "8000 bps",
+        "conclusion": "无噪声信道最大码元速率 = 2H Baud；数据率 = 2H × log₂(M) bps。",
+        "basis": "奈奎斯特只考虑带宽，不考虑噪声。M 是信号电平数（离散状态数）。",
+        "example": "4 kHz 信道，二进制（M=2）→ 2 × 4000 × log₂(2) = 8000 bps。",
+        "table": null
+      },
+      {
+        "id": "P3",
+        "title_en": "Digital Modulation Types",
+        "title_zh": "数字调制类型",
+        "question_en": "ASK, PSK, FSK and QAM are examples of ______. A. Digital to Digital　B. Digital to Analog　C. Analog to Analog　D. Analog to Digital",
+        "answer": "B. Digital to Analog",
+        "conclusion": "ASK/PSK/FSK/QAM 都是把数字信号调制到模拟载波上，即数字→模拟。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "缩写",
+            "中文",
+            "调制方式"
+          ],
+          "rows": [
+            [
+              "ASK",
+              "幅移键控",
+              "幅度表示0/1"
+            ],
+            [
+              "PSK",
+              "相移键控",
+              "相位表示0/1"
+            ],
+            [
+              "FSK",
+              "频移键控",
+              "频率表示0/1"
+            ],
+            [
+              "QAM",
+              "正交幅度调制",
+              "幅度+相位同时调"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "P4",
+        "title_en": "Signal Attenuation",
+        "title_zh": "信号衰减",
+        "question_en": "The loss in signal power as light travels down the fiber is called ______. A. Attenuation　B. Scattering　C. Propagation　D. Interruption",
+        "answer": "A. Attenuation（衰减）",
+        "conclusion": "光信号在光纤中传播时功率下降叫衰减（Attenuation），不是散射、不是中断。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "选项",
+            "含义"
+          ],
+          "rows": [
+            [
+              "Attenuation",
+              "✅ 功率沿路径持续减小"
+            ],
+            [
+              "Scattering",
+              "散射：光子碰到微粒改变方向"
+            ],
+            [
+              "Propagation",
+              "传播：泛指信号移动，不专指损耗"
+            ],
+            [
+              "Interruption",
+              "中断：信号完全断掉"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "P5",
+        "title_en": "Bandwidth Utilization",
+        "title_zh": "带宽利用技术",
+        "question_en": "The techniques for efficient utilization of bandwidth includes ______. 1. Encoding　2. Sampling　3. High bandwidth　4. Demultiplexing　5. Multiplexing",
+        "answer": "5. Multiplexing（多路复用）",
+        "conclusion": "高效利用带宽的核心技术是多路复用——把多路信号共用一条物理链路。",
+        "basis": "Encoding（编码）是信号转换；Sampling（采样）是模数转换步骤；Demultiplexing（解复用）是接收端拆分，是结果不是手段。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "P6",
+        "title_en": "Manchester Encoding",
+        "title_zh": "曼彻斯特编码",
+        "question_en": "The bit stream corresponding to the Manchester output waveform on a port pin below is ____. (no spaces)",
+        "answer": "01011000",
+        "conclusion": "曼彻斯特编码每位中间必有跳变：高→低 = 1，低→高 = 0（IEEE 802.3标准）。",
+        "basis": "中间跳变既是数据又是时钟，所以曼彻斯特编码天然自同步，不需要额外时钟信号。",
+        "example": "看波形从左到右，中间跳变\"↓\"=1，\"↑\"=0，依次读出 01011000。",
+        "table": null
+      },
+      {
+        "id": "P7",
+        "title_en": "Narrow Band Channel",
+        "title_zh": "窄带信道",
+        "question_en": "Which of the following types of channels moves data relatively slowly? A. wide band channel　B. voice band channel　C. narrow band channel　D. all of above",
+        "answer": "C. narrow band channel（窄带信道）",
+        "conclusion": "窄带信道带宽最小，由 Nyquist/Shannon 公式，带宽越小速率上限越低。",
+        "basis": "",
+        "example": "",
+        "table": null
+      }
+    ]
+  },
+  {
+    "part_no": 2,
+    "part_title": "数据链路层 Data Link Layer",
+    "entries": [
+      {
+        "id": "D1",
+        "title_en": "Go-Back-N Window Size",
+        "title_zh": "GBN 窗口大小",
+        "question_en": "Suppose go-back-N protocol uses 4-bit sequence number, the maximum window size is ______. A. 1　B. 7　C. 8　D. 15　E. 16",
+        "answer": "D. 15",
+        "conclusion": "GBN 用 n 位序号，最大发送窗口 = 2ⁿ - 1。4位时 = 2⁴ - 1 = 15。",
+        "basis": "GBN 接收窗口固定为1。若发送窗口达到 2ⁿ，接收方收到的帧可能无法区分是新帧还是重传帧（序号绕回），所以要减1。",
+        "example": "",
+        "table": {
+          "header": [
+            "协议",
+            "最大发送窗口",
+            "最大接收窗口"
+          ],
+          "rows": [
+            [
+              "GBN",
+              "**2ⁿ - 1**",
+              "1"
+            ],
+            [
+              "SR",
+              "**2^(n-1)**",
+              "2^(n-1)"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "D2",
+        "title_en": "Selective Repeat Window",
+        "title_zh": "SR 滑动窗口",
+        "question_en": "Suppose selective repeat protocol uses 3-bit sequence number. If receiving window size is 3, the maximum size of sending window is ______. A. 5　B. 6　C. 7　D. 8",
+        "answer": "A. 5",
+        "conclusion": "SR 协议中，发送窗口 + 接收窗口 ≤ 2ⁿ，所以发送窗口 ≤ 2³ - 3 = 5。",
+        "basis": "若两窗口之和超过 2ⁿ，接收方收到序号相同的帧时无法判断是新帧还是重传帧。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D3",
+        "title_en": "Sliding Window for Moon Link",
+        "title_zh": "月球链路序号位数",
+        "question_en": "Suppose you are designing a sliding window protocol for a 1-Mbps point-to-point link to the moon, which has a one-way latency of 1.25 seconds. Assuming that each frame carries 1 KB of data, what is the minimum number of bits you need for the sequence number? A. 6　B. 7　C. 8　D. 9",
+        "answer": "D. 9（GBN）/ 10（SR）",
+        "conclusion": "RTT=2.5s，一个RTT内可发约305帧，GBN需要窗口≥305，取2⁹=512，需要9位。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D4",
+        "title_en": "CRC",
+        "title_zh": "循环冗余校验",
+        "question_en": "In Cyclic Redundancy Checking, CRC is the ______. A. Divisor　B. Quotient　C. Dividend　D. Remainder",
+        "answer": "D. Remainder（余数）",
+        "conclusion": "CRC 校验码就是模2除法的余数（Remainder），附在消息末尾一起发送。",
+        "basis": "",
+        "example": "消息 11001001，生成多项式 x³+1（1001），余数=011，发送 11001001011。（2017题48正确答案：11001001011）",
+        "table": {
+          "header": [
+            "角色",
+            "含义"
+          ],
+          "rows": [
+            [
+              "Dividend（被除数）",
+              "原始消息左移n位后的值"
+            ],
+            [
+              "Divisor（除数）",
+              "生成多项式"
+            ],
+            [
+              "Quotient（商）",
+              "不用"
+            ],
+            [
+              "**Remainder（余数）**",
+              "✅ CRC 校验码"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "D5",
+        "title_en": "Error Correction Codes",
+        "title_zh": "纠错码",
+        "question_en": "Which codes can be used to correct errors? (Choose two.) 1. Binary convolutional codes　2. Parity　3. Hamming codes　4. Cyclic Redundancy Checks",
+        "answer": "1. Binary convolutional codes + 3. Hamming codes",
+        "conclusion": "Hamming 码和卷积码可以纠错；CRC 和奇偶校验只能检错，不能纠错。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "编码",
+            "检错",
+            "纠错"
+          ],
+          "rows": [
+            [
+              "Parity（奇偶校验）",
+              "✅ 单比特",
+              "❌"
+            ],
+            [
+              "CRC",
+              "✅ 强",
+              "❌"
+            ],
+            [
+              "**Hamming**",
+              "✅",
+              "✅"
+            ],
+            [
+              "**Binary Convolutional**",
+              "✅",
+              "✅"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "D6",
+        "title_en": "Ethernet MAC Protocol",
+        "title_zh": "以太网MAC协议",
+        "question_en": "The MAC protocol for Ethernet is ______. A. CSMA/CD　B. Token Bus　C. Token Ring　D. MACA/MACAW",
+        "answer": "A. CSMA/CD",
+        "conclusion": "以太网用 CSMA/CD——先听后发，边发边监听，检测到冲突立即停止。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "协议",
+            "用途"
+          ],
+          "rows": [
+            [
+              "**CSMA/CD**",
+              "✅ 有线以太网（IEEE 802.3）"
+            ],
+            [
+              "Token Bus",
+              "令牌总线，工业网络"
+            ],
+            [
+              "Token Ring",
+              "令牌环，IBM旧标准"
+            ],
+            [
+              "MACA/MACAW",
+              "无线网络，解决隐藏终端问题"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "D7",
+        "title_en": "Collision Domain vs Broadcast Domain",
+        "title_zh": "冲突域 vs 广播域",
+        "question_en": "In a switched network, the number of collision domains is ______ the number of broadcast domains. A. =　B. <　C. >　D. none of above",
+        "answer": "C. >（冲突域数量 > 广播域数量）",
+        "conclusion": "交换机每个端口是一个冲突域，但整台交换机默认只有一个广播域。所以冲突域数 > 广播域数。",
+        "basis": "隔离广播域需要路由器；交换机只能隔离冲突域。8口交换机 → 8个冲突域，1个广播域，8 > 1。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D8",
+        "title_en": "Switch Table Learning",
+        "title_zh": "交换机地址学习",
+        "question_en": "Each switch will update its switch table by learning the ______ address when ______ a frame. 1. Source MAC, sending　2. Source MAC, receiving　3. Destination MAC, sending　4. Destination MAC, receiving",
+        "answer": "3. Source MAC, receiving（收帧时读源MAC）",
+        "conclusion": "交换机收到帧时，读取帧的源MAC地址，记录\"源MAC → 入端口\"的映射。",
+        "basis": "这样下次要发给这个MAC的帧，就知道该走哪个端口。不看目的MAC是因为目的MAC不告诉我们它在哪。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D9",
+        "title_en": "Cut-Through Switch",
+        "title_zh": "直通式交换机",
+        "question_en": "Once the cut-through Ethernet switch detects the first ______ bytes of an Ethernet frame at the input port, it immediately starts forwarding process.",
+        "answer": "6（字节）",
+        "conclusion": "直通式交换机只需读前6字节（目的MAC地址）就立即开始转发，延迟极低。",
+        "basis": "以太网帧格式：前6字节=目的MAC，接下来6字节=源MAC，再2字节=类型/长度。直通式只需要目的MAC就够了。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D10",
+        "title_en": "Promiscuous Mode",
+        "title_zh": "混杂模式",
+        "question_en": "In ______ all frames are given to the computer, not to those addressed. 1. Special Mode　2. Promiscuous mode　3. Miscues mode　4. Normal mode",
+        "answer": "2. Promiscuous mode（混杂模式）",
+        "conclusion": "混杂模式下网卡接收所有经过的帧，不管目的地址是否是自己，常用于抓包工具（如 Wireshark）。",
+        "basis": "正常模式只接受目的MAC = 本机MAC 或广播地址的帧，其余丢弃。混杂模式全收。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D11",
+        "title_en": "CSMA/CD Maximum Distance",
+        "title_zh": "最大距离与速率的关系",
+        "question_en": "In a CSMA/CD network with a data rate of 10 Mbps, the maximum distance between any station pair is 2500 m. What should be the maximum distance if we increase the data rate to 100 Mbps? To 1 Gbps? To 10 Gbps?",
+        "answer": "100 Mbps → 250 m；1 Gbps → 25 m；10 Gbps → 2.5 m",
+        "conclusion": "速率提高N倍，最大距离缩短N倍。",
+        "basis": "最短帧长（= 2τ×R）必须保持不变以确保冲突检测，速率R提高时传播时延τ必须缩短，即距离缩短。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D12",
+        "title_en": "PPP NCP Functions",
+        "title_zh": "PPP的NCP功能",
+        "question_en": "Which two functions are provided by the NCP during a PPP connection? (Choose two.) 1. negotiating options for the IP protocol 2. managing authentication of the peer routers 3. enhancing security by providing callback over PPP 4. bringing the network layer protocol or protocols up and down",
+        "answer": "1 和 4",
+        "conclusion": "NCP（网络控制协议）负责：协商IP协议参数 + 控制网络层协议的启停。认证是LCP/PAP/CHAP的事，不是NCP的。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "D13",
+        "title_en": "VLAN Trunk Tagging",
+        "title_zh": "VLAN干道标记",
+        "question_en": "Which method does a connected trunk port use to tag VLAN traffic? 1. IEEE 802.1W　2. IEEE 802.1Q　3. IEEE 802.1D　4. IEEE 802.1p",
+        "answer": "2. IEEE 802.1Q",
+        "conclusion": "802.1Q 是 VLAN 帧标记的标准，在以太网帧中插入4字节VLAN标签（含12位VLAN ID）。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "标准",
+            "用途"
+          ],
+          "rows": [
+            [
+              "802.1Q",
+              "✅ VLAN 标记"
+            ],
+            [
+              "802.1D",
+              "生成树协议 STP"
+            ],
+            [
+              "802.1W",
+              "快速生成树 RSTP"
+            ],
+            [
+              "802.1p",
+              "QoS 优先级标记"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "part_no": 3,
+    "part_title": "网络层 Network Layer",
+    "entries": [
+      {
+        "id": "N1",
+        "title_en": "ARP vs RARP",
+        "title_zh": "",
+        "question_en": "______ solves the problem of finding out which Ethernet address corresponds to a given IP address. A. ARP　B. RARP　C. BOOTP　D. DHCP",
+        "answer": "A. ARP（地址解析协议）",
+        "conclusion": "ARP = 已知IP → 求MAC；RARP = 已知MAC → 求IP。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "协议",
+            "输入",
+            "输出",
+            "用途"
+          ],
+          "rows": [
+            [
+              "**ARP**",
+              "IP地址",
+              "MAC地址",
+              "✅ 局域网内通信必用"
+            ],
+            [
+              "RARP",
+              "MAC地址",
+              "IP地址",
+              "早期无盘工作站"
+            ],
+            [
+              "DHCP",
+              "—",
+              "IP+配置",
+              "动态分配IP"
+            ],
+            [
+              "BOOTP",
+              "MAC",
+              "IP（静态）",
+              "DHCP前身"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "N2",
+        "title_en": "IP Fragmentation Offset",
+        "title_zh": "IP分片偏移",
+        "question_en": "Consider sending a 4000-byte IP datagram packet (header length is 20 bytes) into a link that has an MTU of 1500 bytes. The fragment offset fields of the IP header in first packet transmitted over the link is ______.",
+        "answer": "0",
+        "conclusion": "第一个分片的片偏移字段永远是0，因为它从原始数据的起始位置开始。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N3",
+        "title_en": "IP Fragmentation — Identification Field",
+        "title_zh": "",
+        "question_en": "In IPv4 header, the ______ field is needed to allow the destination host to determine which datagram a newly arrived fragment belongs to. 1. fragment offset　2. source IP address　3. identification　4. time to live",
+        "answer": "3. Identification（标识字段）",
+        "conclusion": "同一原始数据报的所有分片有相同的 Identification 值，目的端靠它把分片重组在一起。",
+        "basis": "Fragment Offset 告诉你这片放在原报文的哪个位置；Identification 告诉你这片属于哪个原报文——两者配合才能重组。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N4",
+        "title_en": "IP Fragment Offset Values",
+        "title_zh": "分片偏移值计算",
+        "question_en": "Suppose a router receives an IP packet containing 600 data bytes and has to forward the packet to a network with MTU of 200 bytes. Assume that IP header is 20 bytes long. What are fragment offset values for divided packets? 1. 22, 44, 66, 88　2. 22, 44, 66　3. 0, 22, 44　4. 0, 22, 44, 66",
+        "answer": "3. 0, 22, 44",
+        "conclusion": "计算：每片最多数据 = 200-20 = 180 字节。 第1片：数据0~179，偏移 = 0÷8 = 0 第2片：数据180~359，偏移 = 180÷8 = 22.5 → 实际取 176字节（22×8），偏移字段=22 第3片：数据352~599（剩余248字节），偏移 = 352÷8 = 44 共3片，偏移分别为 0, 22, 44。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N5",
+        "title_en": "RIP Routing Update",
+        "title_zh": "RIP路由更新",
+        "question_en": "Suppose RIP routing protocol is used. Router D's routing table has: Dest=Z, Next hop=B, Hops=7. Router D receives from router A: Dest=Z, Next hop=C, Hops=4. What is D's new routing table entry for Z?",
+        "answer": "Next hop = A，Hops = 5",
+        "conclusion": "D 收到 A 的信息\"到Z经C需4跳\"，D 到 A 自身需1跳，所以总共 4+1=5 跳，比原来的7跳少，更新。下一跳是 A（不是C，因为是A告诉我们的）。",
+        "basis": "RIP 距离向量原则——我信任邻居报告的跳数，再加上我到这个邻居的跳数，得到总代价。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N6",
+        "title_en": "Router: Routing vs Forwarding",
+        "title_zh": "",
+        "question_en": "A router has two processes inside it. One of them is responsible for filling in and updating the routing tables. This process is ______. A. routing　B. forwarding　C. processing　D. queuing",
+        "answer": "A. routing（路由）",
+        "conclusion": "维护路由表 = routing（路由进程）；按路由表转发数据包 = forwarding（转发进程）。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "进程",
+            "英文",
+            "职责"
+          ],
+          "rows": [
+            [
+              "**路由进程**",
+              "**Routing**",
+              "✅ 运行路由算法，填写和更新路由表"
+            ],
+            [
+              "转发进程",
+              "Forwarding",
+              "查路由表，把包从入端口送出端口"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "N7",
+        "title_en": "Route Aggregation",
+        "title_zh": "路由聚合",
+        "question_en": "A router has just received the following new IP addresses: 57.6.96.0/21, 57.6.104.0/21, 57.6.112.0/21, and 57.6.120.0/21. If all of them use the same outgoing line, they be aggregated to ______.",
+        "answer": "57.6.96.0/19",
+        "conclusion": "计算（看第三字节二进制）： ` = 0110 0000 = 0110 1000 = 0111 0000 = 0111 1000 ` 前3位相同（011），掩码 = 8+8+3 = /19，网络地址取最小 = 57.6.96.0/19",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N8",
+        "title_en": "Route Aggregation",
+        "title_zh": "200.23.x.x",
+        "question_en": "The IP addresses 200.23.16.0/23, 200.23.18.0/23, 200.23.20.0/23 and 200.23.22.0/23 can be aggregated into ______. (Choose two.) 1. 200.23.16.0/20　2. 200.23.16.0/22　3. 200.23.8.0/21　4. 200.23.16.0/21",
+        "answer": "1 和 4（200.23.16.0/20 和 200.23.16.0/21）",
+        "conclusion": "计算（第三字节）： ` = 0001 0000 = 0001 0010 = 0001 0100 = 0001 0110 ` 前5位相同（00010）→ /21；前4位也相同（0001）→ /20（更大的块也包含这四个）",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N9",
+        "title_en": "Route Aggregation — Incorrect Statement",
+        "title_zh": "",
+        "question_en": "Which of the following is incorrect about Route Aggregation? 1. Route aggregation is a technique used to decrease the number of routes in the routing table 2. Route aggregation will slow down the process of routing table lookups on the router 3. Route aggregation is accomplished by configuring the routing protocol to advertise the summary route 4. Contiguous blocks of specific routes may be summarized",
+        "answer": "2（错误说法）",
+        "conclusion": "路由聚合会让路由表更小，查找更快，而不是\"变慢\"。选项2是错的。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N10",
+        "title_en": "Default Route",
+        "title_zh": "默认路由",
+        "question_en": "Which route allows a router to forward packets even though its routing table contains no specific route to the destination? 1. 0.0.0.0/32　2. 127.0.0.0/8　3. 127.0.0.1/32　4. none　5. 0.0.0.0/0",
+        "answer": "5. 0.0.0.0/0",
+        "conclusion": "0.0.0.0/0 是默认路由，前缀长度为0，匹配任何地址，当没有更具体的路由时使用。",
+        "basis": "最长前缀匹配——0.0.0.0/0 前缀最短，总是输给更具体的路由，只在\"什么都匹配不上\"时才被选中。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N11",
+        "title_en": "IP Packet Delivery Characteristics",
+        "title_zh": "IP包交付特性",
+        "question_en": "Which of the following describe the IP packet delivery layer? (Choose two.) 1. Best Effort　2. Reliable　3. Connectionless　4. Streaming",
+        "answer": "1. Best Effort + 3. Connectionless",
+        "conclusion": "IP 是无连接（Connectionless）、尽力而为（Best Effort）的服务，不保证可靠交付，不保序。",
+        "basis": "可靠性和顺序由上层 TCP 保证，IP 只管尽力转发，不管有没有丢。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N12",
+        "title_en": "TTL Field Purpose",
+        "title_zh": "TTL字段用途",
+        "question_en": "What is the use of the Time To Live (TTL) field in the IP header? 1. How long a routing entry remains in the routing table before being renewed 2. To count how many Layer 3 devices have passed an IP packet 3. To keep track of the number of virtual routers traffic may use 4. To limit the lifetime of a IP datagram and to prevent indefinite looping",
+        "answer": "4. To limit the lifetime of a IP datagram and to prevent indefinite looping",
+        "conclusion": "TTL 的作用是防止数据报在网络中无限循环——每经过一个路由器TTL减1，减到0就丢弃。",
+        "basis": "如果没有TTL，路由环路会让数据报永远循环，浪费网络资源。traceroute 就是利用TTL从1开始递增，逐一暴露每一跳路由器。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N13",
+        "title_en": "Traceroute — Incorrect Statement",
+        "title_zh": "",
+        "question_en": "Which of the following is incorrect about the traceroute or tracert utility? 1. It uses TCP segments carried in an IP packet 2. It uses the TTL field to determine intermediate routers 3. It traces out the path taken by IP packets to a given destination 4. It can verify connectivity between endpoints",
+        "answer": "1（错误的说法）",
+        "conclusion": "traceroute 用的是 UDP 或 ICMP，不是 TCP。选项1错误。",
+        "basis": "traceroute 发送 TTL 递增的 UDP/ICMP 包，每个路由器 TTL 减到0时返回 ICMP Time Exceeded 消息，从而暴露自己的存在。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N14",
+        "title_en": "BGP Transport Protocol",
+        "title_zh": "BGP的传输协议",
+        "question_en": "BGP runs on the top of ______. 1. RIP　2. TCP　3. UDP　4. IP",
+        "answer": "2. TCP",
+        "conclusion": "BGP（边界网关协议）运行在 TCP 之上（端口179），因为需要可靠传输。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "路由协议",
+            "传输层"
+          ],
+          "rows": [
+            [
+              "RIP",
+              "UDP（端口520）"
+            ],
+            [
+              "OSPF",
+              "直接在IP上（协议号89）"
+            ],
+            [
+              "**BGP**",
+              "**TCP（端口179）**"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "N15",
+        "title_en": "Default Gateway Issue",
+        "title_zh": "默认网关问题",
+        "question_en": "A computer can access devices on the same network but cannot access devices on other networks. What is the probable cause? 1. The computer has an invalid IP address. 2. The computer has an incorrect subnet mask. 3. The cable is not connected properly to the NIC. 4. The computer has an invalid default gateway address.",
+        "answer": "4. The computer has an invalid default gateway address",
+        "conclusion": "同网段能通（ARP直接找到）、跨网段不通 → 默认网关地址错了。",
+        "basis": "同网段通信不经过网关，直接ARP解析MAC；跨网段必须把包发给网关（路由器），网关地址错误则出不去。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N16",
+        "title_en": "Dynamic Routing Protocol Tasks",
+        "title_zh": "动态路由协议的任务",
+        "question_en": "What two tasks do dynamic routing protocols perform? (Choose two.) 1. assign IP addressing　2. update and maintain routing tables　3. propagate host default gateways　4. network discovery",
+        "answer": "2 和 4（维护路由表 + 网络发现）",
+        "conclusion": "动态路由协议做两件事：自动发现网络拓扑 + 持续更新路由表。分配IP是DHCP的事。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N17",
+        "title_en": "Flooding Routing",
+        "title_zh": "洪泛路由",
+        "question_en": "In military applications where large number of routers may be blown to bits at any instant, ______ is used. 1. Shortest path first　2. Flooding　3. First come first serve　4. RIP",
+        "answer": "2. Flooding（洪泛）",
+        "conclusion": "军事场景路由器随时被摧毁，用洪泛路由——不需要路由表，把包从所有端口转发出去，只要有一条路通，包就到达。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N18",
+        "title_en": "Proxy ARP",
+        "title_zh": "代理ARP",
+        "question_en": "Suppose the router is enabled proxy ARP, Host 4 broadcast ARP request to resolve Host 1's Ethernet address. What's the Ethernet address through ARP resolution?",
+        "answer": "E4（路由器连接EE网络的接口MAC地址）",
+        "conclusion": "代理ARP时，路由器代替跨网段主机回答ARP，返回的是路由器自己接口的MAC，不是目标主机的MAC。",
+        "basis": "ARP是二层协议不能跨子网。启用代理ARP后，路由器\"善意欺骗\"：用自己的MAC回答Host 4，让Host 4把包发给路由器，再由路由器转发给Host 1。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N19",
+        "title_en": "DHCP + DNS for Internet Access",
+        "title_zh": "",
+        "question_en": "Which two services are required to enable a computer to receive dynamic IP addresses and access the Internet using names? (Choose two.) 1. WWW　2. DHCP　3. ARP　4. HTTP　5. DNS",
+        "answer": "2. DHCP + 5. DNS",
+        "conclusion": "DHCP 负责动态分配IP地址；DNS 负责把域名翻译成IP地址。两者缺一不可。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "N20",
+        "title_en": "ARP for IP Conflict Prevention",
+        "title_zh": "ARP防IP冲突",
+        "question_en": "After obtaining the IP address, to prevent the IP conflict the client may use ______. 1. ARP　2. ICMP　3. DHCP　4. RIP",
+        "answer": "1. ARP",
+        "conclusion": "客户端获得IP后，发送 Gratuitous ARP（免费ARP）广播自己的IP，若有人回应则说明IP冲突。",
+        "basis": "",
+        "example": "",
+        "table": null
+      }
+    ]
+  },
+  {
+    "part_no": 4,
+    "part_title": "传输层 Transport Layer",
+    "entries": [
+      {
+        "id": "T1",
+        "title_en": "TCP Bytes Allowed to Send",
+        "title_zh": "TCP可发送字节数",
+        "question_en": "In TCP protocol, the number of bytes that may be sent is ______. A. receiving window　B. congestion window　C. the minimum of the above two windows",
+        "answer": "C. the minimum of the above two windows（两者取小值）",
+        "conclusion": "TCP实际可发送量 = min(接收窗口rwnd, 拥塞窗口cwnd)。两个约束都不能违反。",
+        "basis": "rwnd 限制接收方缓冲区，cwnd 限制网络承载能力，发送方必须同时满足两者，取小值最保险。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T2",
+        "title_en": "TCP 3-Way Handshake — SYN+ACK",
+        "title_zh": "",
+        "question_en": "In a TCP 3-way handshake what does a SYN, ACK message indicate? 1. None of the mentioned　2. Final message　3. First message　4. Second message",
+        "answer": "4. Second message of a 3-way handshake",
+        "conclusion": "TCP三次握手顺序：SYN（第1次）→ SYN+ACK（第2次）→ ACK（第3次）。SYN+ACK是服务器的回应，是第2次。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "步骤",
+            "消息",
+            "发送方",
+            "含义"
+          ],
+          "rows": [
+            [
+              "1st",
+              "SYN",
+              "客户端",
+              "\"我想连接你\""
+            ],
+            [
+              "**2nd**",
+              "**SYN+ACK**",
+              "**服务器**",
+              "✅ \"好的，我也想连接你\""
+            ],
+            [
+              "3rd",
+              "ACK",
+              "客户端",
+              "\"收到，连接建立\""
+            ]
+          ]
+        }
+      },
+      {
+        "id": "T3",
+        "title_en": "connect() Sends SYN",
+        "title_zh": "connect系统调用发SYN",
+        "question_en": "Which of the following system calls results in the sending of SYN packets? 1. Accept　2. Connect　3. Bind　4. Listen",
+        "answer": "2. Connect",
+        "conclusion": "客户端调用 connect() 时，TCP发出SYN包，触发三次握手。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "调用",
+            "动作"
+          ],
+          "rows": [
+            [
+              "socket()",
+              "创建套接字"
+            ],
+            [
+              "bind()",
+              "绑定本地端口"
+            ],
+            [
+              "listen()",
+              "服务器进入监听状态（不发SYN）"
+            ],
+            [
+              "**connect()**",
+              "✅ **客户端发 SYN，发起握手**"
+            ],
+            [
+              "accept()",
+              "服务器从队列取出连接"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "T4",
+        "title_en": "connect() Before accept()",
+        "title_zh": "listen后还没accept时connect",
+        "question_en": "The server process S1 executes socket(), bind() and listen() but has not executed accept(). Client P1 executes connect(). Which event could take place? 1. connect() returns an error　2. connect() blocks　3. connect() returns successfully　4. connect() results in a core dump",
+        "answer": "3. connect() returns successfully",
+        "conclusion": "listen()之后，内核TCP栈已在监听，会自动完成三次握手并把连接放入队列，connect()不需要等accept()，直接成功返回。",
+        "basis": "accept() 只是从内核的已完成连接队列取出连接，握手在内核层面已经完成了。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T5",
+        "title_en": "TCP Connections Between Two Ports",
+        "title_zh": "两端口间TCP连接数",
+        "question_en": "How many TCP connections can be opened between two ports? 1. None of the mentioned　2. Single　3. Multiple　4. Zero",
+        "answer": "2. Single（只有一个）",
+        "conclusion": "两个特定端口之间只能有一条TCP连接，因为TCP连接由四元组（src IP, src port, dst IP, dst port）唯一确定。",
+        "basis": "四元组完全相同 = 同一条连接。要开多条连接必须换端口号。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T6",
+        "title_en": "Port vs Socket",
+        "title_zh": "端口 vs 套接字",
+        "question_en": "A ______ is a TCP name for a transport service access point. 1. node　2. port　3. pipe　4. socket",
+        "answer": "2. port（端口）",
+        "conclusion": "Port 是 TCP 对传输层服务访问点的编号（TSAP）；Socket 是网络进程间通信的端点（= IP地址 + Port）。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T7",
+        "title_en": "FTP TCP Connections",
+        "title_zh": "FTP的TCP连接数",
+        "question_en": "If 5 files are transferred from server A to client B in the same FTP session, the number of TCP connections between A and B is ______. 1. 1　2. 5　3. 2　4. 6",
+        "answer": "4. 6（1个控制连接 + 5个数据连接）",
+        "conclusion": "FTP = 1条永久控制连接（端口21）+ 每传一文件开一条数据连接（端口20）= 5文件 → 共6条TCP连接。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T8",
+        "title_en": "TCP Sequence Number Uses",
+        "title_zh": "TCP序号的用途",
+        "question_en": "What are two ways that TCP uses the sequence numbers in a segment? (Choose two.) 1. to determine if the packet changed during transit 2. to identify missing segments at the destination 3. to specify the order in which the segments travel from source to destination 4. to reassemble the segments at the remote location",
+        "answer": "2 和 4（识别缺失段 + 在接收端重组）",
+        "conclusion": "TCP序号的两个核心作用：让接收方知道哪些段丢了（触发重传）+ 把乱序到达的段按正确顺序重组。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T9",
+        "title_en": "TCP Protects from Misdelivery",
+        "title_zh": "TCP防错误投递",
+        "question_en": "TCP protects itself from miss delivery by IP with the help of ______. 1. Pseudo header　2. Destination IP Address in IP header 3. Source port and Destination port　4. Source IP Address in IP header",
+        "answer": "1. Pseudo header（伪首部）",
+        "conclusion": "TCP 在计算校验和时使用伪首部（包含源IP、目标IP、协议号、TCP长度），确保段没有被错误投递到错误的主机。",
+        "basis": "伪首部不实际传输，只参与校验和计算，让TCP\"感知\"IP层的地址信息，防止IP错误投递但TCP本身检测不到的情况。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T10",
+        "title_en": "Persistent HTTP Connection",
+        "title_zh": "持久HTTP连接",
+        "question_en": "In a ______ connection, the server leaves the connection open for more requests after sending a response. 1. nonpersistent　2. persistent　3. persistent and nonpersistent　4. none of the mentioned",
+        "answer": "2. persistent（持久连接）",
+        "conclusion": "持久连接（HTTP/1.1默认）：服务器响应后保持TCP连接，后续请求复用同一条连接，减少握手开销。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T11",
+        "title_en": "GBN Sliding Window — Packets Retransmitted",
+        "title_zh": "",
+        "question_en": "Station A sends 9 packets to B using sliding window (size=3) and go-back-N. Every 5th packet A transmits gets lost. How many total packets does A transmit? 1. 12　2. 20　3. 18　4. 14　5. 16",
+        "answer": "5. 16",
+        "conclusion": "发送过程：1,2,3,4,5(丢),6,7,8(发出) → 5丢了，GBN回退到5重发 → 5,6,7,8,9,10(丢)... 完整序列：1,2,3,4,5,6,7,5,6,7,8,9,7,8,9... 共 16 次发送。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T12",
+        "title_en": "TCP Slow Start",
+        "title_zh": "慢启动到全窗口需要多少时间",
+        "question_en": "A line has 10-msec RTT, no congestion. Receive window = 24 KB, MSS = 2 KB. How long before the first full window can be sent?",
+        "answer": "40 ms（4个RTT）",
+        "conclusion": "慢启动过程： RTT1：发1×MSS=2KB（cwnd=2KB） RTT2：发2×MSS=4KB（cwnd=4KB） RTT3：发4×MSS=8KB（cwnd=8KB） RTT4：发8×MSS=16KB（cwnd=16KB） RTT5：发12×MSS=24KB（cwnd=24KB=接收窗口，发满） 实际：第4个RTT结束，cwnd达到16KB；第5个RTT才第一次发满24KB。需要 40 ms（4个RTT） 才能到达满窗口。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T13",
+        "title_en": "TCP Congestion Window After Timeout",
+        "title_zh": "超时后窗口变化",
+        "question_en": "TCP congestion window = 18 KB, timeout occurs. How big will the window be if the next four transmission bursts are all successful? (MSS = 1 KB)",
+        "answer": "超时后：ssthresh=9KB，cwnd=1KB；接下来4次成功传输后 cwnd = 1+2+4+8+9=... → 第4次后 cwnd = 9+3 = 12KB（近似）",
+        "conclusion": "过程： 超时：ssthresh = 18/2 = 9 KB，cwnd = 1 KB 慢启动：1→2→4→8（3次后=8KB，仍<9KB） 第4次：8+1=9KB（到达ssthresh，进入拥塞避免） 第5次（若还要）：9+1=10KB",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "T14",
+        "title_en": "TCP Congestion: Tahoe vs Reno",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "Tahoe 收到3次重复ACK → cwnd=1，进慢启动；Reno 收到3次重复ACK → cwnd减半，进快恢复（不回到1）。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "事件",
+            "Tahoe",
+            "Reno"
+          ],
+          "rows": [
+            [
+              "超时",
+              "cwnd=1, ssthresh=cwnd/2",
+              "cwnd=1, ssthresh=cwnd/2"
+            ],
+            [
+              "3次重复ACK",
+              "cwnd=1, ssthresh=cwnd/2",
+              "**cwnd=cwnd/2（快恢复）**"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "part_no": 5,
+    "part_title": "应用层 Application Layer",
+    "entries": [
+      {
+        "id": "A1",
+        "title_en": "Email Protocols",
+        "title_zh": "邮件协议",
+        "question_en": "Find the correct match for the protocols: A1: send an email from a mail client to mail server. A2: download an email from mail server to mail client. A3: checking mail in browser. 1. A1:SMTP, A2:HTTP, A3:POP　2. A1:HTTP, A2:SMTP, A3:POP 3. A1:SMTP, A2:POP, A3:HTTP　4. A1:POP, A2:SMTP, A3:HTTP",
+        "answer": "3. A1:SMTP, A2:POP, A3:HTTP",
+        "conclusion": "发邮件用 SMTP；下载邮件用 POP3/IMAP；浏览器看邮件用 HTTP（WebMail）。",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "操作",
+            "协议",
+            "端口"
+          ],
+          "rows": [
+            [
+              "客户端→服务器发送",
+              "**SMTP**",
+              "25"
+            ],
+            [
+              "服务器→客户端下载",
+              "**POP3**",
+              "110"
+            ],
+            [
+              "浏览器查看",
+              "**HTTP**",
+              "80"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "A2",
+        "title_en": "Protocol Stack Decode Order",
+        "title_zh": "协议栈解封装顺序",
+        "question_en": "A web client is receiving a response from a web server. What is the correct order of the protocol stack used to decode the received transmission? 1. Ethernet, IP, TCP, HTTP　2. HTTP, TCP, IP, Ethernet　3. HTTP, Ethernet, IP, TCP　4. Ethernet, IP, TCP, Server",
+        "answer": "1. Ethernet, IP, TCP, HTTP",
+        "conclusion": "接收时从底层往上剥包：物理收到帧 → 以太网层解帧 → IP层解包 → TCP层解段 → HTTP层读内容。",
+        "basis": "发送时从上往下封装（HTTP→TCP→IP→Ethernet），接收时反向解封装。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "A3",
+        "title_en": "Network Protocols Definition",
+        "title_zh": "网络协议的定义",
+        "question_en": "Which statement is correct about network protocols? 1. They define the type of hardware that is used and how it is mounted in racks. 2. They are only required for exchange of messages between devices on remote networks. 3. They define the services the source and the destination can use when communicating. 4. They define how messages are exchanged between the source and the destination.",
+        "answer": "4. They define how messages are exchanged between the source and the destination.",
+        "conclusion": "网络协议定义的是消息交换的规则——格式、顺序、发送/接收时的动作。不定义硬件，不限于远程网络。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "A4",
+        "title_en": "Service vs Protocol vs Interface",
+        "title_zh": "",
+        "question_en": "A ______ is a set of primitives (operations) that a layer provides to the layer above it. A. service　B. interface　C. protocol　D. architecture",
+        "answer": "A. service（服务）",
+        "conclusion": "一层对上层提供的原语（操作）集合叫 Service（服务）；对等层之间的通信规则叫 Protocol（协议）；层间交互规范叫 Interface（接口）。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "A5",
+        "title_en": "OSI Layers Not in Internet",
+        "title_zh": "OSI中Internet没有的层",
+        "question_en": "______ layers from the ISO/OSI reference model do not have a corresponding level in Internet protocol stack. A. Application & Transport　B. Transport & Network　C. Presentation & Session　D. Data Link & Transport",
+        "answer": "C. Presentation & Session（表示层和会话层）",
+        "conclusion": "Internet只有5层（物理、数据链路、网络、传输、应用），OSI第5层会话和第6层表示层的功能被合并进应用层。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "A6",
+        "title_en": "Packet Switching vs Circuit Switching",
+        "title_zh": "分组交换优势",
+        "question_en": "What are the advantages of packet switching over circuit switching? A. Less wasteful in case of bursty traffic B. Less wasteful in case of steady traffic C. Easier to implement on network devices D. Allows for lower delays",
+        "answer": "A. Less wasteful in case of bursty traffic（突发流量时更省）",
+        "conclusion": "分组交换对突发流量（间歇性使用信道）更高效，因为不占用信道时别人可以用。",
+        "basis": "电路交换建立后独占信道，即使没数据也占用，突发流量时大部分时间浪费。分组交换按需占用，信道利用率高。",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "A7",
+        "title_en": "Communication Subnet",
+        "title_zh": "通信子网",
+        "question_en": "The collection of communication lines and routers is called ______. A. LAN　B. MAN　C. WAN　D. Communication Subnet",
+        "answer": "D. Communication Subnet（通信子网）",
+        "conclusion": "通信线路 + 路由器的集合 = 通信子网，负责数据传输功能（对应OSI 1-3层）。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "A8",
+        "title_en": "IPv6 Address Compression",
+        "title_zh": "IPv6地址压缩",
+        "question_en": "What is the most compressed representation of the IPv6 address 2001:0000:0000:abcd:0000:0000:0000:0001? 1. 2001:0000:abcd::1　2. 2001::abcd::1　3. 2001:0:abcd::1　4. 2001::abcd:0:1　5. 2001:0:0:abcd::1",
+        "answer": "5. 2001:0:0:abcd::1",
+        "conclusion": "压缩规则：① 每组前导0省略；② 连续全零组用::代替（只能用一次）。abcd 前面有2组0，最后4组0 → 后面的0更多，用::压缩后面。",
+        "basis": "",
+        "example": "",
+        "table": null
+      }
+    ]
+  },
+  {
+    "part_no": 6,
+    "part_title": "计算题公式速查",
+    "entries": [
+      {
+        "id": "总时延公式（分组交换）",
+        "title_en": "总时延公式",
+        "title_zh": "分组交换",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "总时延 = (x)/(b) + k × d + (k-1) × (p)/(b) x = 消息总比特数，b = 数据率（bps），k = 跳数，d = 每跳传播时延，p = 分组大小（比特） 例：x=1.5Mbits, b=1.5Mbps, k=3跳（含路由器2个），p=1500bits → 总时延 = 1.5M/1.5M + 3×0 + 2×(1500/1.5M) = 1 + 0.002 ≈ 1.002 s",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "滑动窗口效率",
+        "title_en": "滑动窗口效率",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "效率 = (W)/(1 + 2a),   a = (传播时延)/(帧传输时间) 当 W ≥ 1+2a 时，效率=1（信道100%利用）。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "IP 分片偏移值",
+        "title_en": "IP 分片偏移值",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "片偏移字段值 = (该分片数据起始字节位置)/(8) 每片数据量 = MTU - IP首部（通常20字节），且必须是8的倍数。",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "CRC 计算步骤",
+        "title_en": "CRC 计算步骤",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "消息后面补 n 个0（n = 生成多项式的最高次） 用模2除法（XOR，不借位）除以生成多项式 余数就是CRC，附在原消息后发送（不补0的原消息 + 余数）",
+        "basis": "",
+        "example": "",
+        "table": null
+      },
+      {
+        "id": "窗口大小对比",
+        "title_en": "窗口大小对比",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "协议 GBN: n位序号=n，最大发窗口=2ⁿ - 1，最大收窗口=1；协议 SR: n位序号=n，最大发窗口=2^(n-1)，最大收窗口=2^(n-1)",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "协议",
+            "n位序号",
+            "最大发窗口",
+            "最大收窗口"
+          ],
+          "rows": [
+            [
+              "GBN",
+              "n",
+              "**2ⁿ - 1**",
+              "1"
+            ],
+            [
+              "SR",
+              "n",
+              "**2^(n-1)**",
+              "2^(n-1)"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "常见端口号",
+        "title_en": "常见端口号",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "端口 20: 协议=FTP数据，记忆=FTP数据=20；端口 21: 协议=FTP控制，记忆=FTP控制=21；端口 25: 协议=SMTP，记忆=SMTP发邮件=25；端口 53: 协议=DNS，记忆=DNS=53；端口 80: 协议=HTTP，记忆=HTTP=80；端口 110: 协议=POP3，记忆=POP3=110；端口 443: 协议=HTTPS，记忆=HTTPS=443；端口 179: 协议=BGP，记忆=BGP=179",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "端口",
+            "协议",
+            "记忆"
+          ],
+          "rows": [
+            [
+              "20",
+              "FTP数据",
+              "FTP数据=20"
+            ],
+            [
+              "21",
+              "FTP控制",
+              "FTP控制=21"
+            ],
+            [
+              "25",
+              "SMTP",
+              "SMTP发邮件=25"
+            ],
+            [
+              "53",
+              "DNS",
+              "DNS=53"
+            ],
+            [
+              "80",
+              "HTTP",
+              "HTTP=80"
+            ],
+            [
+              "110",
+              "POP3",
+              "POP3=110"
+            ],
+            [
+              "443",
+              "HTTPS",
+              "HTTPS=443"
+            ],
+            [
+              "179",
+              "BGP",
+              "BGP=179"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "各层数据单元",
+        "title_en": "各层数据单元",
+        "title_zh": "",
+        "question_en": "",
+        "answer": "",
+        "conclusion": "层次 应用层: 数据单元=Message（消息）；层次 传输层TCP: 数据单元=Segment（段）；层次 传输层UDP: 数据单元=Datagram（数据报）；层次 网络层: 数据单元=Packet / Datagram（分组）；层次 数据链路层: 数据单元=Frame（帧）；层次 物理层: 数据单元=Bit（比特流）",
+        "basis": "",
+        "example": "",
+        "table": {
+          "header": [
+            "层次",
+            "数据单元"
+          ],
+          "rows": [
+            [
+              "应用层",
+              "Message（消息）"
+            ],
+            [
+              "传输层TCP",
+              "Segment（段）"
+            ],
+            [
+              "传输层UDP",
+              "Datagram（数据报）"
+            ],
+            [
+              "网络层",
+              "Packet / Datagram（分组）"
+            ],
+            [
+              "数据链路层",
+              "Frame（帧）"
+            ],
+            [
+              "物理层",
+              "Bit（比特流）"
+            ]
+          ]
+        }
+      }
+    ]
+  }
+]

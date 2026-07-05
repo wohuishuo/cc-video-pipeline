@@ -177,3 +177,19 @@ projects/qwen3-tts-xpu-v5-fork/
 # Scratch / external app data
 projects/_cos_triage/
 projects/_jianying_data/
+
+# Generated project media and local tool sandboxes
+projects/**/*.mp4
+projects/**/*.webm
+projects/**/*.mov
+projects/**/*.mkv
+projects/**/*.wav
+projects/**/*.mp3
+projects/**/*.m4a
+projects/**/_xpu_lab/
+projects/cos-2026-06/
+projects/guzhenren-demo/
+projects/information-gap-business/full-audit-frames/
+projects/information-gap-business/preview*.png
+projects/information-gap-business/preview-frames*/
+tools/jianying-mcp/

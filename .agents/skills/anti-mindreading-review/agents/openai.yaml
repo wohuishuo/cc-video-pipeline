@@ -1,0 +1,4 @@
+interface:
+  display_name: "反读心审稿"
+  short_description: "审查稿件是否用读心术、精神分类或自我感动表达替代可核验事实。"
+  default_prompt: "审查这份稿子有没有读心术、精神分类、自我感动式抽象，并改成可看到、可听到、可核验的表达。"
