@@ -1,247 +1,224 @@
-# MVP Vertical Slices Refactor Design
+# Creator MVP Vertical-Slice Refactor Design
 
 ## Goal
 
-Turn the repository from a mixed collection of scripts, skills, experiments, and video projects into independently runnable and verifiable capability MVPs. Preserve useful behavior while moving composition into thin workflow coordinators.
+Replace the repository's tool-shaped architecture with a small set of creator-outcome MVPs. A capability is an MVP only when a creator can run it independently and receive a useful finished result.
 
-The first observable result is:
+Existing scripts are behavioral evidence and possible migration sources. Their folders, command boundaries, and implementation steps do not define the new architecture.
 
-> Given a supported video URL, produce a verifiable set of downloaded media, normalized audio, transcript data, scene-change data, loudness data, and key frames. A failed run can be resumed without corrupting completed outputs.
+## Boundary Rule
 
-## Current Problems
+A unit is an independent MVP only if all of these are true:
 
-- PowerShell entry points contain a previous computer's absolute root path.
-- `tools/` mixes shared runtime code, standalone products, experiments, and concrete Remotion videos.
-- `.claude/skills/` mixes executable automation with prompt-only content workflows.
-- File existence doubles as workflow state, so a partial or stale artifact can be mistaken for a completed capability.
-- Python, PowerShell, FFmpeg, Node, and model-specific concerns cross boundaries without stable contracts.
-- The coordinator directly knows script locations, runtime locations, output layouts, and retry rules.
-- There are few focused contract tests, so successful installation is often confused with verified behavior.
+1. It produces a result useful to the creator without requiring the next MVP.
+2. It can be demonstrated with one public input and one finished output package.
+3. It has lifecycle or mutable state that must be owned independently.
+4. It can fail, be retried, and be verified without running unrelated creator workflows.
 
-## Chosen Approach
+Technical steps such as scene detection, loudness analysis, frame extraction, path resolution, authentication, FFmpeg invocation, and model routing fail this test. They remain private operations or adapters inside an outcome MVP.
 
-Use capability-oriented MVPs with a thin coordinator.
+## Creator Outcomes
 
-Each MVP must have:
+The target system has six possible MVPs. Only the first is in the initial implementation scope.
 
-- one observable result;
-- one public command-line entry point;
-- an explicit input/output contract;
-- exactly one owner for each mutable state;
-- focused tests that do not require the entire pipeline;
-- optional platform adapters behind the public contract;
-- a machine-readable result or artifact manifest.
+| MVP | Creator input | Independently useful result | State owned |
+| --- | --- | --- | --- |
+| `research-mvp` | video URL, channel, or topic | research dossier with source facts, transcript, visual evidence, patterns, and reusable observations | research job and dossier version |
+| `authoring-mvp` | idea and optional research dossier | approved content package: brief, titles, script, storyboard, asset list | content-package revisions and approval state |
+| `voice-mvp` | approved script and voice policy | narration package with audio, timing, pronunciation notes, and engine record | voice run and narration version |
+| `production-mvp` | approved content package, narration, and assets | watchable horizontal master video | production job and master version |
+| `distribution-mvp` | approved master and platform targets | platform-ready exports, subtitles, cover, title, and publishing checklist | distribution package version |
+| `review-mvp` | published-video identifiers and snapshots | performance review with evidence-backed recommendations | metric snapshots and review version |
 
-An MVP does not need to be published as an installable package. Independence means it can be invoked and verified without running unrelated capabilities.
+`review-mvp` is deferred until the repository has a real workflow that tracks the user's published videos over time. Generic Bilibili lookup does not justify a separate analytics MVP.
 
-### Rejected alternatives
+Cos dance, Vlog, and knowledge videos are policies/templates applied to these MVPs, not separate state owners.
 
-1. **Stage-oriented P0/P1/P2 folders.** This is a small initial change, but each stage would still combine unrelated state owners and runtimes.
-2. **Clean-room rewrite.** This would produce a tidy structure but discard proven FFmpeg, yt-dlp, transcription, and TTS behavior.
+## Authentication and Platform Data
 
-## Target Capability Boundaries
+Login is not an MVP. Cookies, browser sessions, API tokens, and anonymous access are authentication strategies behind source connectors.
 
-| Capability | Observable result | State owned |
-| --- | --- | --- |
-| `workspace-core` | Resolve a portable workspace and allocate artifact locations | workspace configuration and artifact catalog |
-| `media-fetch` | Turn a URL into validated media and normalized audio | acquisition record and media metadata |
-| `transcription` | Turn audio into the canonical transcript schema | transcript and transcription run metadata |
-| `signal-analysis` | Produce scene-change and loudness data | signal-analysis result |
-| `frame-extraction` | Produce a bounded key-frame set and manifest | frame-set result |
-| `reference-analysis` | Resume and compose reference-analysis steps | job lifecycle and continuation state only |
-| `content-authoring` | Produce versioned brief, titles, script, and storyboard | authored document versions |
-| `tts` | Turn approved text into audio with declared engine settings | synthesis run and voice configuration reference |
-| `visual-rendering` | Render a declared visual composition | render job and render output metadata |
-| `video-editing` | Produce edited horizontal and vertical exports | edit/export job state |
-| `bilibili-insights` | Produce source and publishing insight read models | collected snapshots and derived projections |
-| `video-pipeline` | Compose verified capabilities into a project workflow | top-level project continuation state only |
+For Bilibili:
 
-Existing Claude skills remain user-facing guidance. They call capability entry points but do not become state owners.
+- video metadata, search results, transcripts, comments, and public channel data used to understand a topic belong to `research-mvp`;
+- credentials are supplied to a `BilibiliConnector` adapter and never become research-domain state;
+- post-publication metric snapshots for the creator's own released videos belong to `review-mvp` only when that workflow is implemented;
+- connector code may be shared, but shared code does not merge the research dossier owner with the review owner.
 
-## Vertical Slice Brief: Reference Analysis
+YouTube and local files use equivalent connectors. The research domain consumes normalized source facts rather than platform-specific private objects.
+
+## Initial Vertical-Slice Brief: Research MVP
 
 ### Observable result
 
-One command accepts a video URL and job slug and returns a manifest containing validated paths and metadata for media, audio, transcript, scene cuts, loudness samples, and frames.
+Given a supported video URL, produce a versioned research dossier that a creator can use immediately for topic selection, script writing, or visual planning.
 
-### Use cases
+The dossier contains:
 
-- `create-reference-job`
-- `fetch-media`
-- `transcribe-audio`
-- `analyze-signals`
-- `extract-frames`
-- `resume-reference-job`
-- `show-reference-result`
+- source identity and metadata;
+- transcript or an explicit transcript-unavailable fact;
+- representative visual evidence;
+- structural timeline and content sections;
+- reusable hooks, patterns, and cautions;
+- provenance for every machine-derived artifact;
+- a completion summary that distinguishes missing evidence from failed processing.
 
-### State owners and invariants
+Raw scene scores, loudness samples, downloaded media, and extracted frames are evidence behind the dossier. They are not separate MVP outputs or independent public products.
 
-| State | Unique owner | Protected invariant | Public mutation | Public read/fact |
+### Commands and queries
+
+- `research create <source>` creates or resumes a research job.
+- `research status <job>` reports lifecycle and missing evidence.
+- `research show <job>` returns the committed dossier manifest.
+- `research retry <job>` retries failed private operations without invalidating committed evidence.
+
+### State-owner matrix
+
+| Mutable state | Unique owner | Protected invariant | Public mutation | Public read/fact |
 | --- | --- | --- | --- | --- |
-| workspace root and artifact catalog | `workspace-core` | all paths are inside the selected workspace; slugs cannot escape it | allocate artifact set | artifact paths allocated |
-| acquisition record and media metadata | `media-fetch` | published media passed duration and stream validation | fetch media | media acquired |
-| transcript and engine metadata | `transcription` | SRT and JSON describe the same run and source audio | transcribe audio | transcript committed |
-| cuts and loudness result | `signal-analysis` | results identify the source media and analysis parameters | analyze signals | signals committed |
-| frame set and manifest | `frame-extraction` | frame count respects limits and every manifest entry exists | extract frames | frames committed |
-| job lifecycle and continuation | `reference-analysis` | a step is complete only after its owner commits a result | run or resume job | job advanced / job failed |
+| research job lifecycle | `ResearchJob` | one source and configuration identify one job version; retry never converts partial evidence into committed evidence | create/retry job | job advanced/failed/completed |
+| research dossier version | `ResearchDossier` | a committed dossier identifies its source, evidence, schema, and missing items | commit dossier | dossier committed |
+| source credentials | connector adapter, outside the domain | secrets never appear in dossier, logs, or manifests | adapter configuration | authenticated/anonymous connection result |
+| cached raw media and derived evidence | `ResearchWorkspace` internal to `research-mvp` | paths remain inside the job workspace; temporary artifacts are not committed evidence | stage/promote evidence | evidence staged/committed |
 
-### Protected invariants
+The research coordinator owns job continuation only. Scene detection, loudness processing, extraction, transcription, and source lookup do not own independent business lifecycle state.
 
-- Authority: only the owning capability marks its result committed.
-- Ownership: the coordinator cannot write another capability's result metadata.
-- Idempotency: repeating a completed command returns the committed result or creates a new explicit run; it does not silently mix outputs.
-- Versioning: manifests record schema version, source identity, relevant parameters, and engine/tool identity.
-- Lifecycle: temporary output is not treated as committed output.
-- Recovery: a failed step leaves prior committed facts valid and exposes a resumable failure.
+### Invariants
 
-### Decision gates
-
-- `DECISION_REQUIRED`: whether later project-level outputs use the same artifact manifest format as reference analysis. This does not block the first slice.
-- `DECISION_REQUIRED`: whether content documents eventually use filesystem-only versions or Git-backed versions. This does not block the first slice.
+- A dossier cannot be committed without a stable source identity.
+- Missing optional evidence is recorded explicitly and cannot masquerade as success.
+- Retrying a failed operation preserves already committed evidence.
+- Changing source identity or evidence-affecting configuration creates a new dossier version.
+- Credentials and platform session material never appear in committed outputs.
+- A connector failure is distinguishable from an unsupported source and from unavailable content.
+- All committed filesystem paths remain under the selected research workspace.
 
 ### Non-goals
 
-- No GUI.
-- No database or service framework.
-- No cloud queue.
-- No model download during ordinary contract tests.
-- No rewrite of every existing script in the first slice.
-- No production-scale or platform-completeness claim.
+- No independent scene-analysis, loudness-analysis, or frame-extraction product.
+- No generic workflow engine.
+- No standalone workspace/path service.
+- No separate login service.
+- No database, queue, GUI, or cloud deployment.
+- No attempt to preserve every legacy command or directory.
+- No large-model or network dependency in domain tests.
+- No post-publication analytics in the first slice.
+
+## Typed Relationships
+
+Relationships inside `research-mvp` are ports and private policies, not public MVP boundaries.
+
+| Provider | Relationship | Consumer | Classification | Invariant protected |
+| --- | --- | --- | --- | --- |
+| source connector | `Query: resolve_source` | research job | hard | stable source identity |
+| source connector | `Query: fetch_source_facts` | dossier builder | substitute-capable | normalized provenance |
+| authentication strategy | `Strategy` | source connector | substitute | secrets stay outside domain state |
+| media acquisition adapter | `Adapter` | evidence collector | substitute | raw media validation |
+| transcription adapter | `Adapter` | evidence collector | substitute | transcript provenance |
+| visual evidence policy | `Policy` | evidence collector | substitute | bounded representative evidence |
+| signal extraction adapter | `Adapter` | visual evidence policy | optional substitute | assists selection but owns no state |
+| evidence collector | `Fact: EvidenceCommitted` | dossier builder | hard | only promoted evidence is published |
+| dossier builder | `Fact: DossierCommitted` | research job | hard | completion follows committed result |
+
+Fake connectors and generated local media preserve the boundaries for domain verification. Real Bilibili, YouTube, yt-dlp, FFmpeg, and transcription engines are platform-integration evidence, not prerequisites for proving the domain lifecycle.
 
 ## Capability DAG
 
-Arrows mean that the predecessor provides a proven contract or committed fact consumed by the successor.
-
 ```text
-workspace-core
-  --Adapter(substitute: fake filesystem)--> media-fetch
-media-fetch
-  --Fact: MediaAcquired---------------> transcription
-  --Fact: MediaAcquired---------------> signal-analysis
-  --Fact: MediaAcquired---------------> frame-extraction
-workspace-core
-  --Factory: ArtifactSet--------------> reference-analysis
-media-fetch
-  --Fact: MediaAcquired---------------> reference-analysis
-transcription
-  --Fact: TranscriptCommitted---------> reference-analysis
-signal-analysis
-  --Fact: SignalsCommitted------------> reference-analysis
-frame-extraction
-  --Fact: FramesCommitted-------------> reference-analysis
+Fixed source specification or fake connector
+        |
+        | Query: normalized source identity/facts
+        v
+Research job lifecycle
+        |
+        | Command: collect evidence
+        v
+Evidence collection with substitutable adapters
+        |
+        | Fact: committed evidence
+        v
+Research dossier builder
+        |
+        | Fact: committed dossier
+        v
+Observable research package
 ```
 
-| Node | Owner | Initial status | Direct dependencies | Dependency class |
-| --- | --- | --- | --- | --- |
-| `workspace-core` | workspace owner | unproven | fixed workspace specification; fake filesystem adapter | substitute |
-| `media-fetch` | acquisition owner | implemented but unverified behind a contract | `workspace-core`; yt-dlp/FFmpeg adapters | hard owner contract; substitutable platform adapters |
-| `transcription` | transcript owner | implemented but unverified behind a contract | committed media/audio fact; engine strategy | hard source fact; substitutable engine |
-| `signal-analysis` | signal owner | implemented but unverified behind a contract | committed media fact; FFmpeg adapter | hard source fact; substitutable adapter |
-| `frame-extraction` | frame-set owner | implemented but unverified behind a contract | committed media fact; optional cuts query; FFmpeg adapter | hard source fact; cuts are optional strategy input |
-| `reference-analysis` | job coordinator | implemented as a coupled script | all committed facts above | hard facts |
+The lowest unproven node is normalized source resolution within the research slice, not a reusable infrastructure product. The first test proves that one source becomes one stable research job without leaking connector credentials or filesystem assumptions.
 
-The lowest unproven node is `workspace-core`. The hard-coded old-computer root path prevents portable independent invocation of every downstream capability.
-
-## Contract Shape
-
-Every capability command returns a JSON-compatible result envelope:
+## Research Package Contract
 
 ```json
 {
   "schema_version": "1",
-  "capability": "media-fetch",
-  "run_id": "stable-or-generated-id",
-  "status": "committed",
-  "inputs": {},
-  "outputs": {},
-  "tool_versions": {},
-  "warnings": []
+  "job_id": "stable-id",
+  "status": "complete_with_gaps",
+  "source": {
+    "platform": "bilibili",
+    "source_id": "BV...",
+    "canonical_url": "https://..."
+  },
+  "facts": {},
+  "evidence": [],
+  "timeline": [],
+  "patterns": [],
+  "gaps": [],
+  "provenance": []
 }
 ```
 
-Failed runs return a non-zero exit code and a result with `status: failed` when a safe result location exists. Temporary files are written below a run-specific temporary directory and promoted only after validation.
+Allowed terminal statuses are `complete`, `complete_with_gaps`, and `failed`. `complete_with_gaps` is useful delivery with named missing optional evidence; it is not a hidden failure.
 
-## Migration Strategy
+## Implementation Direction
 
-1. Add contracts, manifests, and tests before moving large amounts of code.
-2. Implement `workspace-core` without changing legacy entry points.
-3. Wrap existing behavior behind one capability at a time.
-4. Keep compatibility shims at existing script paths.
-5. Prove each capability with fake adapters, focused tests, and one adjacent integration using the previous real capability.
-6. Replace `p0_pipeline.ps1` internals with the thin `reference-analysis` coordinator only after its dependencies are verified.
-7. Apply the same pattern to TTS, editing, rendering, authoring, and insights.
-8. Move concrete video compositions and experimental code only after their capability owner is clear.
+Build the research MVP as a new vertical slice with clean contracts. Do not first reorganize legacy files.
 
-## Capability Evidence Requirements
+1. Prove normalized source resolution and research-job identity using a fake connector.
+2. Prove lifecycle, retry, conflict, stale-version, partial-failure, and cleanup behavior with an in-memory or temporary workspace.
+3. Prove dossier commit from fake evidence.
+4. Add one local-file connector and generated media fixture as the first real adjacent integration.
+5. Add FFmpeg-derived evidence behind the private evidence collector.
+6. Add transcription behind the same private boundary.
+7. Add Bilibili/YouTube connectors and credential strategies.
+8. Compare useful legacy behavior against the new result and selectively port algorithms or command options.
+9. Retire legacy entry points only after the research MVP demonstrates equivalent or better creator-visible behavior.
 
-For every MVP record:
+Legacy code is never imported merely to reduce migration effort. It is reused only when a focused test shows that the behavior belongs inside the new contract.
 
-- public contract and unique owner;
-- a failing RED assertion before implementation;
+## Test and Evidence Strategy
+
+For each capability increment record:
+
+- public contract and owner;
+- RED assertion and observed failure;
 - focused contract tests;
-- adjacent integration using the previous real capability;
+- adjacent integration using the previous real increment;
 - duplicate, conflict, stale, reentry, partial-failure, and cleanup behavior;
 - exact commands and results;
 - explicit non-goals.
 
-Platform-heavy adapters use small generated fixtures in normal tests. Network downloads and large model execution are separate platform-integration checks.
+Normal tests use fake connectors, fake adapters, generated text, and short generated media. Separate platform checks cover real FFmpeg, real network sources, cookies, and locally installed transcription models.
 
-## Test Strategy
+## Later Composition
 
-### Contract tests
-
-- workspace discovery from repository root and nested directories;
-- explicit `--workspace` override;
-- slug traversal rejection;
-- deterministic artifact allocation;
-- result envelope schema validation;
-- idempotent rerun and stale-result detection.
-
-### Adapter tests
-
-- fake yt-dlp, FFmpeg, and transcription engines record arguments and create bounded fixtures;
-- adapter failures preserve prior committed results;
-- partial outputs remain uncommitted and are cleanable.
-
-### Adjacent integrations
-
-- real `workspace-core` with fake `media-fetch` adapter;
-- real `media-fetch` contract with generated local media and real FFmpeg;
-- real transcription contract with a fake engine before any large-model check;
-- real signal/frame capabilities with a short generated video fixture;
-- full reference coordinator with network and model substitutes;
-- optional platform checks for a real URL and locally installed model.
-
-## Repository Layout Direction
+Only committed packages cross MVP boundaries:
 
 ```text
-capabilities/
-  workspace-core/
-  media-fetch/
-  transcription/
-  signal-analysis/
-  frame-extraction/
-  reference-analysis/
-  content-authoring/
-  tts/
-  visual-rendering/
-  video-editing/
-  bilibili-insights/
-  video-pipeline/
-contracts/
-tests/
-projects/
-.claude/skills/
+research dossier ──Query──> authoring-mvp
+approved content package ──Query──> voice-mvp
+approved content + narration ──Query──> production-mvp
+approved master ──Query──> distribution-mvp
+published identifiers ──Query──> review-mvp
 ```
 
-The first implementation creates only the directories needed by the first proven node. Empty future capability scaffolds are not created.
+Downstream MVPs cannot mutate upstream packages. A new upstream version triggers an explicit downstream revision rather than silently overwriting work.
 
 ## Delivery Ledger
 
 - Supported completion level: `DESIGNED`.
-- Evidence present: repository inventory, current workflow inspection, state-owner matrix, typed dependency graph, migration order, test strategy.
-- Evidence missing: RED tests, implemented contracts, focused test results, adjacent integration results, real platform checks.
-- Substitutes planned: fake filesystem, fake downloader, fake FFmpeg, fake transcription engine, generated media fixtures.
-- Decisions unapproved: shared project/reference manifest policy; long-term content-document version policy.
-- Forbidden claims: independently runnable MVPs exist; the reference pipeline is domain verified; network downloading is platform integrated; model transcription is production verified; the whole video pipeline is production ready.
+- Evidence present: repository inventory, creator-outcome boundaries, unique state owners, typed research relationships, dependency order, contract sketch, migration rules.
+- Evidence missing: RED tests, implemented research contracts, lifecycle tests, adjacent integration, real connector checks, model checks.
+- Substitutes planned: fake source connector, fake authentication strategy, fake evidence adapters, temporary research workspace, generated media.
+- Decisions still unapproved: exact authoring approval policy and long-term review metric schedule; neither blocks `research-mvp`.
+- Claims forbidden: research MVP implemented; legacy pipeline replaced; Bilibili login solved; analytics verified; end-to-end video production ready; production verification achieved.
 
