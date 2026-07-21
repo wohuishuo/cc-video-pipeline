@@ -1,5 +1,17 @@
 # cc 视频创作流水线
 
+## New MVP architecture
+
+The first clean vertical slice is the research domain core. Run its substitute-adapter demonstration with:
+
+```powershell
+.\tools\.venv\Scripts\python.exe -m research_mvp `
+  --workspace "$env:TEMP\research-mvp-demo" `
+  create demo:video-1
+```
+
+`research-mvp` is domain-verified with substitute adapters. Real Bilibili/YouTube, FFmpeg, and transcription adapters remain platform-integration work. See `docs/mvp/research/` for the brief, DAG, evidence, and delivery ledger.
+
 > **结论先行** —— 这是一套基于 Claude Code skills 的视频创作工具链。
 > 把"参考视频分析 → 内容策划 → 写稿 → 剪辑辅助 → 封面标题 → 数据复盘 → 本地化出海"七步流水线，全部跑在 Windows 本地，开源、零云端依赖。
 

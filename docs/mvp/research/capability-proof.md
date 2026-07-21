@@ -28,4 +28,10 @@ The first assertion requires equivalent normalized source/configuration input to
 
 ## Evidence receipt
 
-This section is intentionally empty until executable RED and GREEN evidence is observed. It will be filled with exact commands, counts, substitutes, missing evidence, and forbidden claims before the capability level is advanced.
+- RED evidence: missing domain, repository, service, and CLI entry modules each failed before implementation.
+- GREEN evidence: 12 focused tests passed; the CLI subprocess produced a committed `complete_with_gaps` dossier.
+- Owner contract: `ResearchService` owns lifecycle and `FileResearchRepository` commits job/dossier state.
+- Substitutes: demo connector, demo collector, generated transcript, temporary filesystem.
+- Missing evidence: real source connectors, authentication, FFmpeg, transcription, crash recovery, concurrency, scale.
+- Supported level: `DOMAIN_VERIFIED`.
+- Forbidden claims: platform integration, production verification, legacy replacement, real analytics, solved login.
