@@ -99,6 +99,7 @@ desktop.ini
 .vscode/
 .idea/
 *.code-workspace
+.worktrees/
 
 # Python 包构建
 build/
