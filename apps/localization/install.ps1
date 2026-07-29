@@ -1,4 +1,93 @@
+[CmdletBinding()]
+param(
+    [string]$SeparatorModelDir
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$venv = Join-Path $root ".venv"
-if (-not (Test-Path $venv)) { python -m venv $venv }
-& (Join-Path $venv "Scripts\python.exe") -m pip install edge-tts
+$tools = Join-Path $root "tools"
+$orchestrationVenv = Join-Path $tools ".venv"
+$separatorVenv = Join-Path $tools "audio-separator-env"
+$modelFilename = "MDX23C-8KFFT-InstVoc_HQ.ckpt"
+if ([string]::IsNullOrWhiteSpace($SeparatorModelDir)) {
+    $SeparatorModelDir = Join-Path $tools "audio-separator-models"
+}
+
+function Invoke-Checked {
+    param(
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(ValueFromRemainingArguments = $true)][string[]]$CommandArguments
+    )
+    & $Command @CommandArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Command failed with exit code ${LASTEXITCODE}: $Command $($CommandArguments -join ' ')"
+    }
+}
+
+function Ensure-Venv {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$PythonVersion
+    )
+    $python = Join-Path $Path "Scripts\python.exe"
+    if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+        $launcher = Get-Command "py.exe" -ErrorAction SilentlyContinue
+        if ($null -eq $launcher) {
+            throw "Python launcher py.exe is required to create the Python $PythonVersion environment at $Path"
+        }
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
+        Invoke-Checked $launcher.Source "-$PythonVersion" "-m" "venv" $Path
+    }
+    if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+        throw "Virtual environment creation did not produce $python"
+    }
+    $actualVersion = (& $python "-c" "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "Cannot inspect Python in $Path"
+    }
+    if ($actualVersion -ne $PythonVersion) {
+        throw "$Path uses Python $actualVersion; Python $PythonVersion is required"
+    }
+    return $python
+}
+
+$orchestrationPython = Ensure-Venv $orchestrationVenv "3.12"
+Invoke-Checked $orchestrationPython "-m" "pip" "install" "--disable-pip-version-check" "edge-tts" "faster-whisper"
+
+$separatorPython = Ensure-Venv $separatorVenv "3.11"
+Invoke-Checked $separatorPython "-m" "pip" "install" "--disable-pip-version-check" "audio-separator[gpu]==0.44.5"
+
+$separatorCli = Join-Path $separatorVenv "Scripts\audio-separator.exe"
+if (-not (Test-Path -LiteralPath $separatorCli -PathType Leaf)) {
+    throw "audio-separator installation did not produce $separatorCli"
+}
+
+$envInfo = (& $separatorCli "--env_info" 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0) {
+    throw "audio-separator --env_info failed with exit code $LASTEXITCODE`n$envInfo"
+}
+if ($envInfo -notmatch "(?i)ONNXruntime has CUDAExecutionProvider available") {
+    throw "audio-separator GPU validation failed: CUDA and CUDAExecutionProvider are required.`n$envInfo"
+}
+if ($envInfo -notmatch "(?i)FFmpeg installed") {
+    throw "audio-separator runtime validation failed: FFmpeg is required.`n$envInfo"
+}
+
+New-Item -ItemType Directory -Force -Path $SeparatorModelDir | Out-Null
+$modelPath = Join-Path $SeparatorModelDir $modelFilename
+if (-not (Test-Path -LiteralPath $modelPath -PathType Leaf) -or (Get-Item -LiteralPath $modelPath).Length -le 0) {
+    Invoke-Checked $separatorCli `
+        "--model_filename" $modelFilename `
+        "--model_file_dir" $SeparatorModelDir `
+        "--download_model_only"
+}
+if (-not (Test-Path -LiteralPath $modelPath -PathType Leaf) -or (Get-Item -LiteralPath $modelPath).Length -le 0) {
+    throw "Model download did not produce a nonempty $modelPath"
+}
+
+Write-Host "Localization runtimes are ready."
+Write-Host "Orchestration Python: $orchestrationPython"
+Write-Host "Separator Python: $separatorPython"
+Write-Host "Separator model: $modelPath"
