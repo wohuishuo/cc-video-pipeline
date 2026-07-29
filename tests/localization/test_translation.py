@@ -53,6 +53,18 @@ def test_merge_translation_keeps_timestamps_and_rejects_missing_ids():
     assert merged[0].text == "Рост на 10% в 2026 году"
 
 
+def test_merge_translation_reconstructs_source_order_from_unordered_exact_ids():
+    """Positional pairing must not change source timing when the model reorders valid IDs."""
+    source = source_segments()[:2]
+
+    merged = merge_translations(source, list(reversed(russian_rows()[:2])))
+
+    assert [(item.id, item.start, item.end, item.text) for item in merged] == [
+        (1, 0.2, 2.4, "Рост на 10% в 2026 году"),
+        (2, 2.5, 4.0, "Промышленные роботы"),
+    ]
+
+
 @pytest.mark.parametrize(
     "rows, message",
     [
@@ -202,14 +214,20 @@ def test_translate_job_rejects_wrong_transcript_schema_without_artifacts(tmp_pat
     assert not (artifact_dir / "subtitles.ru.srt").exists()
 
 
-def test_rewrite_overflow_segments_preserves_source_numerals_once():
-    """Adding current Russian text to the source row must not duplicate numeral requirements."""
+def test_rewrite_overflow_segments_sends_current_russian_text_and_duration_constraint():
+    """A rewrite must shorten the prior Russian text, never freshly translate Chinese text."""
     source = source_segments()[:1]
     current = merge_translations(source, russian_rows()[:1])
+    requests = []
 
-    def rewritten(_url, _payload):
+    def rewritten(_url, payload):
+        requests.append(payload)
         return {"message": {"content": '{"translations": [{"id": 1, "text_ru": "Рост 10% в 2026"}]}'}}
 
     result = rewrite_overflow_segments(source, [1], current, http_post=rewritten)
 
+    rows = json.loads(requests[0]["messages"][1]["content"])
+    assert rows == [{"id": 1, "text_ru": "Рост на 10% в 2026 году", "max_duration_seconds": 2.2}]
+    assert "start" not in requests[0]["messages"][1]["content"]
+    assert "end" not in requests[0]["messages"][1]["content"]
     assert result == [type(current[0])(1, 0.2, 2.4, "Рост 10% в 2026")]

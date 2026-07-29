@@ -157,15 +157,14 @@ def validate_translations(
     unexpected = set(received_ids) - set(expected_ids)
     if unexpected:
         raise TranslationError(_ids_message("unexpected ids", unexpected))
-    if received_ids != expected_ids:
-        raise TranslationError("translation ids must be in source order")
-
-    for source, translated in zip(source_rows, normalized, strict=True):
+    translations_by_id = {item["id"]: item for item in normalized}
+    for source in source_rows:
+        translated = translations_by_id[source["id"]]
         expected_numerals = Counter(_NUMERALS.findall(source["text_zh"]))
         received_numerals = Counter(_NUMERALS.findall(translated["text_ru"]))
         if expected_numerals != received_numerals:
             raise TranslationError(f"translation {source['id']} does not preserve numerals")
-    return normalized
+    return [translations_by_id[identifier] for identifier in expected_ids]
 
 
 def merge_translations(
@@ -215,13 +214,14 @@ def _extract_translations(response: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _translate_chunks(
-    source_segments: Sequence[Segment | Mapping[str, Any]],
+    source_segments: Sequence[Any],
     *,
     ollama_base_url: str,
     model: str,
     chunk_size: int,
     http_post: HttpPost,
     system_prompt: str,
+    request_builder: Callable[..., dict[str, Any]] = build_translation_request,
 ) -> list[dict[str, Any]]:
     if not isinstance(chunk_size, int) or isinstance(chunk_size, bool) or chunk_size <= 0:
         raise TranslationError("chunk_size must be a positive integer")
@@ -232,7 +232,7 @@ def _translate_chunks(
         last_error: Exception | None = None
         for _attempt in range(MAX_CHUNK_ATTEMPTS):
             try:
-                response = http_post(endpoint, build_translation_request(chunk, model=model, system_prompt=system_prompt))
+                response = http_post(endpoint, request_builder(chunk, model=model, system_prompt=system_prompt))
                 translations.extend(validate_translations(chunk, _extract_translations(response)))
                 break
             except Exception as error:
@@ -299,6 +299,36 @@ def _srt(segments: Sequence[TranslationSegment]) -> str:
         f"{segment.id}\n{_srt_timestamp(segment.start)} --> {_srt_timestamp(segment.end)}\n{segment.text}\n\n"
         for segment in segments
     )
+
+
+def _build_rewrite_request(
+    segments: Sequence[TranslationSegment], *, model: str, system_prompt: str
+) -> dict[str, Any]:
+    """Build a concise-rewrite request with text and a duration ceiling, never timecodes."""
+
+    rows: list[dict[str, Any]] = []
+    for segment in segments:
+        duration = segment.end - segment.start
+        if not math.isfinite(duration) or duration <= 0:
+            raise TranslationError(f"rewrite segment {segment.id} requires a positive duration")
+        rows.append(
+            {
+                "id": segment.id,
+                "text_ru": segment.text,
+                "max_duration_seconds": round(duration, 3),
+            }
+        )
+    return {
+        "model": model,
+        "stream": False,
+        "think": False,
+        "format": TRANSLATION_SCHEMA,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(rows, ensure_ascii=False)},
+        ],
+        "options": {"temperature": 0, "num_ctx": 4096},
+    }
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
@@ -387,7 +417,7 @@ def rewrite_overflow_segments(
     source_by_id = {segment.id: segment for segment in source_segments}
     if requested - set(source_by_id) or requested - set(by_id):
         raise TranslationError("overflow ids must exist in source and current translations")
-    rewrite_sources = [source_by_id[identifier] for identifier in sorted(requested)]
+    rewrite_sources = [by_id[identifier] for identifier in sorted(requested)]
     rewritten_rows = _translate_chunks(
         rewrite_sources,
         ollama_base_url=ollama_base_url,
@@ -395,7 +425,10 @@ def rewrite_overflow_segments(
         chunk_size=len(rewrite_sources),
         http_post=http_post or _default_http_post,
         system_prompt=REWRITE_PROMPT,
+        request_builder=_build_rewrite_request,
     )
-    rewritten = merge_translations([source_by_id[item["id"]] for item in rewritten_rows], rewritten_rows)
+    rewritten = merge_translations(
+        [source_by_id[segment.id] for segment in rewrite_sources], rewritten_rows
+    )
     replacement = {segment.id: segment for segment in rewritten}
     return [replacement.get(segment.id, segment) for segment in current_translations]

@@ -74,3 +74,57 @@ The fake HTTP server proves the HTTP/schema/retry/timestamp boundary without
 requiring Ollama. It does not prove real Qwen linguistic quality, human
 editorial acceptance, or alternate target-language support. No transcription,
 voice, timing-alignment, media, upload, or source-file behavior was added.
+
+## Fix round 1
+
+### Root cause and RED evidence
+
+`validate_translations()` required the model's IDs to arrive in source order
+and then paired source and output positionally. An exact but reversed response
+therefore raised `TranslationError: translation ids must be in source order`.
+Separately, `rewrite_overflow_segments()` validated that prior Russian text
+existed but passed Chinese source segments into the shared request builder.
+The captured payload was `[{"id": 1, "text_zh": "2026年增长10%"}]`, so the
+rewrite prompt had no Russian input or duration constraint.
+
+RED command:
+
+```powershell
+& 'C:\Users\eugen\OneDrive\Documents\video\tools\.venv\Scripts\python.exe' -m pytest tests/localization/test_translation.py::test_merge_translation_reconstructs_source_order_from_unordered_exact_ids tests/localization/test_translation.py::test_rewrite_overflow_segments_sends_current_russian_text_and_duration_constraint -q --import-mode=importlib
+```
+
+Observed result: `2 failed in 0.16s`, with the two failures above.
+
+### GREEN evidence
+
+The validator now indexes exact, duplicate-free IDs and returns translations in
+authoritative source order. `merge_translations()` therefore always combines
+by local source ID/timestamps. The rewrite path now sends the prior Russian
+text and `max_duration_seconds` while omitting `start` and `end`; validation
+still verifies Cyrillic and numeral preservation before local timing is joined.
+
+Focused command:
+
+```powershell
+& 'C:\Users\eugen\OneDrive\Documents\video\tools\.venv\Scripts\python.exe' -m pytest tests/localization/test_translation.py -q --import-mode=importlib
+```
+
+Observed result: `10 passed in 0.69s`.
+
+Regression command:
+
+```powershell
+& 'C:\Users\eugen\OneDrive\Documents\video\tools\.venv\Scripts\python.exe' -m pytest tests/localization -q --import-mode=importlib
+```
+
+Observed result: `52 passed in 0.82s`.
+
+### Changed files and self-review
+
+- `apps/localization/localizer/translation.py`
+- `tests/localization/test_translation.py`
+- `.superpowers/sdd/2026-07-30-douyin-russian-localization/task-3-report.md`
+
+Reviewed all ID-set checks (missing, extra, duplicate), source-order
+reconstruction, numeral validation after mapping, and rewrite payload contents.
+`git diff --check` was clean after the GREEN run.
