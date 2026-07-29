@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 from tempfile import NamedTemporaryFile
 from types import MappingProxyType
 from typing import Any, Literal, Mapping
@@ -15,6 +16,8 @@ from typing import Any, Literal, Mapping
 
 StageStatus = Literal["pending", "running", "completed", "failed"]
 _SCHEMA_VERSION = 1
+_SOURCE_ID = re.compile(r"^\[([^\]]+)\]")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def _utc_now() -> str:
@@ -79,11 +82,27 @@ def _validate_stage_lifecycle(
             raise ValueError("completed stage requires timestamps")
         if error is not None:
             raise ValueError("completed stage cannot have an error")
+        if not outputs:
+            raise ValueError("completed stage requires at least one output")
     else:
         if not _is_utc_iso_timestamp(started_at) or not _is_utc_iso_timestamp(completed_at):
             raise ValueError("failed stage requires timestamps")
         if not _string_map(error, "error"):
             raise ValueError("failed stage requires an error")
+
+
+def _validate_job_identity(id: object, source: object, source_sha256: object) -> None:
+    if not isinstance(id, str) or not id.strip():
+        raise ValueError("job ID must be a non-empty string")
+    if not isinstance(source, str) or not source.strip():
+        raise ValueError("source path must be a non-empty string")
+    if not isinstance(source_sha256, str) or _SHA256.fullmatch(source_sha256) is None:
+        raise ValueError("source SHA-256 must be 64 lowercase hexadecimal characters")
+    source_id = _SOURCE_ID.match(Path(source).name)
+    if source_id is None:
+        raise ValueError("source path filename must begin with a source ID")
+    if source_id.group(1) != id:
+        raise ValueError(f"source ID {source_id.group(1)} does not match job ID {id}")
 
 
 @dataclass(frozen=True)
@@ -250,6 +269,16 @@ class JobRecord:
     source_sha256: str
     stages: dict[str, StageRecord] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _validate_job_identity(self.id, self.source, self.source_sha256)
+        if not isinstance(self.stages, dict):
+            raise ValueError("stages must be a mapping")
+        if not all(
+            isinstance(name, str) and name and isinstance(stage, StageRecord)
+            for name, stage in self.stages.items()
+        ):
+            raise ValueError("stages must map non-empty names to StageRecord values")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema_version": _SCHEMA_VERSION,
@@ -268,9 +297,9 @@ class JobRecord:
         if not isinstance(stages, dict):
             raise ValueError("stages must be a mapping")
         return cls(
-            id=str(value["id"]),
-            source=str(value["source"]),
-            source_sha256=str(value["source_sha256"]),
+            id=value["id"],
+            source=value["source"],
+            source_sha256=value["source_sha256"],
             stages={
                 str(name): StageRecord.from_dict(stage)
                 for name, stage in stages.items()
@@ -285,6 +314,24 @@ class BatchManifest:
     manifest: str
     jobs: list[JobRecord]
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.manifest, str) or not self.manifest.strip():
+            raise ValueError("manifest path must be a non-empty string")
+        if not isinstance(self.jobs, list) or not self.jobs:
+            raise ValueError("batch manifest requires at least one job")
+        if not all(isinstance(job, JobRecord) for job in self.jobs):
+            raise ValueError("jobs must contain JobRecord values")
+        ids = [job.id for job in self.jobs]
+        sources = [os.path.normcase(os.path.normpath(job.source)) for job in self.jobs]
+        duplicate_ids = sorted({job_id for job_id in ids if ids.count(job_id) > 1})
+        duplicate_sources = sorted(
+            {source for source in sources if sources.count(source) > 1}
+        )
+        if duplicate_ids:
+            raise ValueError(f"duplicate job ID: {', '.join(duplicate_ids)}")
+        if duplicate_sources:
+            raise ValueError(f"duplicate source identity: {', '.join(duplicate_sources)}")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema_version": _SCHEMA_VERSION,
@@ -298,7 +345,7 @@ class BatchManifest:
         if not isinstance(value["jobs"], list):
             raise ValueError("jobs must be a list")
         return cls(
-            manifest=str(value["manifest"]),
+            manifest=value["manifest"],
             jobs=[JobRecord.from_dict(job) for job in value["jobs"]],
         )
 

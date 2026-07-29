@@ -88,6 +88,35 @@ def test_completed_stage_records_utc_iso_timestamps_and_no_error():
     assert stage.error is None
 
 
+def test_completed_stage_requires_an_output_through_all_construction_paths():
+    with pytest.raises(ValueError, match="completed stage requires at least one output"):
+        StageRecord.completed(adapter="fixture@1", inputs={}, outputs={})
+
+    with pytest.raises(ValueError, match="completed stage requires at least one output"):
+        StageRecord(
+            status="completed",
+            adapter="fixture@1",
+            inputs={},
+            outputs={},
+            started_at="2026-07-30T00:00:00+00:00",
+            completed_at="2026-07-30T00:00:01+00:00",
+        )
+
+    with pytest.raises(ValueError, match="completed stage requires at least one output"):
+        StageRecord.from_dict(
+            {
+                "schema_version": 1,
+                "status": "completed",
+                "adapter": "fixture@1",
+                "inputs": {},
+                "outputs": {},
+                "started_at": "2026-07-30T00:00:00+00:00",
+                "completed_at": "2026-07-30T00:00:01+00:00",
+                "error": None,
+            }
+        )
+
+
 def test_atomic_write_json_replaces_an_existing_receipt_with_valid_json(tmp_path):
     receipt = tmp_path / "job.json"
     receipt.write_text('{"state": "old"}', encoding="utf-8")
@@ -122,7 +151,7 @@ def test_job_manifest_round_trip_preserves_immutable_segment_timing():
     job = JobRecord(
         id="111",
         source="videos/[111] first.mp4",
-        source_sha256="source-fingerprint",
+        source_sha256="a" * 64,
         stages={"transcription": StageRecord.pending(adapter="asr@1")},
     )
     manifest = BatchManifest(manifest="video-urls.txt", jobs=[job])
@@ -137,7 +166,7 @@ def test_job_manifest_round_trip_preserves_immutable_segment_timing():
                 "schema_version": 1,
                 "id": "111",
                 "source": "videos/[111] first.mp4",
-                "source_sha256": "source-fingerprint",
+                "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "stages": {
                     "transcription": {
                         "schema_version": 1,
@@ -213,7 +242,59 @@ def test_manifest_rejects_an_unsupported_schema_version():
 
 
 def test_job_identity_cannot_be_mutated_after_inventory_discovery():
-    job = JobRecord(id="111", source="[111] source.mp4", source_sha256="fingerprint")
+    job = JobRecord(id="111", source="[111] source.mp4", source_sha256="a" * 64)
 
     with pytest.raises(AttributeError):
         job.id = "222"
+
+
+@pytest.mark.parametrize(
+    ("id", "source", "source_sha256", "message"),
+    [
+        ("", "videos/[111] source.mp4", "a" * 64, "job ID"),
+        ("111", "", "a" * 64, "source path"),
+        ("111", "videos/[111] source.mp4", "not-a-fingerprint", "SHA-256"),
+    ],
+)
+def test_job_record_rejects_invalid_immutable_identity(
+    id, source, source_sha256, message
+):
+    with pytest.raises(ValueError, match=message):
+        JobRecord(id=id, source=source, source_sha256=source_sha256)
+
+
+def test_job_record_rejects_a_source_id_that_does_not_match_its_job_id():
+    with pytest.raises(ValueError, match="source ID.*222.*job ID.*111"):
+        JobRecord(
+            id="111",
+            source="videos/[222] source.mp4",
+            source_sha256="a" * 64,
+        )
+
+
+def test_job_record_deserialization_rejects_non_string_identity_fields():
+    with pytest.raises(ValueError, match="job ID"):
+        JobRecord.from_dict(
+            {
+                "schema_version": 1,
+                "id": 111,
+                "source": "videos/[111] source.mp4",
+                "source_sha256": "a" * 64,
+                "stages": {},
+            }
+        )
+
+
+def test_batch_manifest_requires_complete_unique_job_coverage():
+    first = JobRecord(
+        id="111", source="videos/[111] source.mp4", source_sha256="a" * 64
+    )
+    duplicate_id = JobRecord(
+        id="111", source="videos/[111] alternate.mp4", source_sha256="b" * 64
+    )
+
+    with pytest.raises(ValueError, match="duplicate job ID.*111"):
+        BatchManifest(manifest="video-urls.txt", jobs=[first, duplicate_id])
+
+    with pytest.raises(ValueError, match="at least one job"):
+        BatchManifest(manifest="video-urls.txt", jobs=[])
