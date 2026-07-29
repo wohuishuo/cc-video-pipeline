@@ -45,3 +45,23 @@ def test_reusable_applications_contain_no_generated_media():
     forbidden = {".mp3", ".wav", ".mp4", ".mov", ".mkv", ".pid", ".pth", ".bin"}
     offenders = [path for path in (ROOT / "apps").rglob("*") if path.is_file() and path.suffix.lower() in forbidden]
     assert offenders == []
+
+
+def test_readme_is_a_visual_documentation_hub():
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert text.count("```mermaid") >= 2
+    assert "Delivery evidence" in text
+    assert "DOMAIN_VERIFIED" in text
+    for relative in ("docs/ARCHITECTURE.md", "docs/WORKFLOWS.md", "docs/CONTRIBUTING.md"):
+        assert f"]({relative})" in text
+        assert (ROOT / relative).is_file()
+
+
+def test_documentation_pages_include_workflow_and_ownership_diagrams():
+    architecture = (ROOT / "docs/ARCHITECTURE.md").read_text(encoding="utf-8")
+    workflows = (ROOT / "docs/WORKFLOWS.md").read_text(encoding="utf-8")
+    contributing = (ROOT / "docs/CONTRIBUTING.md").read_text(encoding="utf-8")
+    assert "```mermaid" in architecture
+    assert workflows.count("```mermaid") >= 3
+    assert "mvp.json" in contributing
+    assert "Generated artifacts" in contributing

@@ -1,5 +1,25 @@
 # Repository MVP Map
 
+```mermaid
+flowchart TB
+    ROOT[Repository]
+    ROOT --> APPS[apps/ — public MVPs]
+    ROOT --> PACKAGES[packages/ — shared contracts]
+    ROOT --> PROJECTS[projects/ — concrete productions]
+    ROOT --> DOCS[docs/ — guides and evidence]
+    ROOT --> COMPAT[tools/ and .claude/skills/ — compatibility implementations]
+    ROOT -. ignored .-> RUNTIME[models, caches, downloads, renders, profiles]
+
+    classDef public fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
+    classDef data fill:#ecfdf5,stroke:#16a34a,color:#052e16;
+    classDef support fill:#eff6ff,stroke:#2563eb,color:#172554;
+    classDef ignored fill:#f8fafc,stroke:#64748b,color:#334155,stroke-dasharray: 5 5;
+    class APPS public;
+    class PROJECTS data;
+    class PACKAGES,DOCS,COMPAT support;
+    class RUNTIME ignored;
+```
+
 ## Reusable programs
 
 `apps/` contains public applications. Each application owns one result and has an independent launcher, installer, manifest, README, tests, and evidence.

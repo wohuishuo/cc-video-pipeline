@@ -1,38 +1,158 @@
+<div align="center">
+
 # Video Production MVPs
 
-This repository is a Windows-first monorepo of small, independent video-production programs. Choose one result, install only that application, and run it without learning the rest of the repository.
+**A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-## Applications
+[![Tests](https://img.shields.io/badge/tests-52%20passing-22c55e)](scripts/test-all.ps1)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-9-8b5cf6)](apps/README.md)
+[![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
-| Program | Result | Documentation |
-|---|---|---|
-| Platform I/O | Download or prepare uploads for YouTube, Bilibili, Douyin, and TikTok | [Open](apps/platform-io/README.md) |
-| Transcription | Produce JSON and SRT transcripts | [Open](apps/transcription/README.md) |
-| Signal Analysis | Detect cuts and measure loudness | [Open](apps/signal-analysis/README.md) |
-| Frame Extraction | Produce interval or cut-aligned frame sets | [Open](apps/frame-extraction/README.md) |
-| Video Editing | Remove silence, reframe, or make vertical derivatives | [Open](apps/video-editing/README.md) |
-| Localization | Compose translation, dubbing, timing, and subtitles | [Open](apps/localization/README.md) |
-| Voice Cloning | Register voices and synthesize speech locally | [Open](apps/voice-cloning/README.md) |
-| Channel Research | Build reproducible channel and video datasets | [Open](apps/channel-research/README.md) |
-| Remotion Studio | Preview and render reusable video compositions | [Open](apps/remotion-studio/README.md) |
+[Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
 
-## Start here
+</div>
+
+---
+
+## One repository, nine focused programs
+
+This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
+
+```mermaid
+flowchart LR
+    idea([Idea or source]) --> research[Channel Research]
+    research --> download[Platform I/O]
+    download --> transcribe[Transcription]
+    download --> signals[Signal Analysis]
+    signals --> frames[Frame Extraction]
+    transcribe --> edit[Video Editing]
+    frames --> studio[Remotion Studio]
+    edit --> localize[Localization]
+    voice[Voice Cloning] --> localize
+    studio --> master[(Master video)]
+    localize --> master
+    master --> publish[Platform I/O]
+
+    classDef source fill:#eff6ff,stroke:#2563eb,color:#172554;
+    classDef app fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
+    classDef artifact fill:#ecfdf5,stroke:#16a34a,color:#052e16;
+    classDef external fill:#fff7ed,stroke:#ea580c,color:#431407;
+    class idea source;
+    class research,download,transcribe,signals,frames,edit,studio,localize,voice app;
+    class master artifact;
+    class publish external;
+```
+
+The arrows describe useful composition, not mandatory coupling.
+
+## Choose one result
+
+| Program | You provide | You receive | Evidence | Guide |
+|---|---|---|---|---|
+| **Platform I/O** | URL or finished video | Verified download or guarded upload receipt | `DOMAIN_VERIFIED` | [Open](apps/platform-io/README.md) |
+| **Channel Research** | Platform source reference | Reproducible research dossier | `DOMAIN_VERIFIED` | [Open](apps/channel-research/README.md) |
+| **Transcription** | Audio or video | Transcript JSON + SRT | `IMPLEMENTED` | [Open](apps/transcription/README.md) |
+| **Signal Analysis** | Video | Cut points + loudness measurements | `IMPLEMENTED` | [Open](apps/signal-analysis/README.md) |
+| **Frame Extraction** | Video + optional cuts | Frame set | `IMPLEMENTED` | [Open](apps/frame-extraction/README.md) |
+| **Video Editing** | Video + edit operation | Edited derivative | `IMPLEMENTED` | [Open](apps/video-editing/README.md) |
+| **Voice Cloning** | Text + reference voice | Synthesized speech | `IMPLEMENTED` | [Open](apps/voice-cloning/README.md) |
+| **Remotion Studio** | Composition + project props | Preview or render | `IMPLEMENTED` | [Open](apps/remotion-studio/README.md) |
+| **Localization** | Transcript + translation + voice + timing | Localized derivative | `DESIGNED` | [Open](apps/localization/README.md) |
+
+## Independent by design
+
+```mermaid
+flowchart TB
+    user([Creator / automation])
+    subgraph apps[Independent applications]
+      A[apps/platform-io]
+      B[apps/transcription]
+      C[apps/signal-analysis]
+      D[apps/frame-extraction]
+      E[apps/video-editing]
+      F[apps/localization]
+      G[apps/voice-cloning]
+      H[apps/channel-research]
+      I[apps/remotion-studio]
+    end
+    contracts[(Versioned files and receipts)]
+    projects[(Project-owned scripts and assets)]
+    outputs[(Ignored generated artifacts)]
+
+    user --> apps
+    apps <--> contracts
+    projects --> apps
+    apps --> outputs
+
+    classDef boundary fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
+    classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
+    class A,B,C,D,E,F,G,H,I boundary;
+    class contracts,projects,outputs data;
+```
+
+- Applications communicate through public CLIs and explicit files.
+- No application imports another application's private implementation.
+- Concrete productions remain in `projects/`; reusable behavior belongs in `apps/`.
+- Models, cookies, profiles, source downloads, previews, and renders stay out of Git.
+
+## Five-minute start
+
+Requirements: Windows 11, PowerShell 5.1+, Python 3.12, Git, and FFmpeg. Individual applications document any additional dependencies.
 
 ```powershell
+git clone https://github.com/wohuishuo/cc-video-pipeline.git
+cd cc-video-pipeline
+
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install pytest
+
 powershell -ExecutionPolicy Bypass -File .\scripts\doctor.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-Each application contains its own `README.md`, `install.ps1`, `run.ps1`, `mvp.json`, tests, and delivery evidence. Generated media belongs in an explicit output directory and is not source code.
+Then install only the program you need:
 
-## Repository rules
+```powershell
+powershell -ExecutionPolicy Bypass -File .\apps\platform-io\install.ps1
+powershell -ExecutionPolicy Bypass -File .\apps\platform-io\run.ps1 doctor --json
+```
 
-- Applications communicate through public CLIs and versioned files.
-- An application may not import another application's private implementation.
-- Cookies, browser profiles, models, downloaded media, and renders are never committed.
-- A zero process exit code is not success unless the declared output is verified.
-- Delivery levels are evidence labels, not marketing labels.
+## Delivery evidence
 
-The repository architecture and migration plan are documented in `docs/superpowers/specs/2026-07-29-independent-video-mvp-repository-design.md`.
+Status labels describe what has been proven:
+
+| Level | Meaning |
+|---|---|
+| `DESIGNED` | Boundary and behavior are specified; executable completion is not claimed. |
+| `IMPLEMENTED` | Code and public entrypoint exist; real environment evidence may still be missing. |
+| `DOMAIN_VERIFIED` | Domain contracts and adjacent integrations pass with recorded evidence. |
+| `PLATFORM_INTEGRATED` | Real external runtime or platform behavior has been verified. |
+| `PRODUCTION_VERIFIED` | Recovery, security, operations, and representative production behavior are evidenced. |
+
+Every program has a `docs/mvp/<name>/` brief, capability DAG, evidence record, and delivery ledger. Known limits are part of the product documentation, not hidden footnotes.
+
+## Documentation
+
+- [Architecture and ownership](docs/ARCHITECTURE.md)
+- [Creator workflows](docs/WORKFLOWS.md)
+- [Contributing a new MVP](docs/CONTRIBUTING.md)
+- [Repository map](docs/PROJECT_MAP.md)
+- [Command guide](TOOLS.md)
+- [Platform I/O details](docs/video-platform-io.md)
+- [Design decisions](docs/superpowers/specs/2026-07-29-independent-video-mvp-repository-design.md)
+
+## Safety defaults
+
+- Downloads try anonymous access before optional cookies.
+- Upload commands prepare by default; `--execute` is required to touch a platform.
+- YouTube upload defaults to private unless public visibility is explicitly requested.
+- A zero exit code is never treated as success when the declared output is missing.
+- Credentials and browser profiles are redacted from receipts and ignored by Git.
+
+---
+
+<div align="center">
+
+Built for creators who want small tools they can understand, verify, replace, and reuse.
+
+</div>
