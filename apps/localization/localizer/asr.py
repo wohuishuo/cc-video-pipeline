@@ -191,11 +191,21 @@ def transcribe_batch(
 ) -> list[dict[str, Any]]:
     """Load one CUDA model, process every job, and leave failed jobs retryable."""
 
-    if model_factory is None:
-        from faster_whisper import WhisperModel as FasterWhisperModel
+    try:
+        if model_factory is None:
+            from faster_whisper import WhisperModel as FasterWhisperModel
 
-        model_factory = FasterWhisperModel
-    model = model_factory(model_name, device=device, compute_type=compute_type)
+            model_factory = FasterWhisperModel
+        model = model_factory(model_name, device=device, compute_type=compute_type)
+    except Exception as error:
+        for job in jobs:
+            try:
+                inputs = _source_inputs(job)
+            except Exception:
+                inputs = {"source_sha256": job.source_sha256}
+            _mark_failed(job, inputs, error)
+        return []
+
     results: list[dict[str, Any]] = []
     try:
         for job in jobs:

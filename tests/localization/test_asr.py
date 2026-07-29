@@ -10,7 +10,7 @@ LOCALIZATION_ROOT = Path(__file__).resolve().parents[2] / "apps" / "localization
 sys.path.insert(0, str(LOCALIZATION_ROOT))
 
 from localizer.asr import TranscriptionError, transcribe_batch, transcribe_job  # noqa: E402
-from localizer.contracts import JobRecord, sha256_file  # noqa: E402
+from localizer.contracts import JobRecord, StageRecord, sha256_file  # noqa: E402
 
 
 @dataclass
@@ -208,3 +208,28 @@ def test_transcribe_batch_loads_one_cuda_model_and_continues_after_a_failed_job(
     assert [result["job_id"] for result in results] == ["222"]
     assert first.stages["transcription"].status == "failed"
     assert second.stages["transcription"].status == "completed"
+
+
+def test_transcribe_batch_marks_every_job_failed_when_model_loading_fails(tmp_path):
+    """A failed CUDA load must invalidate every affected transcription receipt."""
+    first = make_job(tmp_path, "111")
+    second = make_job(tmp_path, "222")
+    old_transcript = tmp_path / "old-transcript.json"
+    old_transcript.write_text('{"segments": []}', encoding="utf-8")
+    first.stages["transcription"] = StageRecord.completed(
+        adapter="faster-whisper@large-v3",
+        inputs={"source_sha256": first.source_sha256},
+        outputs={"transcript": str(old_transcript)},
+    )
+
+    def failing_factory(*_args, **_kwargs):
+        raise RuntimeError("CUDA initialization failed")
+
+    assert transcribe_batch([first, second], model_factory=failing_factory) == []
+    for job in (first, second):
+        stage = job.stages["transcription"]
+        assert stage.status == "failed"
+        assert stage.error == {
+            "type": "RuntimeError",
+            "message": "CUDA initialization failed",
+        }
