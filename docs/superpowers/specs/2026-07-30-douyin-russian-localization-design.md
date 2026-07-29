@@ -56,13 +56,13 @@ flowchart LR
 
 | Mutable state | Sole owner | Public artifact |
 |---|---|---|
-| Batch discovery and per-video stage status | Localization job ledger | `batch-manifest.json`, `jobs/<id>/job.json` |
+| Batch discovery and per-video stage status | Localization job ledger | `batch-manifest.json`, `jobs/{id}/job.json` |
 | Speech recognition result | Transcription adapter | `transcript.zh.json`, `transcript.zh.srt` |
 | Russian wording | Translation adapter | `translation.ru.json`, `subtitles.ru.srt` |
 | Synthesized speech | Voice adapter | `voice/clips/*.wav`, `voice/manifest.json` |
 | Non-dialogue source bed | Separation adapter | `audio/no_vocals.wav`, `audio/separation.json` |
 | Aligned narration and final mix | Audio compositor | `audio/narration.wav`, `audio/mix.wav`, `audio/mix.json` |
-| Caption replacement and encode | Video renderer | `final/<id>.ru.mp4`, `render.json` |
+| Caption replacement and encode | Video renderer | `final/{id}.ru.mp4`, `render.json` |
 
 ## Processing policies
 
@@ -89,7 +89,7 @@ flowchart LR
 
 ### Original audio preservation
 
-- Separate dialogue from the already-mixed stereo source through a replaceable two-stem adapter.
+- Separate dialogue from the already-mixed stereo source through `audio-separator==0.44.5` with the two-stem `MDX23C-8KFFT-InstVoc_HQ.ckpt` model and retain the replaceable adapter boundary. Keep both `Vocals` and `Instrumental` stems for QA; use `Instrumental` as the Russian mix bed. Record the required MIT/UVR attribution in the application documentation.
 - Keep the no-vocals bed. Do not mix the original final track under Russian narration because that would reintroduce Chinese speech.
 - Duck the bed under narration and normalize the final mix to approximately `-16 LUFS`, true peak at or below `-1.5 dBTP`.
 - If separation fails for a video, mark the stage retryable. A narration-only substitute may be produced for diagnosis but is not accepted as the final batch result.
@@ -112,7 +112,7 @@ flowchart LR
 ```text
 downloads/douyin/creator-1338558235019738-full/russian/
   batch-manifest.json
-  jobs/<video-id>/
+  jobs/{video-id}/
     job.json
     transcript.zh.json
     transcript.zh.srt
@@ -122,6 +122,7 @@ downloads/douyin/creator-1338558235019738-full/russian/
       manifest.json
       clips/*.wav
     audio/
+      vocals.wav
       no_vocals.wav
       narration.wav
       mix.wav
@@ -129,7 +130,7 @@ downloads/douyin/creator-1338558235019738-full/russian/
       mix.json
     render.json
   final/
-    [<video-id>] <source-title>.ru.mp4
+    [{video-id}] {source-title}.ru.mp4
 ```
 
 Every stage records an input fingerprint, adapter/version, output paths, output fingerprints, started/completed timestamps, and an error classification. A completed stage is skipped only when fingerprints and declared outputs still match.
