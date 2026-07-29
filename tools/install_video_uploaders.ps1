@@ -26,10 +26,11 @@ if (-not $SkipPythonDependencies) {
   & $python -m pip install --upgrade pip
   if (Test-Path (Join-Path $checkout "requirements.txt")) {
     & $python -m pip install -r (Join-Path $checkout "requirements.txt")
-  } else {
-    & $python -m pip install -e $checkout
   }
-  & $python -m playwright install chromium
+  # Upstream's requirements.txt omits patchright while production modules import it.
+  # Installing the package itself applies pyproject.toml and its pinned patchright dependency.
+  & $python -m pip install -e $checkout
+  & $python -m patchright install chromium
 }
 
 Write-Output ([pscustomobject]@{name="social-auto-upload"; revision=$actual; checkout=$checkout; ready=$true} | ConvertTo-Json)
