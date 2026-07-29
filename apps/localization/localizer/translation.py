@@ -125,7 +125,7 @@ def _ids_message(label: str, identifiers: Iterable[int]) -> str:
 def validate_translations(
     source_segments: Sequence[Segment | Mapping[str, Any]], translations: Any
 ) -> list[dict[str, Any]]:
-    """Validate one complete, ordered Russian response against authoritative source text."""
+    """Validate an exact Russian ID set and reconstruct authoritative source order."""
 
     source_rows = _source_rows(source_segments)
     if not isinstance(translations, list):
