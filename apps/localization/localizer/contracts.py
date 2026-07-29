@@ -16,6 +16,7 @@ from typing import Any, Literal, Mapping
 
 StageStatus = Literal["pending", "running", "completed", "failed"]
 _SCHEMA_VERSION = 1
+_BATCH_SCHEMA_VERSION = 2
 _SOURCE_ID = re.compile(r"^\[([^\]]+)\]")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 
@@ -24,9 +25,16 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _require_schema(value: dict[str, Any], expected_keys: set[str]) -> None:
-    if value.get("schema_version") != _SCHEMA_VERSION:
-        raise ValueError(f"unsupported schema version: {value.get('schema_version')}")
+def _require_schema(
+    value: dict[str, Any],
+    expected_keys: set[str],
+    *,
+    schema_version: int = _SCHEMA_VERSION,
+    schema_name: str = "",
+) -> None:
+    if value.get("schema_version") != schema_version:
+        prefix = f"unsupported {schema_name} schema version" if schema_name else "unsupported schema version"
+        raise ValueError(f"{prefix}: {value.get('schema_version')}")
     actual_keys = set(value)
     missing = expected_keys - actual_keys
     unexpected = actual_keys - expected_keys
@@ -312,11 +320,24 @@ class BatchManifest:
     """The exact source set resolved from a corrected URL manifest."""
 
     manifest: str
+    expected_ids: tuple[str, ...]
     jobs: tuple[JobRecord, ...]
 
     def __post_init__(self) -> None:
         if not isinstance(self.manifest, str) or not self.manifest.strip():
             raise ValueError("manifest path must be a non-empty string")
+        if not isinstance(self.expected_ids, (list, tuple)) or not self.expected_ids:
+            raise ValueError("batch manifest requires at least one expected ID")
+        expected_ids = tuple(self.expected_ids)
+        if not all(isinstance(video_id, str) and video_id for video_id in expected_ids):
+            raise ValueError("expected IDs must be non-empty strings")
+        duplicate_expected_ids = sorted(
+            {video_id for video_id in expected_ids if expected_ids.count(video_id) > 1}
+        )
+        if duplicate_expected_ids:
+            raise ValueError(
+                f"duplicate expected ID: {', '.join(duplicate_expected_ids)}"
+            )
         if not isinstance(self.jobs, (list, tuple)) or not self.jobs:
             raise ValueError("batch manifest requires at least one job")
         jobs = tuple(self.jobs)
@@ -332,22 +353,39 @@ class BatchManifest:
             raise ValueError(f"duplicate job ID: {', '.join(duplicate_ids)}")
         if duplicate_sources:
             raise ValueError(f"duplicate source identity: {', '.join(duplicate_sources)}")
+        missing_ids = sorted(set(expected_ids) - set(ids))
+        unexpected_ids = sorted(set(ids) - set(expected_ids))
+        if missing_ids or unexpected_ids:
+            details: list[str] = []
+            if missing_ids:
+                details.append(f"missing job IDs: {', '.join(missing_ids)}")
+            if unexpected_ids:
+                details.append(f"unexpected job IDs: {', '.join(unexpected_ids)}")
+            raise ValueError("; ".join(details))
+        object.__setattr__(self, "expected_ids", expected_ids)
         object.__setattr__(self, "jobs", jobs)
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "schema_version": _SCHEMA_VERSION,
+            "schema_version": _BATCH_SCHEMA_VERSION,
             "manifest": self.manifest,
+            "expected_ids": list(self.expected_ids),
             "jobs": [job.to_dict() for job in self.jobs],
         }
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "BatchManifest":
-        _require_schema(value, {"schema_version", "manifest", "jobs"})
+        _require_schema(
+            value,
+            {"schema_version", "manifest", "expected_ids", "jobs"},
+            schema_version=_BATCH_SCHEMA_VERSION,
+            schema_name="batch",
+        )
         if not isinstance(value["jobs"], list):
             raise ValueError("jobs must be a list")
         return cls(
             manifest=value["manifest"],
+            expected_ids=value["expected_ids"],
             jobs=[JobRecord.from_dict(job) for job in value["jobs"]],
         )
 

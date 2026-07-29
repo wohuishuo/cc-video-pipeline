@@ -78,6 +78,7 @@ def discover_jobs(manifest_path: str | Path, source_directory: str | Path) -> Ba
 
     return BatchManifest(
         manifest=str(manifest),
+        expected_ids=tuple(manifest_ids),
         jobs=[
             JobRecord(
                 id=video_id,

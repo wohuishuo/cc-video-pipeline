@@ -37,6 +37,7 @@ def test_discover_jobs_returns_one_fingerprinted_job_per_manifest_id(tmp_path):
     manifest = discover_jobs(urls, videos)
 
     assert [job.id for job in manifest.jobs] == ["222", "111"]
+    assert manifest.expected_ids == ("222", "111")
     assert [Path(job.source).name for job in manifest.jobs] == [
         "[222] second.mp4",
         "[111] first.mp4",

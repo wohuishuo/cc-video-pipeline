@@ -154,13 +154,16 @@ def test_job_manifest_round_trip_preserves_immutable_segment_timing():
         source_sha256="a" * 64,
         stages={"transcription": StageRecord.pending(adapter="asr@1")},
     )
-    manifest = BatchManifest(manifest="video-urls.txt", jobs=[job])
+    manifest = BatchManifest(
+        manifest="video-urls.txt", expected_ids=("111",), jobs=[job]
+    )
 
     restored = BatchManifest.from_dict(manifest.to_dict())
 
     assert restored.to_dict() == {
-        "schema_version": 1,
+        "schema_version": 2,
         "manifest": "video-urls.txt",
+        "expected_ids": ["111"],
         "jobs": [
             {
                 "schema_version": 1,
@@ -235,9 +238,16 @@ def test_stage_receipt_fingerprints_cannot_be_mutated_after_validation(tmp_path)
 
 
 def test_manifest_rejects_an_unsupported_schema_version():
-    with pytest.raises(ValueError, match="unsupported schema version: 2"):
+    with pytest.raises(ValueError, match="unsupported batch schema version: 3"):
         BatchManifest.from_dict(
-            {"schema_version": 2, "manifest": "video-urls.txt", "jobs": []}
+            {"schema_version": 3, "manifest": "video-urls.txt", "jobs": []}
+        )
+
+
+def test_batch_manifest_rejects_legacy_schema_without_expected_ids():
+    with pytest.raises(ValueError, match="unsupported batch schema version: 1"):
+        BatchManifest.from_dict(
+            {"schema_version": 1, "manifest": "video-urls.txt", "jobs": []}
         )
 
 
@@ -294,20 +304,43 @@ def test_batch_manifest_requires_complete_unique_job_coverage():
     )
 
     with pytest.raises(ValueError, match="duplicate job ID.*111"):
-        BatchManifest(manifest="video-urls.txt", jobs=[first, duplicate_id])
+        BatchManifest(
+            manifest="video-urls.txt",
+            expected_ids=("111",),
+            jobs=[first, duplicate_id],
+        )
 
     with pytest.raises(ValueError, match="at least one job"):
-        BatchManifest(manifest="video-urls.txt", jobs=[])
+        BatchManifest(manifest="video-urls.txt", expected_ids=("111",), jobs=[])
 
 
 def test_batch_manifest_coverage_cannot_be_mutated_after_validation():
     job = JobRecord(
         id="111", source="videos/[111] source.mp4", source_sha256="a" * 64
     )
-    manifest = BatchManifest(manifest="video-urls.txt", jobs=[job])
+    manifest = BatchManifest(
+        manifest="video-urls.txt", expected_ids=("111",), jobs=[job]
+    )
 
     with pytest.raises(AttributeError):
         manifest.manifest = "other-urls.txt"
 
     with pytest.raises(TypeError):
         manifest.jobs[0] = job
+
+
+def test_batch_manifest_rejects_missing_and_extra_jobs_against_expected_ids():
+    first = JobRecord(
+        id="111", source="videos/[111] source.mp4", source_sha256="a" * 64
+    )
+    second = JobRecord(
+        id="222", source="videos/[222] source.mp4", source_sha256="b" * 64
+    )
+
+    with pytest.raises(ValueError, match="missing job IDs: 222"):
+        BatchManifest(
+            manifest="video-urls.txt", expected_ids=("111", "222"), jobs=[first]
+        )
+
+    with pytest.raises(ValueError, match="unexpected job IDs: 222"):
+        BatchManifest(manifest="video-urls.txt", expected_ids=("111",), jobs=[first, second])
