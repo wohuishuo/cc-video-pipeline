@@ -1,0 +1,219 @@
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+
+LOCALIZATION_ROOT = Path(__file__).resolve().parents[2] / "apps" / "localization"
+sys.path.insert(0, str(LOCALIZATION_ROOT))
+
+from localizer.contracts import (  # noqa: E402
+    BatchManifest,
+    JobRecord,
+    Segment,
+    StageRecord,
+    atomic_write_json,
+    sha256_file,
+)
+
+
+def test_stage_is_reusable_only_when_fingerprints_and_outputs_match(tmp_path):
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source-v1")
+    output = tmp_path / "artifact.json"
+    output.write_text("{}", encoding="utf-8")
+    stage = StageRecord.completed(
+        adapter="fixture@1",
+        inputs={"source": sha256_file(source)},
+        outputs={"artifact": str(output)},
+    )
+
+    assert stage.is_reusable({"source": sha256_file(source)}, adapter="fixture@1")
+
+    source.write_bytes(b"source-v2")
+
+    assert not stage.is_reusable({"source": sha256_file(source)}, adapter="fixture@1")
+
+
+def test_stage_is_not_reusable_when_a_declared_output_is_empty_or_missing(tmp_path):
+    output = tmp_path / "artifact.json"
+    output.write_text("{}", encoding="utf-8")
+    stage = StageRecord.completed(
+        adapter="fixture@1",
+        inputs={"source": "fingerprint"},
+        outputs={"artifact": str(output)},
+    )
+
+    output.write_bytes(b"")
+    assert not stage.is_reusable({"source": "fingerprint"}, adapter="fixture@1")
+
+    output.unlink()
+    assert not stage.is_reusable({"source": "fingerprint"}, adapter="fixture@1")
+
+
+def test_stage_is_not_reusable_for_a_different_adapter_version(tmp_path):
+    output = tmp_path / "artifact.json"
+    output.write_text("{}", encoding="utf-8")
+    stage = StageRecord.completed(
+        adapter="fixture@1",
+        inputs={"source": "fingerprint"},
+        outputs={"artifact": str(output)},
+    )
+
+    assert not stage.is_reusable({"source": "fingerprint"}, adapter="fixture@2")
+
+
+def test_stage_reuse_requires_the_current_adapter_version(tmp_path):
+    output = tmp_path / "artifact.json"
+    output.write_text("{}", encoding="utf-8")
+    stage = StageRecord.completed(
+        adapter="fixture@1",
+        inputs={"source": "fingerprint"},
+        outputs={"artifact": str(output)},
+    )
+
+    with pytest.raises(TypeError, match="adapter"):
+        stage.is_reusable({"source": "fingerprint"})
+
+
+def test_completed_stage_records_utc_iso_timestamps_and_no_error():
+    stage = StageRecord.completed(
+        adapter="fixture@1", inputs={}, outputs={"artifact": "result.json"}
+    )
+
+    assert stage.status == "completed"
+    assert stage.completed_at is not None
+    assert stage.completed_at.endswith("+00:00")
+    assert stage.error is None
+
+
+def test_atomic_write_json_replaces_an_existing_receipt_with_valid_json(tmp_path):
+    receipt = tmp_path / "job.json"
+    receipt.write_text('{"state": "old"}', encoding="utf-8")
+
+    atomic_write_json(receipt, {"state": "complete", "attempt": 2})
+
+    assert json.loads(receipt.read_text(encoding="utf-8")) == {
+        "state": "complete",
+        "attempt": 2,
+    }
+    assert not list(tmp_path.glob(".job.json.*.tmp"))
+
+
+def test_atomic_write_json_removes_its_temporary_file_after_a_replace_failure(
+    tmp_path, monkeypatch
+):
+    receipt = tmp_path / "job.json"
+
+    def fail_replace(self, target):
+        raise OSError("simulated replacement failure")
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="simulated replacement failure"):
+        atomic_write_json(receipt, {"state": "complete"})
+
+    assert not list(tmp_path.glob(".job.json.*.tmp"))
+
+
+def test_job_manifest_round_trip_preserves_immutable_segment_timing():
+    segment = Segment(id=7, start=1.25, end=2.5, text="\u5de5\u4e1a", words=[])
+    job = JobRecord(
+        id="111",
+        source="videos/[111] first.mp4",
+        source_sha256="source-fingerprint",
+        stages={"transcription": StageRecord.pending(adapter="asr@1")},
+    )
+    manifest = BatchManifest(manifest="video-urls.txt", jobs=[job])
+
+    restored = BatchManifest.from_dict(manifest.to_dict())
+
+    assert restored.to_dict() == {
+        "schema_version": 1,
+        "manifest": "video-urls.txt",
+        "jobs": [
+            {
+                "schema_version": 1,
+                "id": "111",
+                "source": "videos/[111] first.mp4",
+                "source_sha256": "source-fingerprint",
+                "stages": {
+                    "transcription": {
+                        "schema_version": 1,
+                        "status": "pending",
+                        "adapter": "asr@1",
+                        "inputs": {},
+                        "outputs": {},
+                        "started_at": None,
+                        "completed_at": None,
+                        "error": None,
+                    }
+                },
+            }
+        ],
+    }
+    assert Segment.from_dict(segment.to_dict()) == segment
+
+
+def test_stage_record_rejects_an_incomplete_completed_receipt(tmp_path):
+    output = tmp_path / "artifact.json"
+    output.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="completed stage requires timestamps"):
+        StageRecord.from_dict(
+            {
+                "schema_version": 1,
+                "status": "completed",
+                "adapter": "fixture@1",
+                "inputs": {"source": "fingerprint"},
+                "outputs": {"artifact": str(output)},
+                "started_at": None,
+                "completed_at": None,
+                "error": None,
+            }
+        )
+
+
+def test_stage_record_rejects_an_incomplete_completed_state_in_memory():
+    with pytest.raises(ValueError, match="completed stage requires timestamps"):
+        StageRecord(
+            status="completed",
+            adapter="fixture@1",
+            inputs={"source": "fingerprint"},
+            outputs={"artifact": "artifact.json"},
+        )
+
+
+def test_stage_receipt_lifecycle_cannot_be_mutated_after_validation():
+    stage = StageRecord.running(adapter="fixture@1", inputs={"source": "fingerprint"})
+
+    with pytest.raises(AttributeError):
+        stage.status = "completed"
+
+
+def test_stage_receipt_fingerprints_cannot_be_mutated_after_validation(tmp_path):
+    output = tmp_path / "artifact.json"
+    output.write_text("{}", encoding="utf-8")
+    stage = StageRecord.completed(
+        adapter="fixture@1",
+        inputs={"source": "original-fingerprint"},
+        outputs={"artifact": str(output)},
+    )
+
+    with pytest.raises(TypeError):
+        stage.inputs["source"] = "forged-fingerprint"
+
+
+def test_manifest_rejects_an_unsupported_schema_version():
+    with pytest.raises(ValueError, match="unsupported schema version: 2"):
+        BatchManifest.from_dict(
+            {"schema_version": 2, "manifest": "video-urls.txt", "jobs": []}
+        )
+
+
+def test_job_identity_cannot_be_mutated_after_inventory_discovery():
+    job = JobRecord(id="111", source="[111] source.mp4", source_sha256="fingerprint")
+
+    with pytest.raises(AttributeError):
+        job.id = "222"
