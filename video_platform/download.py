@@ -9,6 +9,12 @@ from .platforms import detect_platform
 from .process import ProcessRunner
 
 
+def fallback_heights(max_height: int) -> tuple[int, ...]:
+    candidates = (1080, 720, 480, 360)
+    values = tuple(height for height in candidates if height <= max_height)
+    return values or (max_height,)
+
+
 @dataclass(frozen=True)
 class DownloadRequest:
     platform: Platform
@@ -56,6 +62,13 @@ class YtDlpDownloader:
         ]
         if request.cookies:
             args.extend(["--cookies", str(request.cookies)])
+        if request.platform is Platform.BILIBILI:
+            args.extend([
+                "--http-chunk-size", "10M",
+                "--concurrent-fragments", "16",
+                "--retries", "10",
+                "--fragment-retries", "10",
+            ])
         args.append(request.url)
         return args
 
@@ -63,26 +76,37 @@ class YtDlpDownloader:
         return self.runner.run(self.build_args(request))
 
     def download(self, request: DownloadRequest) -> JobReceipt:
-        anonymous = replace(request, cookies=None)
-        result = self._run_once(anonymous)
+        result = None
         authenticated_retry = False
-        if result.exit_code != 0 and request.cookies:
-            result = self._run_once(request)
-            authenticated_retry = True
-        if result.exit_code != 0:
+        attempted_heights: list[int] = []
+        for use_cookies in ((False, True) if request.cookies else (False,)):
+            authenticated_retry = use_cookies
+            for height in fallback_heights(request.max_height):
+                attempted_heights.append(height)
+                attempt = replace(request, max_height=height, cookies=request.cookies if use_cookies else None)
+                result = self._run_once(attempt)
+                if result.exit_code == 0:
+                    break
+            if result is not None and result.exit_code == 0:
+                break
+        if result is None or result.exit_code != 0:
             return JobReceipt(
                 request.platform,
                 "download",
                 "failed",
-                {"authenticated_retry": authenticated_retry},
-                error=result.stderr[-4000:],
+                {"authenticated_retry": authenticated_retry, "attempted_heights": attempted_heights},
+                error=(result.stderr[-4000:] if result else "No download attempt was made"),
             )
 
         media = self._latest_media(request.output_dir)
         if media is None:
             return JobReceipt(request.platform, "download", "failed", error="yt-dlp exited successfully but no media file was found")
         facts = self._probe(media)
-        facts.update({"requested_max_height": request.max_height, "authenticated_retry": authenticated_retry})
+        facts.update({
+            "requested_max_height": request.max_height,
+            "authenticated_retry": authenticated_retry,
+            "attempted_heights": attempted_heights,
+        })
         return JobReceipt(request.platform, "download", "ok", facts, str(media))
 
     @staticmethod
@@ -108,3 +132,19 @@ class YtDlpDownloader:
             "audio_codec": audio.get("codec_name") if audio else None,
             "duration": float(payload.get("format", {}).get("duration", 0) or 0),
         }
+
+
+class PlatformDownloader:
+    def __init__(self, primary, social_fallback=None) -> None:
+        self.primary = primary
+        self.social_fallback = social_fallback
+
+    def download(self, request: DownloadRequest) -> JobReceipt:
+        receipt = self.primary.download(request)
+        if (
+            receipt.status != "ok"
+            and self.social_fallback is not None
+            and request.platform in {Platform.DOUYIN, Platform.TIKTOK}
+        ):
+            return self.social_fallback.download(request)
+        return receipt

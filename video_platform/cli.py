@@ -8,16 +8,21 @@ import hashlib
 from dataclasses import asdict
 from pathlib import Path
 
-from .download import DownloadRequest, YtDlpDownloader
+from .download import DownloadRequest, PlatformDownloader, YtDlpDownloader
+from .f2_download import F2Downloader
 from .models import Platform
 from .receipts import write_receipt
 from .process import ProcessRunner
 from .upload import UploadLedger, UploadRequest, build_upload_adapters
 
 
+def _json_text(payload: object) -> str:
+    return json.dumps(payload, ensure_ascii=True, indent=2)
+
+
 def _print(payload: object, json_output: bool) -> None:
     if json_output:
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(_json_text(payload))
     else:
         if isinstance(payload, dict):
             for key, value in payload.items():
@@ -121,7 +126,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
     try:
         request = DownloadRequest(Platform(args.platform), args.url, args.output_dir, args.max_height, args.cookies)
-        receipt = YtDlpDownloader().download(request)
+        f2_executable = project_root / ".tools" / "f2" / ".venv" / "Scripts" / "f2.exe"
+        fallback = F2Downloader(f2_executable) if f2_executable.is_file() else None
+        receipt = PlatformDownloader(YtDlpDownloader(), fallback).download(request)
         receipt_path = args.output_dir.resolve() / "download-receipt.json"
         write_receipt(receipt, receipt_path)
         payload = asdict(receipt)

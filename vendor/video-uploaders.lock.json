@@ -6,6 +6,12 @@
       "revision": "dde0eacb91268de2680825396eea873f8d8ddb38",
       "license": "GPL-3.0",
       "checkout": ".tools/social-auto-upload"
+    },
+    "f2": {
+      "url": "https://github.com/Johnserf-Seed/f2.git",
+      "revision": "7dab3e2ffffaa2535834d28fca99dbc2e89fa9d3",
+      "license": "Apache-2.0",
+      "checkout": ".tools/f2"
     }
   }
 }

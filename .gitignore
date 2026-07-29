@@ -47,6 +47,7 @@ reference/**/*.jpg
 
 # Python 虚拟环境
 tools/.venv/
+.venv/
 tools/.venv/**
 tools/__pycache__/
 tools/**/__pycache__/

@@ -1,6 +1,6 @@
 import json
 
-from video_platform.cli import main
+from video_platform.cli import _json_text, main
 
 
 def test_doctor_reports_each_required_dependency(capsys):
@@ -35,3 +35,9 @@ def test_upload_defaults_to_preparation_without_execution(capsys, tmp_path):
     assert code == 0
     assert payload["status"] == "prepared"
     assert "--visibility" in payload["command"]
+
+
+def test_json_console_output_is_ascii_safe_and_round_trips_unicode():
+    text = _json_text({"title": "中文标题"})
+    text.encode("ascii")
+    assert json.loads(text)["title"] == "中文标题"

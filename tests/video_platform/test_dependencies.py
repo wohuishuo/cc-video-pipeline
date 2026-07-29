@@ -22,3 +22,11 @@ def test_runtime_config_is_created_from_upstream_example(tmp_path):
     created = ensure_runtime_config(tmp_path)
     assert created == tmp_path / "conf.py"
     assert created.read_text(encoding="utf-8") == "BASE_DIR = 'example'\n"
+
+
+def test_short_video_fallback_is_pinned_for_douyin_and_tiktok():
+    manifest = DependencyManifest.load(Path("vendor/video-uploaders.lock.json"))
+    dependency = manifest.dependencies["f2"]
+    assert dependency.url == "https://github.com/Johnserf-Seed/f2.git"
+    assert re.fullmatch(r"[0-9a-f]{40}", dependency.revision)
+    assert dependency.license == "Apache-2.0"

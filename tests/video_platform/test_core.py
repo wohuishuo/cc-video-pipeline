@@ -24,3 +24,12 @@ def test_process_runner_returns_structured_result():
     assert result.exit_code == 0
     assert result.stdout.strip() == "ok"
     assert result.args[0] == sys.executable
+
+
+def test_process_runner_forces_utf8_and_merges_child_environment():
+    result = ProcessRunner().run(
+        [sys.executable, "-c", "import os; print(os.environ['VIDEO_PLATFORM_TEST_ENV'])"],
+        env={"VIDEO_PLATFORM_TEST_ENV": "中文"},
+    )
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "中文"
