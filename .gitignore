@@ -177,3 +177,11 @@ projects/qwen3-tts-xpu-v5-fork/
 # Scratch / external app data
 projects/_cos_triage/
 projects/_jianying_data/
+
+# Repository-level generated artifacts
+/models/
+/tmp/
+**/*.pid
+/tools/remotion-hello/public/
+/tools/remotion-hello/*preview*.png
+/tools/remotion-hello/*contact*.jpg

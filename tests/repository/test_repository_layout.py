@@ -39,3 +39,9 @@ def test_every_mvp_has_four_evidence_artifacts():
     for name in EXPECTED_APPS:
         evidence = ROOT / "docs" / "mvp" / name
         assert {path.name for path in evidence.glob("*.md")} >= required
+
+
+def test_reusable_applications_contain_no_generated_media():
+    forbidden = {".mp3", ".wav", ".mp4", ".mov", ".mkv", ".pid", ".pth", ".bin"}
+    offenders = [path for path in (ROOT / "apps").rglob("*") if path.is_file() and path.suffix.lower() in forbidden]
+    assert offenders == []
