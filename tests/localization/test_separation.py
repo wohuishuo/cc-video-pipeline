@@ -2,6 +2,8 @@ import builtins
 import importlib
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import wave
 
@@ -27,6 +29,7 @@ from localizer.separation import (  # noqa: E402
     validate_instrumental,
 )
 from localizer.separator_worker import (  # noqa: E402
+    probe_media_duration,
     process_separation_job,
     run_separation_batch,
 )
@@ -373,6 +376,188 @@ def test_batch_interruption_is_persisted_and_propagated_for_resume(tmp_path):
     assert persisted.jobs[0].stages["separation"].status == "failed"
     assert created[0].closed is True
     assert not (batch_path.parent / ".separator-worker").exists()
+
+
+def test_source_read_failure_replaces_stale_completion_and_persists_failed_stage(tmp_path):
+    """Hashing failure must not leave a stale completed receipt or initialize the model."""
+    job = make_job(tmp_path)
+    model_dir = tmp_path / "models"
+    model_dir.mkdir()
+    model = model_dir / MODEL_FILENAME
+    model.write_bytes(b"fixture model")
+    workspace = tmp_path / "worker-output"
+    workspace.mkdir()
+    process_separation_job(
+        FakeSeparator(workspace),
+        job,
+        model_sha256=sha256_file(model),
+        output_dir=workspace,
+        duration_probe=lambda _source: 2.0,
+    )
+    stale_outputs = [Path(path) for path in job.stages["separation"].outputs.values()]
+    Path(job.source).unlink()
+    source_manifest = tmp_path / "source-manifest.txt"
+    source_manifest.write_text("fixture", encoding="utf-8")
+    batch_path = tmp_path / "batch-manifest.json"
+    atomic_write_json(
+        batch_path,
+        BatchManifest(
+            manifest=str(source_manifest),
+            expected_ids=(job.id,),
+            jobs=(job,),
+        ).to_dict(),
+    )
+
+    def model_must_not_load(**_kwargs):
+        raise AssertionError("source failure must be classified before model loading")
+
+    failures = run_separation_batch(
+        batch_path,
+        model_dir=model_dir,
+        separator_factory=model_must_not_load,
+        duration_probe=lambda _source: 2.0,
+    )
+
+    assert len(failures) == 1
+    assert failures[0]["job_id"] == job.id
+    assert failures[0]["type"] == "FileNotFoundError"
+    assert Path(job.source).name in failures[0]["message"]
+    persisted = BatchManifest.from_dict(json.loads(batch_path.read_text(encoding="utf-8")))
+    stage = persisted.jobs[0].stages["separation"]
+    assert stage.status == "failed"
+    assert stage.inputs == {
+        "source_sha256": job.source_sha256,
+        "model_filename": MODEL_FILENAME,
+        "model_sha256": sha256_file(model),
+    }
+    assert stage.outputs == {}
+    assert stage.error["type"] == "FileNotFoundError"
+    assert Path(job.source).name in stage.error["message"]
+    assert all(not output.exists() for output in stale_outputs)
+
+
+def test_audio_duration_probe_uses_selected_audio_stream_not_container(tmp_path):
+    """Using format.duration would reject valid stems when video outlasts its audio."""
+    ffmpeg = shutil.which("ffmpeg")
+    ffprobe = shutil.which("ffprobe")
+    if ffmpeg is None or ffprobe is None:
+        pytest.skip("FFmpeg fixture tools are unavailable")
+    source = tmp_path / "[909] different-timelines.mp4"
+    subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=64x64:r=10:d=2",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=16000:duration=1",
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-c:v",
+            "mpeg4",
+            "-c:a",
+            "aac",
+            str(source),
+        ],
+        check=True,
+    )
+    format_probe = subprocess.run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(source),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    container_duration = float(format_probe.stdout.strip())
+
+    audio_duration = probe_media_duration(source)
+
+    assert container_duration == pytest.approx(2.0, abs=0.1)
+    assert audio_duration == pytest.approx(1.0, abs=0.1)
+    assert container_duration - audio_duration > 0.5
+
+    job = JobRecord(id="909", source=str(source), source_sha256=sha256_file(source))
+    workspace = tmp_path / "worker-output"
+    workspace.mkdir()
+    receipt = process_separation_job(
+        FakeSeparator(workspace, outcomes=[(1.0, 1.0)]),
+        job,
+        model_sha256="f" * 64,
+        output_dir=workspace,
+    )
+    assert receipt["source_duration"] == pytest.approx(1.0, abs=0.1)
+    assert job.stages["separation"].status == "completed"
+
+
+def test_audio_duration_probe_falls_back_to_duration_ticks(monkeypatch, tmp_path):
+    """N/A duration text must not hide valid duration_ts/time_base metadata."""
+    import localizer.separator_worker as worker
+
+    response = subprocess.CompletedProcess(
+        args=["ffprobe"],
+        returncode=0,
+        stdout=json.dumps(
+            {
+                "streams": [
+                    {
+                        "duration": "N/A",
+                        "duration_ts": 16_000,
+                        "time_base": "1/16000",
+                    }
+                ]
+            }
+        ),
+        stderr="",
+    )
+    monkeypatch.setattr(worker.subprocess, "run", lambda *_args, **_kwargs: response)
+
+    assert worker.probe_media_duration(tmp_path / "source.mp4") == 1.0
+
+
+def test_installer_verify_only_rejects_same_named_model_with_wrong_hash(tmp_path):
+    """A nonempty impostor must fail the installer's cryptographic model gate."""
+    powershell = shutil.which("powershell")
+    if powershell is None:
+        pytest.skip("Windows PowerShell is unavailable")
+    model = tmp_path / MODEL_FILENAME
+    model.write_bytes(b"not the official checkpoint")
+    installer = LOCALIZATION_ROOT / "install.ps1"
+
+    completed = subprocess.run(
+        [
+            powershell,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(installer),
+            "-SeparatorModelDir",
+            str(tmp_path),
+            "-VerifyModelOnly",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert "model SHA-256 mismatch" in (completed.stdout + completed.stderr)
 
 
 def test_orchestration_modules_import_without_audio_separator(monkeypatch):

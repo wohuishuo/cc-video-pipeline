@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from fractions import Fraction
 import json
 import math
 import os
@@ -42,8 +43,70 @@ SeparatorFactory = Callable[..., SeparatorAdapter]
 DurationProbe = Callable[[str | Path], float]
 
 
+def _positive_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if math.isfinite(result) and result > 0 else None
+
+
+def _stream_duration(stream: dict[str, Any]) -> float | None:
+    duration = _positive_float(stream.get("duration"))
+    if duration is not None:
+        return duration
+    duration_ticks = _positive_float(stream.get("duration_ts"))
+    time_base = stream.get("time_base")
+    if duration_ticks is None or not isinstance(time_base, str):
+        return None
+    try:
+        duration = duration_ticks * float(Fraction(time_base))
+    except (ValueError, ZeroDivisionError):
+        return None
+    return _positive_float(duration)
+
+
+def _decoded_audio_duration(path: str | Path) -> float:
+    try:
+        completed = subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-v",
+                "error",
+                "-progress",
+                "pipe:1",
+                "-nostats",
+                "-i",
+                str(path),
+                "-map",
+                "0:a:0",
+                "-vn",
+                "-f",
+                "null",
+                "-",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise SeparationError(f"cannot decode source audio duration: {error}") from error
+    durations = [
+        _positive_float(line.partition("=")[2])
+        for line in completed.stdout.splitlines()
+        if line.startswith("out_time_us=")
+    ]
+    decoded = [value / 1_000_000 for value in durations if value is not None]
+    if not decoded:
+        raise SeparationError("cannot decode source audio duration")
+    return max(decoded)
+
+
 def probe_media_duration(path: str | Path) -> float:
-    """Read container duration through ffprobe without decoding the source in Python."""
+    """Read the selected audio timeline, decoding only when stream metadata is absent."""
 
     try:
         completed = subprocess.run(
@@ -51,22 +114,30 @@ def probe_media_duration(path: str | Path) -> float:
                 "ffprobe",
                 "-v",
                 "error",
+                "-select_streams",
+                "a:0",
                 "-show_entries",
-                "format=duration",
+                "stream=duration,duration_ts,time_base",
                 "-of",
-                "default=noprint_wrappers=1:nokey=1",
+                "json",
                 str(path),
             ],
             check=True,
             capture_output=True,
             text=True,
         )
-        duration = float(completed.stdout.strip())
-    except (OSError, subprocess.CalledProcessError, ValueError) as error:
-        raise SeparationError(f"cannot probe source duration: {error}") from error
-    if not math.isfinite(duration) or duration <= 0:
-        raise SeparationError("source duration must be a positive finite number")
-    return duration
+        value = json.loads(completed.stdout)
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
+        raise SeparationError(f"cannot probe source audio duration: {error}") from error
+    streams = value.get("streams") if isinstance(value, dict) else None
+    if (
+        not isinstance(streams, list)
+        or len(streams) != 1
+        or not isinstance(streams[0], dict)
+    ):
+        raise SeparationError("source requires exactly one selected audio stream")
+    duration = _stream_duration(streams[0])
+    return _decoded_audio_duration(path) if duration is None else duration
 
 
 def _artifact_dir(job: JobRecord) -> Path:
@@ -89,6 +160,15 @@ def _remove_paths(paths: tuple[Path, ...]) -> None:
             path.unlink()
 
 
+def _separation_final_paths(job: JobRecord) -> tuple[Path, Path, Path]:
+    audio_dir = _artifact_dir(job) / "audio"
+    return (
+        audio_dir / "vocals.wav",
+        audio_dir / "no_vocals.wav",
+        audio_dir / "separation.json",
+    )
+
+
 def _mark_failed(
     job: JobRecord,
     inputs: dict[str, str],
@@ -100,6 +180,14 @@ def _mark_failed(
         outputs={},
         error={"type": type(error).__name__, "message": str(error)},
     )
+
+
+def _fallback_inputs(job: JobRecord, model_sha256: str) -> dict[str, str]:
+    return {
+        "source_sha256": job.source_sha256,
+        "model_filename": MODEL_FILENAME,
+        "model_sha256": model_sha256,
+    }
 
 
 def _copy_to_temporary(source: Path, destination: Path) -> Path:
@@ -130,7 +218,12 @@ def process_separation_job(
 ) -> dict[str, Any]:
     """Separate and atomically publish one job while preserving stage ownership."""
 
-    inputs = separation_inputs(job, model_sha256)
+    try:
+        inputs = separation_inputs(job, model_sha256)
+    except BaseException as error:
+        _remove_paths(_separation_final_paths(job))
+        _mark_failed(job, _fallback_inputs(job, model_sha256), error)
+        raise
     if separation_is_reusable(job, model_sha256=model_sha256):
         return load_separation_receipt(job.stages["separation"].outputs["separation"])
 
@@ -256,6 +349,14 @@ def run_separation_batch(
     failures: list[dict[str, str]] = []
     pending: list[JobRecord] = []
     for job in batch.jobs:
+        try:
+            separation_inputs(job, model_sha256)
+        except Exception as error:
+            _remove_paths(_separation_final_paths(job))
+            _mark_failed(job, _fallback_inputs(job, model_sha256), error)
+            failures.append(_failure(job, error))
+            atomic_write_json(batch_path, batch.to_dict())
+            continue
         if separation_is_reusable(job, model_sha256=model_sha256):
             continue
         pending.append(job)
@@ -282,11 +383,7 @@ def run_separation_batch(
                 try:
                     inputs = separation_inputs(job, model_sha256)
                 except BaseException:
-                    inputs = {
-                        "source_sha256": job.source_sha256,
-                        "model_filename": MODEL_FILENAME,
-                        "model_sha256": model_sha256,
-                    }
+                    inputs = _fallback_inputs(job, model_sha256)
                 _mark_failed(job, inputs, error)
                 failures.append(_failure(job, error))
             atomic_write_json(batch_path, batch.to_dict())
