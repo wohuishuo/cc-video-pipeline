@@ -128,3 +128,5 @@ Observed result: `52 passed in 0.82s`.
 Reviewed all ID-set checks (missing, extra, duplicate), source-order
 reconstruction, numeral validation after mapping, and rewrite payload contents.
 `git diff --check` was clean after the GREEN run.
+
+Commit: `d6d2ad2 fix(localization): preserve ID mapping in translation`.
