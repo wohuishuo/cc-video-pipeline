@@ -1,0 +1,1 @@
+{"schema_version":1,"name":"signal-analysis","summary":"Detect shot boundaries and measure loudness.","entrypoint":"run.ps1","install":"install.ps1","test":"python -m pytest tests/repository -q","inputs":["video file"],"outputs":["cut timestamps","loudness measurements"],"dependencies":["ffmpeg","ffprobe"],"delivery_level":"IMPLEMENTED"}

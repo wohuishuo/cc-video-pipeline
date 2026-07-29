@@ -1,0 +1,1 @@
+{"schema_version":1,"name":"remotion-studio","summary":"Preview and render reusable Remotion compositions.","entrypoint":"run.ps1","install":"install.ps1","test":"npm --prefix tools/remotion-hello run build","inputs":["composition id","project props"],"outputs":["rendered video"],"dependencies":["node>=18","remotion"],"delivery_level":"IMPLEMENTED"}

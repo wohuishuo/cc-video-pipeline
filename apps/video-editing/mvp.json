@@ -1,0 +1,1 @@
+{"schema_version":1,"name":"video-editing","summary":"Cut silence, reframe, and create vertical derivatives.","entrypoint":"run.ps1","install":"install.ps1","test":"python -m pytest tests/repository -q","inputs":["video file","editing options"],"outputs":["edited video derivative"],"dependencies":["ffmpeg","optional mediapipe and opencv"],"delivery_level":"IMPLEMENTED"}

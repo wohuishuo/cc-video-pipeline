@@ -47,6 +47,7 @@ reference/**/*.jpg
 
 # Python 虚拟环境
 tools/.venv/
+.venv/
 tools/.venv/**
 tools/__pycache__/
 tools/**/__pycache__/
@@ -100,6 +101,10 @@ desktop.ini
 .idea/
 *.code-workspace
 .worktrees/
+.tools/
+downloads/
+receipts/
+profiles/
 
 # Python 包构建
 build/
@@ -172,3 +177,11 @@ projects/qwen3-tts-xpu-v5-fork/
 # Scratch / external app data
 projects/_cos_triage/
 projects/_jianying_data/
+
+# Repository-level generated artifacts
+/models/
+/tmp/
+**/*.pid
+/tools/remotion-hello/public/
+/tools/remotion-hello/*preview*.png
+/tools/remotion-hello/*contact*.jpg

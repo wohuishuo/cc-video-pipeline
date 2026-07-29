@@ -1,0 +1,1 @@
+{"schema_version":1,"name":"frame-extraction","summary":"Extract interval or cut-aligned video frames.","entrypoint":"run.ps1","install":"install.ps1","test":"python -m pytest tests/repository -q","inputs":["video file","optional cut timestamps"],"outputs":["frame image set"],"dependencies":["ffmpeg"],"delivery_level":"IMPLEMENTED"}

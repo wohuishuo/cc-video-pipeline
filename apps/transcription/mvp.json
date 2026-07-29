@@ -1,0 +1,1 @@
+{"schema_version":1,"name":"transcription","summary":"Create JSON and SRT transcripts from media.","entrypoint":"run.ps1","install":"install.ps1","test":"python -m pytest tests/repository -q","inputs":["audio or video file"],"outputs":["transcript JSON","subtitle SRT"],"dependencies":["python>=3.12","faster-whisper or FunASR"],"delivery_level":"IMPLEMENTED"}
