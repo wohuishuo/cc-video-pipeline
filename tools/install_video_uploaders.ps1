@@ -14,6 +14,11 @@ git -C $checkout checkout --detach $dep.revision
 $actual = (git -C $checkout rev-parse HEAD).Trim()
 if ($actual -ne $dep.revision) { throw "Pinned uploader revision mismatch: $actual" }
 
+$runtimeConfig = Join-Path $checkout "conf.py"
+if (-not (Test-Path $runtimeConfig)) {
+  Copy-Item (Join-Path $checkout "conf.example.py") $runtimeConfig
+}
+
 if (-not $SkipPythonDependencies) {
   $venv = Join-Path $checkout ".venv"
   if (-not (Test-Path $venv)) { python -m venv $venv }

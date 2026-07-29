@@ -35,3 +35,15 @@ class DependencyManifest:
 def resolve_uploader_checkout(project_root: Path) -> Path:
     manifest = DependencyManifest.load(project_root / "vendor" / "video-uploaders.lock.json")
     return (project_root / manifest.dependencies["social-auto-upload"].checkout).resolve()
+
+
+def ensure_runtime_config(checkout: Path) -> Path:
+    checkout = Path(checkout)
+    target = checkout / "conf.py"
+    if target.exists():
+        return target
+    example = checkout / "conf.example.py"
+    if not example.is_file():
+        raise FileNotFoundError(f"Missing upstream configuration example: {example}")
+    target.write_text(example.read_text(encoding="utf-8"), encoding="utf-8")
+    return target
