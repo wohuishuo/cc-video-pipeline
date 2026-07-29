@@ -307,22 +307,23 @@ class JobRecord:
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class BatchManifest:
     """The exact source set resolved from a corrected URL manifest."""
 
     manifest: str
-    jobs: list[JobRecord]
+    jobs: tuple[JobRecord, ...]
 
     def __post_init__(self) -> None:
         if not isinstance(self.manifest, str) or not self.manifest.strip():
             raise ValueError("manifest path must be a non-empty string")
-        if not isinstance(self.jobs, list) or not self.jobs:
+        if not isinstance(self.jobs, (list, tuple)) or not self.jobs:
             raise ValueError("batch manifest requires at least one job")
-        if not all(isinstance(job, JobRecord) for job in self.jobs):
+        jobs = tuple(self.jobs)
+        if not all(isinstance(job, JobRecord) for job in jobs):
             raise ValueError("jobs must contain JobRecord values")
-        ids = [job.id for job in self.jobs]
-        sources = [os.path.normcase(os.path.normpath(job.source)) for job in self.jobs]
+        ids = [job.id for job in jobs]
+        sources = [os.path.normcase(os.path.normpath(job.source)) for job in jobs]
         duplicate_ids = sorted({job_id for job_id in ids if ids.count(job_id) > 1})
         duplicate_sources = sorted(
             {source for source in sources if sources.count(source) > 1}
@@ -331,6 +332,7 @@ class BatchManifest:
             raise ValueError(f"duplicate job ID: {', '.join(duplicate_ids)}")
         if duplicate_sources:
             raise ValueError(f"duplicate source identity: {', '.join(duplicate_sources)}")
+        object.__setattr__(self, "jobs", jobs)
 
     def to_dict(self) -> dict[str, Any]:
         return {

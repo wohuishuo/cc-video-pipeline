@@ -298,3 +298,16 @@ def test_batch_manifest_requires_complete_unique_job_coverage():
 
     with pytest.raises(ValueError, match="at least one job"):
         BatchManifest(manifest="video-urls.txt", jobs=[])
+
+
+def test_batch_manifest_coverage_cannot_be_mutated_after_validation():
+    job = JobRecord(
+        id="111", source="videos/[111] source.mp4", source_sha256="a" * 64
+    )
+    manifest = BatchManifest(manifest="video-urls.txt", jobs=[job])
+
+    with pytest.raises(AttributeError):
+        manifest.manifest = "other-urls.txt"
+
+    with pytest.raises(TypeError):
+        manifest.jobs[0] = job
