@@ -100,6 +100,10 @@ desktop.ini
 .idea/
 *.code-workspace
 .worktrees/
+.tools/
+downloads/
+receipts/
+profiles/
 
 # Python 包构建
 build/

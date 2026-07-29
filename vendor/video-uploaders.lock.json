@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "dependencies": {
+    "social-auto-upload": {
+      "url": "https://github.com/dreammis/social-auto-upload.git",
+      "revision": "dde0eacb91268de2680825396eea873f8d8ddb38",
+      "license": "GPL-3.0",
+      "checkout": ".tools/social-auto-upload"
+    }
+  }
+}
