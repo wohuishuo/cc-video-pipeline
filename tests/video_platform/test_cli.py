@@ -23,3 +23,15 @@ def test_download_rejects_explicit_platform_mismatch(capsys, tmp_path):
     ])
     assert code == 2
     assert "belongs to youtube" in json.loads(capsys.readouterr().out)["error"]
+
+
+def test_upload_defaults_to_preparation_without_execution(capsys, tmp_path):
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"sample")
+    metadata = tmp_path / "metadata.json"
+    metadata.write_text('{"title":"Draft","description":"","tags":[]}', encoding="utf-8")
+    code = main(["upload", "youtube", str(video), "--metadata", str(metadata), "--account", "me", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["status"] == "prepared"
+    assert "--visibility" in payload["command"]
