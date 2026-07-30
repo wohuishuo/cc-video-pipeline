@@ -442,6 +442,7 @@ def run_voice_batch(
     clear_cuda_cache: CacheCleanup = _clear_cuda_cache,
     enforce_authorized_reference: bool = True,
     project_root: str | Path | None = None,
+    job_ids: set[str] | None = None,
 ) -> list[dict[str, str]]:
     """Load one synthesizer and clone prompt, then resume every translated job."""
 
@@ -466,6 +467,8 @@ def run_voice_batch(
     failures: list[dict[str, str]] = []
     pending_jobs: list[JobRecord] = []
     for job in batch.jobs:
+        if job_ids is not None and job.id not in job_ids:
+            continue
         try:
             if _job_requires_synthesis(job, context):
                 pending_jobs.append(job)
@@ -547,6 +550,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--reference", required=True, type=Path)
     parser.add_argument("--reference-text", required=True)
     parser.add_argument("--model-id", default=MODEL_ID)
+    parser.add_argument("--job-id", action="append", dest="job_ids")
     return parser
 
 
@@ -557,6 +561,7 @@ def main(argv: list[str] | None = None) -> int:
         reference=args.reference,
         reference_text=args.reference_text,
         model_id=args.model_id,
+        job_ids=set(args.job_ids) if args.job_ids else None,
     )
     print(json.dumps({"failures": failures}, ensure_ascii=False))
     return 1 if failures else 0

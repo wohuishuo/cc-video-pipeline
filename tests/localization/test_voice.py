@@ -404,6 +404,46 @@ def test_fully_reusable_batch_does_not_load_model_or_replace_completed_receipt(t
     assert persisted.jobs[0].stages["voice"] == prior_stage
 
 
+def test_batch_synthesizes_only_requested_job(tmp_path):
+    first, _ = translation_job(tmp_path, job_id="111")
+    second, _ = translation_job(tmp_path, job_id="222")
+    batch_path = tmp_path / "batch-manifest.json"
+    source_manifest = tmp_path / "source-manifest.txt"
+    source_manifest.write_text("fixture", encoding="utf-8")
+    atomic_write_json(
+        batch_path,
+        BatchManifest(
+            manifest=str(source_manifest),
+            expected_ids=(first.id, second.id),
+            jobs=(first, second),
+        ).to_dict(),
+    )
+    reference = tmp_path / "reference.wav"
+    write_sine_wave(reference, seconds=9.05)
+    fakes = []
+
+    def factory(*_args):
+        fake = FakeSynthesizer()
+        fakes.append(fake)
+        return fake
+
+    failures = run_voice_batch(
+        batch_path,
+        reference=reference,
+        reference_text=AUTHORIZED_REFERENCE_TEXT,
+        model_id="fixture-model",
+        synthesizer_factory=factory,
+        enforce_authorized_reference=False,
+        job_ids={"222"},
+    )
+
+    assert failures == []
+    persisted = BatchManifest.from_dict(json.loads(batch_path.read_text(encoding="utf-8")))
+    assert "voice" not in persisted.jobs[0].stages
+    assert persisted.jobs[1].stages["voice"].status == "completed"
+    assert len(fakes) == 1
+
+
 def test_worker_reads_real_translation_contract_and_preserves_other_stage_receipts(tmp_path):
     """Reading an invented field or replacing the stage map would break Task 3 integration."""
     job, _artifact_dir = translation_job(

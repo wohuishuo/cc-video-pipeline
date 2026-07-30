@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
-from typing import Any
+from typing import Any, Callable, Iterable
 
 from . import asr
 from .audio import AudioMixSpec, build_mix
@@ -118,6 +118,20 @@ def _run_worker(executable: Path, module: str, arguments: list[str], app_root: P
     subprocess.run(command, check=True, env=environment, cwd=executable.parents[3])
 
 
+def _run_job_sequence(
+    job_ids: Iterable[str], localize: Callable[[str], None]
+) -> list[dict[str, str]]:
+    """Run isolated jobs sequentially and keep later jobs independent."""
+    failures: list[dict[str, str]] = []
+    for job_id in job_ids:
+        try:
+            localize(job_id)
+        except Exception as error:
+            failures.append({"job_id": job_id, "error": str(error)})
+            _log(f"[失败] {job_id}: {type(error).__name__}: {error}")
+    return failures
+
+
 def _prepare_fast_beds(batch: BatchManifest, batch_path: Path) -> None:
     """Quickly suppress center-panned narration without an AI separation model."""
     for index, job in enumerate(batch.jobs, 1):
@@ -193,6 +207,39 @@ def _mix_all(batch: BatchManifest) -> dict[str, tuple[int, ...]]:
     return overflow
 
 
+def _mix_job(job: JobRecord) -> None:
+    translation_path = Path(job.stages["translation"].outputs["translation"])
+    segments = _load_json(translation_path)["segments"]
+    voice_manifest = Path(job.stages["voice"].outputs["voice"])
+    instrumental = Path(job.stages["separation"].outputs["instrumental"])
+    duration = float(probe_video(job.source)["format"]["duration"])
+    result = build_mix(
+        AudioMixSpec(
+            segments,
+            voice_manifest.parent / "clips",
+            instrumental,
+            duration,
+            translation_path.parent / "audio",
+            max_compression_ratio=100.0,
+        )
+    )
+    if result.overflow_ids:
+        raise RuntimeError(f"voice clips exceed timeline: {result.overflow_ids}")
+    job.stages["mix"] = StageRecord.completed(
+        "ffmpeg-mix@1",
+        {
+            "translation_sha256": sha256_file(translation_path),
+            "voice_sha256": sha256_file(voice_manifest),
+            "instrumental_sha256": sha256_file(instrumental),
+        },
+        {
+            "narration": str(result.narration_path),
+            "mix": str(result.mix_path),
+            "receipt": str(result.receipt_path),
+        },
+    )
+
+
 def _render_all(batch: BatchManifest, final_root: Path, batch_path: Path) -> None:
     for index, job in enumerate(batch.jobs, 1):
         translation_path = Path(job.stages["translation"].outputs["translation"])
@@ -213,6 +260,29 @@ def _render_all(batch: BatchManifest, final_root: Path, batch_path: Path) -> Non
             {"video": str(output)},
         )
         _save(batch_path, batch)
+
+
+def _render_job(job: JobRecord, final_root: Path) -> Path:
+    translation_path = Path(job.stages["translation"].outputs["translation"])
+    media = probe_video(job.source)
+    video = next(stream for stream in media["streams"] if stream["codec_type"] == "video")
+    ass = write_ass(
+        _load_json(translation_path)["segments"],
+        translation_path.parent / "subtitles.ru.ass",
+        play_res=(int(video["width"]), int(video["height"])),
+    )
+    output = final_root / f"{Path(job.source).stem}.ru.mp4"
+    render_localized_video(job.source, job.stages["mix"].outputs["mix"], ass, output)
+    job.stages["render"] = StageRecord.completed(
+        "ffmpeg-russian-render@1",
+        {
+            "source_sha256": job.source_sha256,
+            "mix_sha256": sha256_file(job.stages["mix"].outputs["mix"]),
+            "subtitle_sha256": sha256_file(ass),
+        },
+        {"video": str(output)},
+    )
+    return output
 
 
 def run(args: argparse.Namespace) -> None:
@@ -242,37 +312,47 @@ def run(args: argparse.Namespace) -> None:
     else:
         _prepare_fast_beds(batch, batch_path)
 
-    _log("[配音] 开始整批生成俄语克隆声音")
-    _run_worker(
-        runtime_root / "tools" / "qwen3tts-env" / "Scripts" / "python.exe",
-        "localizer.qwen_voice_worker",
-        ["--batch-manifest", str(batch_path), "--reference", str(runtime_root / AUTHORIZED_REFERENCE_RELATIVE), "--reference-text", AUTHORIZED_REFERENCE_TEXT],
-        app_root,
-    )
-    batch = BatchManifest.from_dict(_load_json(batch_path))
+    qwen = runtime_root / "tools" / "qwen3tts-env" / "Scripts" / "python.exe"
+    job_ids = [job.id for job in batch.jobs]
 
-    overflow = _mix_all(batch)
-    if overflow:
-        _log(f"[重写] {sum(map(len, overflow.values()))} 个俄语段落过长，自动压缩文案后重新配音")
-        for job in batch.jobs:
-            if job.id in overflow:
-                _rewrite_job(job, overflow[job.id])
-        _save(batch_path, batch)
+    def localize_one(job_id: str) -> None:
+        current = BatchManifest.from_dict(_load_json(batch_path))
+        job = next(item for item in current.jobs if item.id == job_id)
+        render_stage = job.stages.get("render")
+        if isinstance(render_stage, StageRecord):
+            prior_output = Path(render_stage.outputs.get("video", ""))
+            if render_stage.status == "completed" and prior_output.is_file():
+                _log(f"[跳过] {job_id} 已存在 final")
+                return
+
+        position = job_ids.index(job_id) + 1
+        _log(f"[视频 {position}/{len(job_ids)}] 配音 {job_id}")
         _run_worker(
-            runtime_root / "tools" / "qwen3tts-env" / "Scripts" / "python.exe",
+            qwen,
             "localizer.qwen_voice_worker",
-            ["--batch-manifest", str(batch_path), "--reference", str(runtime_root / AUTHORIZED_REFERENCE_RELATIVE), "--reference-text", AUTHORIZED_REFERENCE_TEXT],
+            [
+                "--batch-manifest", str(batch_path),
+                "--reference", str(runtime_root / AUTHORIZED_REFERENCE_RELATIVE),
+                "--reference-text", AUTHORIZED_REFERENCE_TEXT,
+                "--job-id", job_id,
+            ],
             app_root,
         )
-        batch = BatchManifest.from_dict(_load_json(batch_path))
-        overflow = _mix_all(batch)
-        if overflow:
-            raise RuntimeError(f"Russian text still too long after rewrite: {overflow}")
-    _save(batch_path, batch)
+        current = BatchManifest.from_dict(_load_json(batch_path))
+        job = next(item for item in current.jobs if item.id == job_id)
+        _log(f"[视频 {position}/{len(job_ids)}] 混音 {job_id}")
+        _mix_job(job)
+        _save(batch_path, current)
+        if not args.skip_render:
+            _log(f"[视频 {position}/{len(job_ids)}] 渲染 {job_id}")
+            output = _render_job(job, final_root)
+            _save(batch_path, current)
+            _log(f"[完成 {position}/{len(job_ids)}] {output.name}")
 
-    if not args.skip_render:
-        _render_all(batch, final_root, batch_path)
-    _log(f"完成。俄语视频输出：{final_root}")
+    failures = _run_job_sequence(job_ids, localize_one)
+    if failures:
+        atomic_write_json(output_root / "failures.json", {"failures": failures})
+    _log(f"批次结束：成功文件位于 {final_root}；失败 {len(failures)} 个。")
 
 
 def _parser() -> argparse.ArgumentParser:
