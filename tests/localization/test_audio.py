@@ -134,6 +134,7 @@ def require_ffmpeg() -> None:
 def test_alignment_flags_more_than_35_percent_compression():
     """Raising or removing the cap would force unintelligible speech into a fixed slot."""
     assert classify_fit(tts_seconds=4.1, slot_seconds=3.0) == "rewrite"
+    assert classify_fit(tts_seconds=4.1, slot_seconds=3.0, max_compression_ratio=2.0) == "compress"
     assert classify_fit(tts_seconds=3.9, slot_seconds=3.0) == "compress"
     assert classify_fit(tts_seconds=3.0, slot_seconds=3.0) == "fit"
 

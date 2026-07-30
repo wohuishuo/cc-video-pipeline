@@ -173,7 +173,14 @@ def _mix_all(batch: BatchManifest) -> dict[str, tuple[int, ...]]:
         duration = float(probe_video(job.source)["format"]["duration"])
         _log(f"[混音 {index}/{len(batch.jobs)}] {job.id}")
         result = build_mix(
-            AudioMixSpec(segments, voice_manifest.parent / "clips", instrumental, duration, translation_path.parent / "audio")
+            AudioMixSpec(
+                segments,
+                voice_manifest.parent / "clips",
+                instrumental,
+                duration,
+                translation_path.parent / "audio",
+                max_compression_ratio=100.0,
+            )
         )
         if result.overflow_ids:
             overflow[job.id] = result.overflow_ids

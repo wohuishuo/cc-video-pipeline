@@ -31,6 +31,7 @@ class AudioMixSpec:
     instrumental_path: Path
     source_duration: float
     output_dir: Path
+    max_compression_ratio: float = 1.35
 
 
 @dataclass(frozen=True)
@@ -42,12 +43,14 @@ class AudioMixResult:
     published: bool
 
 
-def classify_fit(*, tts_seconds: float, slot_seconds: float) -> Fit:
+def classify_fit(*, tts_seconds: float, slot_seconds: float, max_compression_ratio: float = 1.35) -> Fit:
     if not all(math.isfinite(value) and value > 0 for value in (tts_seconds, slot_seconds)):
         raise AudioMixError("clip and slot durations must be positive finite numbers")
     if tts_seconds <= slot_seconds:
         return "fit"
-    if tts_seconds <= slot_seconds * 1.35:
+    if not math.isfinite(max_compression_ratio) or max_compression_ratio < 1:
+        raise AudioMixError("max compression ratio must be at least 1")
+    if tts_seconds <= slot_seconds * max_compression_ratio:
         return "compress"
     return "rewrite"
 
@@ -87,7 +90,11 @@ def _validate(spec: AudioMixSpec) -> list[dict[str, Any]]:
         clip = spec.clip_dir / f"{identifier:04d}.wav"
         duration = _clip_duration(clip)
         slot = end - start
-        fit = classify_fit(tts_seconds=duration, slot_seconds=slot)
+        fit = classify_fit(
+            tts_seconds=duration,
+            slot_seconds=slot,
+            max_compression_ratio=spec.max_compression_ratio,
+        )
         rows.append({
             "id": identifier,
             "start": start,
