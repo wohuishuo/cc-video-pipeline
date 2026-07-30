@@ -220,7 +220,7 @@ def _mix_job(job: JobRecord) -> None:
             instrumental,
             duration,
             translation_path.parent / "audio",
-            max_compression_ratio=100.0,
+            max_compression_ratio=1_000_000_000.0,
         )
     )
     if result.overflow_ids:

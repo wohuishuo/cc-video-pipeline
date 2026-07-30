@@ -123,6 +123,17 @@ def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
         raise AudioMixError(f"FFmpeg failed: {detail[-1200:]}") from error
 
 
+def _atempo_filters(ratio: float) -> list[str]:
+    """Split an extreme speed-up into FFmpeg-supported atempo stages."""
+    filters: list[str] = []
+    remaining = ratio
+    while remaining > 100.0:
+        filters.append("atempo=100.000000000")
+        remaining /= 100.0
+    filters.append(f"atempo={remaining:.9f}")
+    return filters
+
+
 def _build_narration(rows: list[dict[str, Any]], duration: float, target: Path) -> None:
     command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
     for row in rows:
@@ -135,7 +146,7 @@ def _build_narration(rows: list[dict[str, Any]], duration: float, target: Path) 
             f"[{index}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=stereo"
         )
         if row["fit"] == "compress":
-            chain += f",atempo={row['tempo']:.9f}"
+            chain += "," + ",".join(_atempo_filters(row["tempo"]))
         delay = round(row["start"] * 1000)
         chain += f",apad,atrim=duration={slot:.6f},adelay={delay}|{delay}[v{index}]"
         filters.append(chain)
