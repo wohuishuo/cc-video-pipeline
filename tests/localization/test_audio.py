@@ -19,11 +19,18 @@ from localizer.audio import (  # noqa: E402
     build_mix,
     classify_fit,
     _atempo_filters,
+    _final_mix_filter,
 )
 
 
 def test_extreme_tempo_is_split_into_supported_ffmpeg_filters():
     assert _atempo_filters(250.0) == ["atempo=100.000000000", "atempo=2.500000000"]
+
+
+def test_final_mix_makes_narration_dominant_over_background():
+    graph = _final_mix_filter(10.0)
+    assert "volume=0.25[bed]" in graph
+    assert "volume=2.5[voice]" in graph
 from localizer.contracts import sha256_file  # noqa: E402
 
 

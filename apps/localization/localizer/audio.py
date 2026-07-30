@@ -162,15 +162,20 @@ def _build_narration(rows: list[dict[str, Any]], duration: float, target: Path) 
     _run(command)
 
 
-def _build_final_mix(instrumental: Path, narration: Path, duration: float, target: Path) -> None:
-    graph = (
-        f"[0:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={duration:.6f}[bed];"
-        f"[1:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={duration:.6f}[voice];"
-        "[bed][voice]sidechaincompress=threshold=0.015:ratio=10:attack=15:release=350[ducked];"
-        "[ducked][voice]amix=inputs=2:duration=first:normalize=0,"
+def _final_mix_filter(duration: float) -> str:
+    return (
+        f"[0:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={duration:.6f}[bedraw];"
+        f"[1:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={duration:.6f},asplit[sidechain][voiceraw];"
+        "[bedraw][sidechain]sidechaincompress=threshold=0.015:ratio=10:attack=15:release=350,volume=0.25[bed];"
+        "[voiceraw]volume=2.5[voice];"
+        "[bed][voice]amix=inputs=2:duration=first:normalize=0,"
         f"loudnorm=I=-16:TP=-1.5:LRA=9,apad=whole_dur={duration:.6f},"
         f"atrim=duration={duration:.6f}[mix]"
     )
+
+
+def _build_final_mix(instrumental: Path, narration: Path, duration: float, target: Path) -> None:
+    graph = _final_mix_filter(duration)
     _run([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", str(instrumental), "-i", str(narration),
