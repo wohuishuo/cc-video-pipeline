@@ -141,6 +141,11 @@ def probe_media_duration(path: str | Path) -> float:
 
 
 def _artifact_dir(job: JobRecord) -> Path:
+    translation = job.stages.get("translation")
+    if isinstance(translation, StageRecord):
+        translated = translation.outputs.get("translation")
+        if translated:
+            return Path(translated).parent
     return Path(job.source).parent / "russian" / "jobs" / job.id
 
 

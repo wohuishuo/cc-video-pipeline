@@ -68,9 +68,10 @@ def _validate_segments(raw_segments: Iterable[Any]) -> list[Segment]:
             word_end = _as_float(raw_word.end, f"segment {index} word {word_index} end")
             word_text = raw_word.word
             if word_end <= word_start:
-                raise TranscriptionError(
-                    f"segment {index} word {word_index} requires a positive duration"
-                )
+                # Whisper can emit zero-length punctuation tokens. Word timing is
+                # supplemental; dropping one bad token is safer than discarding the
+                # authoritative segment timing and the whole video's transcript.
+                continue
             if word_start < start or word_end > end:
                 raise TranscriptionError(
                     f"segment {index} word {word_index} must be within segment timing"

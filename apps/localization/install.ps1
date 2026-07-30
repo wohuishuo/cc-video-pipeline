@@ -1,13 +1,18 @@
 [CmdletBinding()]
 param(
     [string]$SeparatorModelDir,
+    [string]$RuntimeRoot,
     [switch]$VerifyModelOnly
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$root = if ([string]::IsNullOrWhiteSpace($RuntimeRoot)) {
+    (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+} else {
+    (Resolve-Path $RuntimeRoot).Path
+}
 $tools = Join-Path $root "tools"
 $orchestrationVenv = Join-Path $tools ".venv"
 $separatorVenv = Join-Path $tools "audio-separator-env"
@@ -40,11 +45,16 @@ function Ensure-Venv {
     $python = Join-Path $Path "Scripts\python.exe"
     if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
         $launcher = Get-Command "py.exe" -ErrorAction SilentlyContinue
-        if ($null -eq $launcher) {
-            throw "Python launcher py.exe is required to create the Python $PythonVersion environment at $Path"
-        }
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
-        Invoke-Checked $launcher.Source "-$PythonVersion" "-m" "venv" $Path
+        if ($null -ne $launcher) {
+            & $launcher.Source "-$PythonVersion" "-m" "venv" $Path
+        }
+        if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+            $qwenPython = Join-Path $root "tools\qwen3tts-env\Scripts\python.exe"
+            if ($PythonVersion -eq "3.11" -and (Test-Path -LiteralPath $qwenPython -PathType Leaf)) {
+                & $qwenPython -m venv $Path
+            }
+        }
     }
     if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
         throw "Virtual environment creation did not produce $python"
@@ -89,9 +99,13 @@ if (-not (Test-Path -LiteralPath $separatorCli -PathType Leaf)) {
     throw "audio-separator installation did not produce $separatorCli"
 }
 
+$priorErrorPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 $envInfo = (& $separatorCli "--env_info" 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0) {
-    throw "audio-separator --env_info failed with exit code $LASTEXITCODE`n$envInfo"
+$envInfoExitCode = $LASTEXITCODE
+$ErrorActionPreference = $priorErrorPreference
+if ($envInfoExitCode -ne 0) {
+    throw "audio-separator --env_info failed with exit code $envInfoExitCode`n$envInfo"
 }
 if ($envInfo -notmatch "(?i)ONNXruntime has CUDAExecutionProvider available") {
     throw "audio-separator GPU validation failed: CUDA and CUDAExecutionProvider are required.`n$envInfo"
