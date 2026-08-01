@@ -1,6 +1,11 @@
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
-$root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$python = Join-Path $root ".venv\Scripts\python.exe"
-if (-not (Test-Path $python)) { $python = "python" }
-& $python (Join-Path $root "tools\transcribe_dispatch.py") @Arguments
+$ErrorActionPreference = "Stop"
+$repository = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$gitCommon = (& git -C $repository rev-parse --git-common-dir).Trim()
+$commonPath = if ([IO.Path]::IsPathRooted($gitCommon)) { (Resolve-Path $gitCommon).Path } else { (Resolve-Path (Join-Path $repository $gitCommon)).Path }
+$python = Join-Path (Split-Path -Parent $commonPath) "tools\.venv\Scripts\python.exe"
+if (-not (Test-Path -LiteralPath $python)) { throw "Repository Python 3.12 runtime not found: $python" }
+$env:PYTHONPATH = $PSScriptRoot
+$env:PYTHONUTF8 = "1"
+& $python -m transcription_app.cli @Arguments
 exit $LASTEXITCODE

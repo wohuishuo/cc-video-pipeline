@@ -1,18 +1,18 @@
 # Transcription MVP
 
-Converts one media file into transcript JSON and SRT. The dispatcher selects FunASR for Chinese and faster-whisper for other languages.
+Transcription consumes a committed Source Intake manifest and publishes timestamped transcript JSON/SRT artifacts plus a `transcript-manifest.json` and `transcription-receipt.json`.
 
 ```powershell
 .\install.ps1
-.\run.ps1 input.wav --lang auto
+.\run.ps1 C:\Jobs\intake\source-manifest.json `
+  --output-dir C:\Jobs\transcripts `
+  --operation-id job-42 `
+  --language auto `
+  --model small `
+  --device auto `
+  --json
 ```
 
-Model downloads are cached outside Git.
+The loop handles one media item at a time. Completed item checkpoints are verified and reused after a later item fails. Reusing an operation ID with changed source, language, model, device or compute policy conflicts instead of overwriting prior evidence.
 
-## Localization CUDA adapter
-
-The Russian-localization pipeline uses one resident `faster-whisper` `large-v3`
-model on `cuda` with `float16`, Chinese language lock, VAD, and word timestamps.
-For each job it writes `transcript.zh.json` and `transcript.zh.srt` under the
-job directory; a failed transcription leaves the `transcription` receipt
-retryable rather than completed.
+Faster Whisper is a replaceable adapter. Model files are cached outside Git. Transcription does not own translation, synthesize speech, style subtitles, mix audio or publish video.
