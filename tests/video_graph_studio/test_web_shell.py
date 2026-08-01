@@ -19,7 +19,12 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'value="prepared-localization"' in html
     assert 'value="folder-intake"' in html
     assert 'value="url-intake"' in html
+    assert 'value="folder-transcription"' in html
+    assert 'value="url-transcription"' in html
     assert 'id="source-url"' in html
+    assert 'id="source-language"' in html
+    assert 'id="asr-model"' in html
+    assert 'id="asr-device"' in html
     assert "onclick=" not in html.lower()
 
 
@@ -42,6 +47,11 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'sourceUrl' in script
     assert 'folder-intake' in script
     assert 'url-intake' in script
+    assert 'folder-transcription' in script
+    assert 'url-transcription' in script
+    assert 'sourceLanguage' in script
+    assert 'asrModel' in script
+    assert 'asrDevice' in script
     assert 'sourceRoot.required = !urlMode' in script
     assert 'sourceUrl.required = urlMode' in script
     assert 'node.dataset.stepId' in script

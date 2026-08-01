@@ -29,6 +29,8 @@
       <label class="choice active"><input type="radio" name="template" value="prepared-localization" checked> Localize</label>
       <label class="choice"><input type="radio" name="template" value="folder-intake"> Folder</label>
       <label class="choice"><input type="radio" name="template" value="url-intake"> URL</label>
+      <label class="choice"><input type="radio" name="template" value="folder-transcription"> Folder+ASR</label>
+      <label class="choice"><input type="radio" name="template" value="url-transcription"> URL+ASR</label>
     </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
@@ -43,20 +45,47 @@
         <input id="source-url" name="sourceUrl" type="url" autocomplete="off" placeholder="Paste a YouTube, Bilibili, Douyin or TikTok URL">
       </div>
     </div>
-    <fieldset class="choice-field" aria-label="Target languages">
+    <div id="asr-controls" class="asr-controls" hidden>
+      <div class="field asr-field">
+        <label for="source-language">Source language</label>
+        <select id="source-language" name="sourceLanguage">
+          <option value="auto">Auto detect</option>
+          <option value="zh">Chinese</option>
+          <option value="en">English</option>
+          <option value="ru">Russian</option>
+        </select>
+      </div>
+      <div class="field asr-field">
+        <label for="asr-model">ASR model</label>
+        <select id="asr-model" name="asrModel">
+          <option value="tiny">Tiny · fast</option>
+          <option value="small" selected>Small · balanced</option>
+          <option value="large-v3">Large v3 · quality</option>
+        </select>
+      </div>
+      <div class="field asr-field device-field">
+        <label for="asr-device">Device</label>
+        <select id="asr-device" name="asrDevice">
+          <option value="auto">Auto</option>
+          <option value="cpu">CPU</option>
+          <option value="cuda">CUDA</option>
+        </select>
+      </div>
+    </div>
+    <fieldset class="choice-field localization-only" aria-label="Target languages">
       <legend>Languages</legend>
       <label class="choice active"><input type="checkbox" name="language" value="ru-RU" checked> RU</label>
       <label class="choice unavailable" title="Raw intake translation is the next slice"><input type="checkbox" name="language" value="en-US" disabled> EN</label>
       <label class="choice unavailable"><input type="checkbox" name="language" value="kk-KZ" disabled> KK</label>
     </fieldset>
-    <div class="field voice-field">
+    <div class="field voice-field localization-only">
       <label for="voice">Voice</label>
       <select id="voice" name="voice">
         <option value="ru-RU-DmitryNeural">Dmitry · Neural</option>
         <option value="ru-RU-SvetlanaNeural">Svetlana · Neural</option>
       </select>
     </div>
-    <fieldset class="choice-field platforms" aria-label="Target platforms">
+    <fieldset class="choice-field platforms localization-only" aria-label="Target platforms">
       <legend>Targets</legend>
       <label class="choice active"><input type="checkbox" name="platform" value="local" checked> Local</label>
       <label class="choice unavailable"><input type="checkbox" name="platform" value="youtube" disabled> YouTube</label>

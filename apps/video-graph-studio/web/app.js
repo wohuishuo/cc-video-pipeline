@@ -15,6 +15,16 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Download 1080p", description: "Invoke Platform I/O anonymously first with bounded quality fallback.", owner: "platform-io", relationship: "Adapter", delivery: "DOMAIN_VERIFIED" },
     verify: { title: "Verify source", description: "Check downloaded media and commit a reusable source manifest.", owner: "source-intake", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
   },
+  "folder-transcription": {
+    source: { title: "Folder intake", description: "Discover local media and commit a reusable source manifest.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Serial transcription", description: "Transcribe one verified media item at a time with resumable checkpoints.", owner: "transcription", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify transcripts", description: "Check source, JSON and SRT fingerprints before continuation.", owner: "transcription", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
+  "url-transcription": {
+    source: { title: "URL intake", description: "Download one supported social video and commit its source manifest.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Serial transcription", description: "Transcribe one verified media item at a time with resumable checkpoints.", owner: "transcription", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify transcripts", description: "Check source, JSON and SRT fingerprints before continuation.", owner: "transcription", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
 };
 
 const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
@@ -111,7 +121,9 @@ async function submitRun(event) {
   const languages = $$('input[name="language"]:checked').map((item) => item.value);
   const platforms = $$('input[name="platform"]:checked').map((item) => item.value);
   const voice = $("#voice").value;
-  const needsFolder = state.templateId !== "url-intake";
+  const urlMode = state.templateId.startsWith("url-");
+  const transcriptionMode = state.templateId.endsWith("-transcription");
+  const needsFolder = !urlMode;
   if ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl)) {
     toast("Choose a source folder or supported social URL.", true);
     return;
@@ -126,10 +138,19 @@ async function submitRun(event) {
   setRunControlsBusy(true);
   button.innerHTML = "<span>◌</span> Creating…";
   try {
-    const payload = state.templateId === "url-intake"
-      ? { templateId: state.templateId, sourceUrl, maxHeight: 1080 }
-      : state.templateId === "folder-intake"
-        ? { templateId: state.templateId, sourceRoot }
+    const sourcePayload = urlMode ? { sourceUrl, maxHeight: 1080 } : { sourceRoot };
+    const asrDevice = $("#asr-device").value;
+    const payload = transcriptionMode
+      ? {
+          templateId: state.templateId,
+          ...sourcePayload,
+          sourceLanguage: $("#source-language").value,
+          asrModel: $("#asr-model").value,
+          asrDevice,
+          asrComputeType: asrDevice === "cpu" ? "int8" : asrDevice === "cuda" ? "float16" : "default",
+        }
+      : state.templateId.endsWith("-intake")
+        ? { templateId: state.templateId, ...sourcePayload }
         : { templateId: state.templateId, sourceRoot, languages, voice, platforms };
     const create = await api("/api/v1/runs", {
       method: "POST",
@@ -163,7 +184,7 @@ function resetRunProjection() {
     node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
     node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
   });
-  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : "0 / 2";
+  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
   $("#progress-bar").style.width = "0%";
   $("#run-id").textContent = "No active run";
   $("#activity-summary").textContent = "Waiting for a run";
@@ -172,17 +193,20 @@ function resetRunProjection() {
 
 function selectTemplate(templateId) {
   state.templateId = templateId;
-  const urlMode = templateId === "url-intake";
+  const urlMode = templateId.startsWith("url-");
+  const transcriptionMode = templateId.endsWith("-transcription");
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
   sourceRoot.closest(".source-field").hidden = urlMode;
   sourceRoot.required = !urlMode;
   sourceUrl.required = urlMode;
-  const intakeMode = templateId !== "prepared-localization";
-  $$('[aria-label="Target languages"], .voice-field, [aria-label="Target platforms"]').forEach((element) => {
-    element.classList.toggle("control-muted", intakeMode);
+  const sourceOnlyMode = templateId !== "prepared-localization";
+  $$(".localization-only").forEach((element) => {
+    element.hidden = sourceOnlyMode;
+    element.classList.toggle("control-muted", sourceOnlyMode);
   });
+  $("#asr-controls").hidden = !transcriptionMode;
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
@@ -190,19 +214,39 @@ function selectTemplate(templateId) {
     ? ["Prepared folder", "Validate batch manifest", "Edge localization", "Voice · mix · hard subtitles", "Verify output", "Inspect files and receipts"]
     : templateId === "folder-intake"
       ? ["Local folder", "Resolve an allowed source", "Discover media", "Build deterministic manifest", "Verify source", "Check files and receipt"]
-      : ["Social URL", "YouTube · Bilibili · Douyin · TikTok", "Download 1080p", "Anonymous first · cookie optional", "Verify source", "Check files and receipt"];
+      : templateId === "url-intake"
+        ? ["Social URL", "YouTube · Bilibili · Douyin · TikTok", "Download 1080p", "Anonymous first · cookie optional", "Verify source", "Check files and receipt"]
+        : templateId === "folder-transcription"
+          ? ["Folder intake", "Discover and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
+          : ["URL intake", "Download and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const stepIds = templateId === "prepared-localization" ? ["source", "localize", "verify"] : ["", "intake", "verify"];
+  const stepIds = templateId === "prepared-localization"
+    ? ["source", "localize", "verify"]
+    : transcriptionMode
+      ? ["intake", "transcribe", "verify-transcript"]
+      : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
   const paletteCopy = templateId === "prepared-localization"
     ? ["Prepared folder", "Local query", "Edge localization", "Serial adapter", "Verify outputs", "Receipt policy"]
     : templateId === "folder-intake"
       ? ["Local folder", "Local input", "Discover media", "Serial command", "Verify source", "Manifest policy"]
-      : ["Social URL", "Remote input", "Download 1080p", "Platform adapter", "Verify source", "Manifest policy"];
+      : templateId === "url-intake"
+        ? ["Social URL", "Remote input", "Download 1080p", "Platform adapter", "Verify source", "Manifest policy"]
+        : templateId === "folder-transcription"
+          ? ["Folder intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
+          : ["URL intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = templateId === "prepared-localization" ? "Prepared Folder Localization" : templateId === "folder-intake" ? "Folder Source Intake" : "Social URL Intake";
+  $(".workspace-label").textContent = templateId === "prepared-localization"
+    ? "Prepared Folder Localization"
+    : templateId === "folder-intake"
+      ? "Folder Source Intake"
+      : templateId === "url-intake"
+        ? "Social URL Intake"
+        : templateId === "folder-transcription"
+          ? "Folder Intake + Transcription"
+          : "URL Intake + Transcription";
   $$(".source-preview").forEach((element) => { element.textContent = (urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
   resetRunProjection();
   focusNode(state.selectedNode);
