@@ -205,6 +205,81 @@ class RunStore:
             connection.commit()
             return int(sequence)
 
+    def start_step(self, run_id: str, node_id: str) -> CommandResult:
+        return self._change_step(run_id, node_id, {"PENDING", "INTERRUPTED"}, "RUNNING")
+
+    def complete_step(self, run_id: str, node_id: str, result: dict[str, Any]) -> CommandResult:
+        return self._change_step(run_id, node_id, {"RUNNING"}, "COMPLETED", result=result)
+
+    def fail_step(self, run_id: str, node_id: str, error: str) -> CommandResult:
+        return self._change_step(run_id, node_id, {"RUNNING"}, "FAILED", error=error)
+
+    def cancel_step(self, run_id: str, node_id: str) -> CommandResult:
+        return self._change_step(run_id, node_id, {"RUNNING"}, "CANCELLED")
+
+    def interrupt_active(self) -> int:
+        """Fence process handles lost during a previous server generation."""
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            steps = connection.execute(
+                "UPDATE steps SET status = 'INTERRUPTED', version = version + 1 WHERE status = 'RUNNING'"
+            ).rowcount
+            connection.execute(
+                """UPDATE runs SET status = 'INTERRUPTED', version = version + 1, updated_at = ?
+                WHERE status IN ('RUNNING', 'CANCEL_REQUESTED')""",
+                (_now(),),
+            )
+            connection.commit()
+            return int(steps)
+
+    def _change_step(
+        self,
+        run_id: str,
+        node_id: str,
+        allowed: set[str],
+        target: str,
+        *,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> CommandResult:
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT status, version, result_json, error FROM steps WHERE run_id = ? AND node_id = ?",
+                (run_id, node_id),
+            ).fetchone()
+            if row is None:
+                connection.rollback()
+                return CommandResult("REJECTED_NOT_FOUND", {"runId": run_id, "nodeId": node_id})
+            if row["status"] == target and target in {"COMPLETED", "FAILED", "CANCELLED"}:
+                connection.commit()
+                return CommandResult(
+                    "DUPLICATE_COMPLETED",
+                    {"runId": run_id, "nodeId": node_id, "status": target},
+                )
+            if row["status"] not in allowed:
+                connection.rollback()
+                return CommandResult(
+                    "REJECTED_CONFLICT",
+                    {"runId": run_id, "nodeId": node_id, "status": row["status"]},
+                )
+            connection.execute(
+                """UPDATE steps SET status = ?, version = version + 1, result_json = ?, error = ?
+                WHERE run_id = ? AND node_id = ? AND version = ?""",
+                (
+                    target,
+                    canonical_json(result) if result is not None else None,
+                    error,
+                    run_id,
+                    node_id,
+                    row["version"],
+                ),
+            )
+            connection.commit()
+            return CommandResult(
+                "COMPLETED", {"runId": run_id, "nodeId": node_id, "status": target}
+            )
+
     def get_run(self, run_id: str) -> dict[str, Any]:
         with self._connect() as connection:
             if connection.execute("SELECT 1 FROM runs WHERE run_id = ?", (run_id,)).fetchone() is None:
@@ -253,4 +328,3 @@ class RunStore:
             ],
             "logs": [dict(log) for log in logs],
         }
-
