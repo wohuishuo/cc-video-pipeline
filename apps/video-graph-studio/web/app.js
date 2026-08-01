@@ -25,6 +25,16 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Serial transcription", description: "Transcribe one verified media item at a time with resumable checkpoints.", owner: "transcription", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
     verify: { title: "Verify transcripts", description: "Check source, JSON and SRT fingerprints before continuation.", owner: "transcription", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
   },
+  "folder-translation": {
+    source: { title: "Folder intake", description: "Discover local media and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Serial translation", description: "Transcribe, verify and translate every language/media work item sequentially.", owner: "translation", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify translations", description: "Require exact language/media coverage and matching JSON/SRT fingerprints.", owner: "translation", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
+  "url-translation": {
+    source: { title: "URL intake", description: "Download one supported social video and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Serial translation", description: "Transcribe, verify and translate every language/media work item sequentially.", owner: "translation", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify translations", description: "Require exact language/media coverage and matching JSON/SRT fingerprints.", owner: "translation", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
 };
 
 const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
@@ -123,6 +133,7 @@ async function submitRun(event) {
   const voice = $("#voice").value;
   const urlMode = state.templateId.startsWith("url-");
   const transcriptionMode = state.templateId.endsWith("-transcription");
+  const translationMode = state.templateId.endsWith("-translation");
   const needsFolder = !urlMode;
   if ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl)) {
     toast("Choose a source folder or supported social URL.", true);
@@ -130,6 +141,10 @@ async function submitRun(event) {
   }
   if (state.templateId === "prepared-localization" && (!languages.length || !platforms.length)) {
     toast("Choose a source, language and target.", true);
+    return;
+  }
+  if (translationMode && !languages.length) {
+    toast("Choose at least one target language.", true);
     return;
   }
   const correlationId = crypto.randomUUID();
@@ -140,15 +155,24 @@ async function submitRun(event) {
   try {
     const sourcePayload = urlMode ? { sourceUrl, maxHeight: 1080 } : { sourceRoot };
     const asrDevice = $("#asr-device").value;
-    const payload = transcriptionMode
+    const transcriptPayload = {
+      templateId: state.templateId,
+      ...sourcePayload,
+      sourceLanguage: $("#source-language").value,
+      asrModel: $("#asr-model").value,
+      asrDevice,
+      asrComputeType: asrDevice === "cpu" ? "int8" : asrDevice === "cuda" ? "float16" : "default",
+    };
+    const payload = translationMode
       ? {
-          templateId: state.templateId,
-          ...sourcePayload,
-          sourceLanguage: $("#source-language").value,
-          asrModel: $("#asr-model").value,
-          asrDevice,
-          asrComputeType: asrDevice === "cpu" ? "int8" : asrDevice === "cuda" ? "float16" : "default",
+          ...transcriptPayload,
+          targetLanguages: languages,
+          translationModel: "facebook/nllb-200-distilled-600M",
+          translationDevice: $("#translation-device").value,
+          translationBatchSize: Number($("#translation-batch-size").value),
         }
+      : transcriptionMode
+      ? transcriptPayload
       : state.templateId.endsWith("-intake")
         ? { templateId: state.templateId, ...sourcePayload }
         : { templateId: state.templateId, sourceRoot, languages, voice, platforms };
@@ -184,7 +208,7 @@ function resetRunProjection() {
     node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
     node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
   });
-  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
+  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
   $("#progress-bar").style.width = "0%";
   $("#run-id").textContent = "No active run";
   $("#activity-summary").textContent = "Waiting for a run";
@@ -195,18 +219,26 @@ function selectTemplate(templateId) {
   state.templateId = templateId;
   const urlMode = templateId.startsWith("url-");
   const transcriptionMode = templateId.endsWith("-transcription");
+  const translationMode = templateId.endsWith("-translation");
+  const needsAsr = transcriptionMode || translationMode;
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
   sourceRoot.closest(".source-field").hidden = urlMode;
   sourceRoot.required = !urlMode;
   sourceUrl.required = urlMode;
-  const sourceOnlyMode = templateId !== "prepared-localization";
-  $$(".localization-only").forEach((element) => {
-    element.hidden = sourceOnlyMode;
-    element.classList.toggle("control-muted", sourceOnlyMode);
+  const preparedMode = templateId === "prepared-localization";
+  $$(".prepared-only").forEach((element) => {
+    element.hidden = !preparedMode;
+    element.classList.toggle("control-muted", !preparedMode);
   });
-  $("#asr-controls").hidden = !transcriptionMode;
+  $("#target-language-controls").hidden = !(preparedMode || translationMode);
+  $$('input[name="language"]').forEach((input) => {
+    input.disabled = preparedMode && input.value !== "ru-RU";
+    input.closest("label").classList.toggle("unavailable", input.disabled);
+  });
+  $("#asr-controls").hidden = !needsAsr;
+  $("#translation-controls").hidden = !translationMode;
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
@@ -218,12 +250,23 @@ function selectTemplate(templateId) {
         ? ["Social URL", "YouTube · Bilibili · Douyin · TikTok", "Download 1080p", "Anonymous first · cookie optional", "Verify source", "Check files and receipt"]
         : templateId === "folder-transcription"
           ? ["Folder intake", "Discover and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
-          : ["URL intake", "Download and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"];
+          : templateId === "url-transcription"
+            ? ["URL intake", "Download and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
+            : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
+  const outputDetails = templateId === "prepared-localization"
+    ? ["MP4 · H.264", "Local receipt"]
+    : translationMode || transcriptionMode
+      ? ["JSON · SRT", translationMode ? "Translation Manifest" : "Transcript Manifest"]
+      : ["Source Manifest", "SHA-256 receipt"];
+  $("#output-format").textContent = outputDetails[0];
+  $("#output-evidence").textContent = outputDetails[1];
   const stepIds = templateId === "prepared-localization"
     ? ["source", "localize", "verify"]
-    : transcriptionMode
+    : translationMode
+      ? ["intake", "translate", "verify-translation"]
+      : transcriptionMode
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
@@ -235,7 +278,9 @@ function selectTemplate(templateId) {
         ? ["Social URL", "Remote input", "Download 1080p", "Platform adapter", "Verify source", "Manifest policy"]
         : templateId === "folder-transcription"
           ? ["Folder intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
-          : ["URL intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"];
+          : templateId === "url-transcription"
+            ? ["URL intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
+            : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
   $(".workspace-label").textContent = templateId === "prepared-localization"
@@ -246,7 +291,9 @@ function selectTemplate(templateId) {
         ? "Social URL Intake"
         : templateId === "folder-transcription"
           ? "Folder Intake + Transcription"
-          : "URL Intake + Transcription";
+          : templateId === "url-transcription"
+            ? "URL Intake + Transcription"
+            : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
   $$(".source-preview").forEach((element) => { element.textContent = (urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
   resetRunProjection();
   focusNode(state.selectedNode);

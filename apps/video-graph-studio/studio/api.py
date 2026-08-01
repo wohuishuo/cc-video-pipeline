@@ -69,7 +69,36 @@ TRANSCRIPTION_GRAPHS = {
     )
 }
 
-SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS}
+TRANSLATION_GRAPHS = {
+    template_id: GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": template_id,
+            "revision": 1,
+            "nodes": [
+                {"id": "intake", "type": "source-intake", "config": {"mode": mode}},
+                {"id": "verify-source", "type": "verify-source", "config": {}},
+                {"id": "transcribe", "type": "transcribe-source", "config": {}},
+                {"id": "verify-transcript", "type": "verify-transcript", "config": {}},
+                {"id": "translate", "type": "translate-transcript", "config": {}},
+                {"id": "verify-translation", "type": "verify-translation", "config": {}},
+            ],
+            "edges": [
+                {"source": "intake", "target": "verify-source", "relationship": "Fact"},
+                {"source": "verify-source", "target": "transcribe", "relationship": "Fact"},
+                {"source": "transcribe", "target": "verify-transcript", "relationship": "Fact"},
+                {"source": "verify-transcript", "target": "translate", "relationship": "Fact"},
+                {"source": "translate", "target": "verify-translation", "relationship": "Fact"},
+            ],
+        }
+    )
+    for template_id, mode in (
+        ("folder-translation", "folder"),
+        ("url-translation", "url"),
+    )
+}
+
+SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
@@ -196,7 +225,7 @@ class StudioApplication:
                 "sourceUrl": value,
                 "maxHeight": int(payload.get("maxHeight", 1080)),
             }
-        if template_id in TRANSCRIPTION_GRAPHS:
+        if template_id in TRANSCRIPTION_GRAPHS or template_id in TRANSLATION_GRAPHS:
             source_language = str(payload.get("sourceLanguage", "auto")).strip()
             model = str(payload.get("asrModel", "small")).strip()
             device = str(payload.get("asrDevice", "auto")).strip()
@@ -211,6 +240,31 @@ class StudioApplication:
                     "asrModel": model,
                     "asrDevice": device,
                     "asrComputeType": compute_type,
+                }
+            )
+        if template_id in TRANSLATION_GRAPHS:
+            languages = payload.get("targetLanguages")
+            supported = {"ru-RU", "en-US", "kk-KZ"}
+            if (
+                not isinstance(languages, list)
+                or not languages
+                or not all(isinstance(value, str) and value in supported for value in languages)
+                or len(set(languages)) != len(languages)
+            ):
+                raise ContractError("REJECTED_MALFORMED", "targetLanguages must be a unique supported list")
+            translation_model = str(payload.get("translationModel", "facebook/nllb-200-distilled-600M")).strip()
+            translation_device = str(payload.get("translationDevice", "auto")).strip()
+            translation_batch_size = int(payload.get("translationBatchSize", 8))
+            if not translation_model or translation_device not in {"auto", "cpu", "cuda"}:
+                raise ContractError("REJECTED_MALFORMED", "unsupported translation policy")
+            if not 1 <= translation_batch_size <= 64:
+                raise ContractError("REJECTED_MALFORMED", "translationBatchSize must be between 1 and 64")
+            parameters.update(
+                {
+                    "targetLanguages": list(languages),
+                    "translationModel": translation_model,
+                    "translationDevice": translation_device,
+                    "translationBatchSize": translation_batch_size,
                 }
             )
         result = self.store.create_run(

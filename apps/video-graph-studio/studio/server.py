@@ -120,9 +120,11 @@ def build_runtime(repository: Path, data_root: Path):
         PreparedFolderEdgeAdapter,
         SourceIntakeAdapter,
         TranscriptSourceAdapter,
+        TranslateTranscriptAdapter,
         VerifyOutputAdapter,
         VerifySourceAdapter,
         VerifyTranscriptAdapter,
+        VerifyTranslationAdapter,
     )
     from .engine import WorkflowEngine
     from .store import RunStore
@@ -135,6 +137,7 @@ def build_runtime(repository: Path, data_root: Path):
     edge_launcher = repository / "apps" / "localization" / "edge-russian.ps1"
     intake_launcher = repository / "apps" / "source-intake" / "run.ps1"
     transcription_launcher = repository / "apps" / "transcription" / "run.ps1"
+    translation_launcher = repository / "apps" / "translation" / "run.ps1"
     engine = WorkflowEngine(
         store,
         {
@@ -147,6 +150,10 @@ def build_runtime(repository: Path, data_root: Path):
                 transcription_launcher, data_root / "transcripts"
             ),
             "verify-transcript": VerifyTranscriptAdapter(),
+            "translate-transcript": TranslateTranscriptAdapter(
+                translation_launcher, data_root / "translations"
+            ),
+            "verify-translation": VerifyTranslationAdapter(),
         },
     )
     application = StudioApplication(store, engine, allowed_roots=_allowed_roots(repository))

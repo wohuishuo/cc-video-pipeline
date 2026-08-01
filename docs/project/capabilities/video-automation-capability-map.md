@@ -37,8 +37,8 @@ flowchart LR
 | --- | --- | --- | --- |
 | G01-G03 | Graph definition, run and process ownership | `DOMAIN_VERIFIED` | crash/restart drill and production operations |
 | S01-S04 | Source Intake | `DOMAIN_VERIFIED`; live YouTube evidence | profile enumeration and three remaining platforms |
-| T01-T03 | Transcription | legacy `IMPLEMENTED` only | versioned manifest contract and real one-file receipt |
-| L01-L03 | Translation | `DESIGNED` | adapter-neutral contract, human-editable artifact and quality checks |
+| T01-T03 | Transcription | `DOMAIN_VERIFIED`; real Tiny/CPU and browser graph evidence | representative quality, GPU and recovery evidence |
+| L01-L03 | Translation | `DOMAIN_VERIFIED`; adapter-neutral serial loop and editable artifacts | real local NLLB smoke, reviewed-text republish and quality sampling |
 | V01 | Voice segment loop | Edge implementation exists | adapter-neutral receipt and stable real completion |
 | C01-C03 | Subtitle, audio and composition | partial implementation | independently verified media derivative |
 | P01-P02 | Publication | guarded preparation exists | authenticated private/draft evidence per platform |

@@ -34,6 +34,23 @@ flowchart LR
 
 Localization is currently `DESIGNED`; the diagram documents the intended public file contracts, not a production-verification claim.
 
+## Transcribe and translate from the browser
+
+```mermaid
+flowchart LR
+    SOURCE["Folder or supported video URL"] --> INTAKE["Source Intake"]
+    INTAKE --> TX["Transcription"]
+    TX --> TM[("Transcript Manifest")]
+    TM --> TR["Translation"]
+    LANG["RU / EN / KK selection"] --> TR
+    TR --> OUT[("Editable translation JSON + SRT")]
+    CONTROL["Video Graph Studio"] -. "commands and verifies" .-> INTAKE
+    CONTROL -. "commands and verifies" .-> TX
+    CONTROL -. "commands and verifies" .-> TR
+```
+
+Choose `Folder+Translate` or `URL+Translate` in Video Graph Studio. The graph runs six durable steps with one worker. Translation output is marked `MACHINE`; it is not yet a dubbed or subtitle-burned video.
+
 ## Build visual cards and publish
 
 ```mermaid

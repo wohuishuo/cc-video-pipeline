@@ -31,6 +31,8 @@
       <label class="choice"><input type="radio" name="template" value="url-intake"> URL</label>
       <label class="choice"><input type="radio" name="template" value="folder-transcription"> Folder+ASR</label>
       <label class="choice"><input type="radio" name="template" value="url-transcription"> URL+ASR</label>
+      <label class="choice"><input type="radio" name="template" value="folder-translation"> Folder+Translate</label>
+      <label class="choice"><input type="radio" name="template" value="url-translation"> URL+Translate</label>
     </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
@@ -72,20 +74,38 @@
         </select>
       </div>
     </div>
-    <fieldset class="choice-field localization-only" aria-label="Target languages">
+    <div id="translation-controls" class="asr-controls" hidden>
+      <div class="field asr-field device-field">
+        <label for="translation-device">Translation</label>
+        <select id="translation-device" name="translationDevice">
+          <option value="auto">Auto</option>
+          <option value="cpu">CPU</option>
+          <option value="cuda">CUDA</option>
+        </select>
+      </div>
+      <div class="field asr-field device-field">
+        <label for="translation-batch-size">Batch</label>
+        <select id="translation-batch-size" name="translationBatchSize">
+          <option value="4">4</option>
+          <option value="8" selected>8</option>
+          <option value="16">16</option>
+        </select>
+      </div>
+    </div>
+    <fieldset id="target-language-controls" class="choice-field" aria-label="Target languages">
       <legend>Languages</legend>
       <label class="choice active"><input type="checkbox" name="language" value="ru-RU" checked> RU</label>
-      <label class="choice unavailable" title="Raw intake translation is the next slice"><input type="checkbox" name="language" value="en-US" disabled> EN</label>
+      <label class="choice unavailable"><input type="checkbox" name="language" value="en-US" disabled> EN</label>
       <label class="choice unavailable"><input type="checkbox" name="language" value="kk-KZ" disabled> KK</label>
     </fieldset>
-    <div class="field voice-field localization-only">
+    <div class="field voice-field prepared-only">
       <label for="voice">Voice</label>
       <select id="voice" name="voice">
         <option value="ru-RU-DmitryNeural">Dmitry · Neural</option>
         <option value="ru-RU-SvetlanaNeural">Svetlana · Neural</option>
       </select>
     </div>
-    <fieldset class="choice-field platforms localization-only" aria-label="Target platforms">
+    <fieldset class="choice-field platforms prepared-only" aria-label="Target platforms">
       <legend>Targets</legend>
       <label class="choice active"><input type="checkbox" name="platform" value="local" checked> Local</label>
       <label class="choice unavailable"><input type="checkbox" name="platform" value="youtube" disabled> YouTube</label>
@@ -137,7 +157,7 @@
         </article>
         <article class="graph-node output-node" data-node-id="verify" data-step-id="verify" tabindex="0">
           <header><span><i>✓</i> OUTPUT</span><b class="node-status">WAITING</b></header>
-          <div class="node-body"><h3 id="output-node-title">Verify output</h3><p id="output-node-description">Inspect files and receipts</p><dl><div><dt>Format</dt><dd>MP4 · H.264</dd></div><div><dt>Evidence</dt><dd>Local receipt</dd></div></dl></div>
+          <div class="node-body"><h3 id="output-node-title">Verify output</h3><p id="output-node-description">Inspect files and receipts</p><dl><div><dt>Format</dt><dd id="output-format">MP4 · H.264</dd></div><div><dt>Evidence</dt><dd id="output-evidence">Local receipt</dd></div></dl></div>
           <span class="port input-port"></span>
         </article>
         <div class="canvas-note"><span>i</span><p><strong>Graph Engineering</strong> owns continuation only. Every node remains an independent, replaceable MVP.</p></div>
