@@ -5,7 +5,7 @@
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
 [![Tests](https://img.shields.io/badge/tests-52%20passing-22c55e)](scripts/test-all.ps1)
-[![MVPs](https://img.shields.io/badge/independent%20MVPs-10-8b5cf6)](apps/README.md)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-11-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
 [Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
@@ -14,7 +14,7 @@
 
 ---
 
-## One repository, ten focused programs
+## One repository, eleven focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
 
@@ -22,8 +22,9 @@ This is not one giant pipeline. Each MVP has its own launcher, installer, manife
 flowchart LR
     idea([Idea or source]) --> research[Channel Research]
     research --> download[Platform I/O]
-    download --> transcribe[Transcription]
-    download --> signals[Signal Analysis]
+    download --> intake[Source Intake]
+    intake --> transcribe[Transcription]
+    intake --> signals[Signal Analysis]
     signals --> frames[Frame Extraction]
     transcribe --> edit[Video Editing]
     frames --> studio[Remotion Studio]
@@ -38,7 +39,7 @@ flowchart LR
     classDef artifact fill:#ecfdf5,stroke:#16a34a,color:#052e16;
     classDef external fill:#fff7ed,stroke:#ea580c,color:#431407;
     class idea source;
-    class research,download,transcribe,signals,frames,edit,studio,localize,voice app;
+    class research,download,intake,transcribe,signals,frames,edit,studio,localize,voice app;
     class master artifact;
     class publish external;
 ```
@@ -50,6 +51,7 @@ The arrows describe useful composition, not mandatory coupling.
 | Program | You provide | You receive | Evidence | Guide |
 |---|---|---|---|---|
 | **Platform I/O** | URL or finished video | Verified download or guarded upload receipt | `DOMAIN_VERIFIED` | [Open](apps/platform-io/README.md) |
+| **Source Intake** | Local folder or supported social URL | Deterministic source manifest + receipt | `DOMAIN_VERIFIED` | [Open](apps/source-intake/README.md) |
 | **Channel Research** | Platform source reference | Reproducible research dossier | `DOMAIN_VERIFIED` | [Open](apps/channel-research/README.md) |
 | **Transcription** | Audio or video | Transcript JSON + SRT | `IMPLEMENTED` | [Open](apps/transcription/README.md) |
 | **Signal Analysis** | Video | Cut points + loudness measurements | `IMPLEMENTED` | [Open](apps/signal-analysis/README.md) |
@@ -75,6 +77,7 @@ flowchart TB
       G[apps/voice-cloning]
       H[apps/channel-research]
       I[apps/remotion-studio]
+      J[apps/source-intake]
     end
     contracts[(Versioned files and receipts)]
     projects[(Project-owned scripts and assets)]
@@ -87,7 +90,7 @@ flowchart TB
 
     classDef boundary fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
     classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    class A,B,C,D,E,F,G,H,I boundary;
+    class A,B,C,D,E,F,G,H,I,J boundary;
     class contracts,projects,outputs data;
 ```
 

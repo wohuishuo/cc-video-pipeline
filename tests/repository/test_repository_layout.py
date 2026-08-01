@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_APPS = {
     "platform-io", "transcription", "signal-analysis", "frame-extraction",
     "video-editing", "localization", "voice-cloning", "channel-research",
-    "remotion-studio", "video-graph-studio",
+    "remotion-studio", "source-intake", "video-graph-studio",
 }
 
 
