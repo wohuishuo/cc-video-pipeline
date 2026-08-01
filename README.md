@@ -53,7 +53,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **Platform I/O** | URL or finished video | Verified download or guarded upload receipt | `DOMAIN_VERIFIED` | [Open](apps/platform-io/README.md) |
 | **Source Intake** | Local folder or supported social URL | Deterministic source manifest + receipt | `DOMAIN_VERIFIED` | [Open](apps/source-intake/README.md) |
 | **Channel Research** | Platform source reference | Reproducible research dossier | `DOMAIN_VERIFIED` | [Open](apps/channel-research/README.md) |
-| **Transcription** | Audio or video | Transcript JSON + SRT | `IMPLEMENTED` | [Open](apps/transcription/README.md) |
+| **Transcription** | Source manifest + ASR policy | Verified transcript manifest + JSON/SRT | `DOMAIN_VERIFIED` | [Open](apps/transcription/README.md) |
 | **Signal Analysis** | Video | Cut points + loudness measurements | `IMPLEMENTED` | [Open](apps/signal-analysis/README.md) |
 | **Frame Extraction** | Video + optional cuts | Frame set | `IMPLEMENTED` | [Open](apps/frame-extraction/README.md) |
 | **Video Editing** | Video + edit operation | Edited derivative | `IMPLEMENTED` | [Open](apps/video-editing/README.md) |
