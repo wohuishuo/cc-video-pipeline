@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 import os
 from pathlib import Path
 from queue import Empty, Queue
@@ -183,3 +185,97 @@ class VerifyOutputAdapter:
         on_log(f"Verified {len(videos)} localized video(s)")
         return AdapterResult(True, {"outputRoot": str(output), "videoCount": len(videos)})
 
+
+class SourceIntakeAdapter(CommandAdapter):
+    """Invokes the independent Source Intake public launcher."""
+
+    def __init__(self, launcher: Path, intake_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.intake_root = Path(intake_root).resolve()
+
+    def execute(
+        self,
+        node: GraphNode,
+        context: dict[str, Any],
+        on_log: Callable[[str], None],
+        cancel_event: threading.Event,
+    ) -> AdapterResult:
+        parameters = context["parameters"]
+        mode = str(parameters.get("sourceKind", ""))
+        source = parameters.get("sourceRoot") if mode == "folder" else parameters.get("sourceUrl")
+        if mode not in {"folder", "url"} or not isinstance(source, str):
+            return AdapterResult(False, {}, "invalid Source Intake parameters")
+        output = self.intake_root / str(context["runId"])
+        child_operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+            str(self.launcher), mode, source, "--output-dir", str(output),
+            "--operation-id", child_operation_id, "--json",
+        ]
+        if mode == "url":
+            argv.extend(["--max-height", str(parameters.get("maxHeight", 1080))])
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "intake-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "intake receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid intake receipt: {error}")
+        if receipt.get("resultClass") != "COMPLETED" or not manifest.is_file():
+            return AdapterResult(False, result.details, "Source Intake did not commit a manifest")
+        return AdapterResult(
+            True,
+            {
+                **result.details,
+                "receipt": str(receipt_path),
+                "manifest": str(manifest),
+                "manifestSha256": receipt.get("manifestSha256"),
+                "mediaCount": receipt.get("mediaCount"),
+            },
+        )
+
+
+class VerifySourceAdapter:
+    """Verifies the committed Source Intake fact without owning the manifest."""
+
+    def execute(
+        self,
+        node: GraphNode,
+        context: dict[str, Any],
+        on_log: Callable[[str], None],
+        cancel_event: threading.Event,
+    ) -> AdapterResult:
+        intake = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "intake" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(intake, dict):
+            return AdapterResult(False, {}, "committed intake fact missing")
+        manifest_path = Path(str(intake.get("manifest", ""))).resolve()
+        if not manifest_path.is_file():
+            return AdapterResult(False, {}, "source manifest missing")
+        digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        if digest != intake.get("manifestSha256"):
+            return AdapterResult(False, {}, "source manifest fingerprint conflict")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            media = manifest["media"]
+            valid = bool(media) and all(
+                Path(str(row["path"])).is_file()
+                and Path(str(row["path"])).stat().st_size == int(row["size"])
+                for row in media
+            )
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            media = []
+        if not valid:
+            return AdapterResult(False, {}, "source manifest media validation failed")
+        on_log(f"Verified source manifest with {len(media)} media file(s)")
+        return AdapterResult(True, {"manifest": str(manifest_path), "mediaCount": len(media)})

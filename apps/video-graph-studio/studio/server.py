@@ -114,28 +114,42 @@ def _allowed_roots(repository: Path) -> tuple[Path, ...]:
     return tuple(result)
 
 
-def main(argv: list[str] | None = None) -> int:
-    from .adapters import PreparedFolderAdapter, PreparedFolderEdgeAdapter, VerifyOutputAdapter
+def build_runtime(repository: Path, data_root: Path):
+    from .adapters import (
+        PreparedFolderAdapter,
+        PreparedFolderEdgeAdapter,
+        SourceIntakeAdapter,
+        VerifyOutputAdapter,
+        VerifySourceAdapter,
+    )
     from .engine import WorkflowEngine
     from .store import RunStore
 
-    args = _parser().parse_args(argv)
-    repository = Path(__file__).resolve().parents[3]
-    args.data_root.mkdir(parents=True, exist_ok=True)
-    store = RunStore(args.data_root / "studio.db")
-    interrupted = store.interrupt_active()
-    if interrupted:
-        print(f"Recovered {interrupted} interrupted step(s).", flush=True)
+    repository = Path(repository).resolve()
+    data_root = Path(data_root).resolve()
+    data_root.mkdir(parents=True, exist_ok=True)
+    store = RunStore(data_root / "studio.db")
+    store.interrupt_active()
     edge_launcher = repository / "apps" / "localization" / "edge-russian.ps1"
+    intake_launcher = repository / "apps" / "source-intake" / "run.ps1"
     engine = WorkflowEngine(
         store,
         {
             "prepared-folder": PreparedFolderAdapter(),
             "edge-localize": PreparedFolderEdgeAdapter(edge_launcher),
             "verify-output": VerifyOutputAdapter(),
+            "source-intake": SourceIntakeAdapter(intake_launcher, data_root / "intakes"),
+            "verify-source": VerifySourceAdapter(),
         },
     )
     application = StudioApplication(store, engine, allowed_roots=_allowed_roots(repository))
+    return application, engine
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    repository = Path(__file__).resolve().parents[3]
+    application, engine = build_runtime(repository, args.data_root)
     server = create_server(
         "127.0.0.1",
         args.port,

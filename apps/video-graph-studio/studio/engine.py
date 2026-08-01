@@ -105,7 +105,11 @@ class WorkflowEngine:
                 self.store.append_log(run_id, f"[{node_id}] started")
                 result: AdapterResult = adapter.execute(
                     node,
-                    {"runId": run_id, "parameters": run["parameters"]},
+                    {
+                        "runId": run_id,
+                        "parameters": run["parameters"],
+                        "steps": self.store.get_run(run_id)["steps"],
+                    },
                     lambda line, rid=run_id: self.store.append_log(rid, line),
                     self._cancel_event,
                 )
@@ -139,4 +143,3 @@ class WorkflowEngine:
     def _transition_latest(self, run_id: str, target: str) -> CommandResult:
         run = self.store.get_run(run_id)
         return self.store.transition(run_id, expected_version=run["version"], target=target)
-
