@@ -5,8 +5,8 @@
 | Owner | Voice Rendering MVP |
 | Delivery level | `DOMAIN_VERIFIED` |
 | Observable result | Translation Manifest plus exact voice policy becomes per-segment MP3 clips, Voice Manifest and receipt |
-| Evidence present | 7 domain tests; serial ordering; one active synthesis call; clip hash/duration; failure isolation; retry reuse; replay/conflict; real Edge RU+KK service completion |
-| Evidence missing | Graph Studio composition; subjective voice review; rate-limit policy; long-form load; offline substitute; clean-machine install; production recovery/security |
+| Evidence present | 7 domain tests; serial ordering; one active synthesis call; clip hash/duration; failure isolation; retry reuse; replay/conflict; real Edge RU+KK service completion; tested eight-step Graph Studio composition and browser controls |
+| Evidence missing | live eight-step browser completion; subjective voice review; rate-limit policy; long-form load; offline substitute; clean-machine install; production recovery/security |
 | Forbidden claims | no voice cloning claim; no final-video/dubbing claim; no guaranteed Microsoft service availability; no production verification |
 
 ## Live operation

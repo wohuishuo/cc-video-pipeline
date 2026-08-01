@@ -98,7 +98,33 @@ TRANSLATION_GRAPHS = {
     )
 }
 
-SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS}
+VOICE_GRAPHS = {
+    template_id: GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1, "graphId": template_id, "revision": 1,
+            "nodes": [
+                {"id": "intake", "type": "source-intake", "config": {"mode": mode}},
+                {"id": "verify-source", "type": "verify-source", "config": {}},
+                {"id": "transcribe", "type": "transcribe-source", "config": {}},
+                {"id": "verify-transcript", "type": "verify-transcript", "config": {}},
+                {"id": "translate", "type": "translate-transcript", "config": {}},
+                {"id": "verify-translation", "type": "verify-translation", "config": {}},
+                {"id": "render-voice", "type": "render-voice", "config": {}},
+                {"id": "verify-voice", "type": "verify-voice", "config": {}},
+            ],
+            "edges": [
+                {"source": left, "target": right, "relationship": "Fact"}
+                for left, right in zip(
+                    ("intake", "verify-source", "transcribe", "verify-transcript", "translate", "verify-translation", "render-voice"),
+                    ("verify-source", "transcribe", "verify-transcript", "translate", "verify-translation", "render-voice", "verify-voice"),
+                )
+            ],
+        }
+    )
+    for template_id, mode in (("folder-voice", "folder"), ("url-voice", "url"))
+}
+
+SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
@@ -225,7 +251,7 @@ class StudioApplication:
                 "sourceUrl": value,
                 "maxHeight": int(payload.get("maxHeight", 1080)),
             }
-        if template_id in TRANSCRIPTION_GRAPHS or template_id in TRANSLATION_GRAPHS:
+        if template_id in TRANSCRIPTION_GRAPHS or template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS:
             source_language = str(payload.get("sourceLanguage", "auto")).strip()
             model = str(payload.get("asrModel", "small")).strip()
             device = str(payload.get("asrDevice", "auto")).strip()
@@ -242,7 +268,7 @@ class StudioApplication:
                     "asrComputeType": compute_type,
                 }
             )
-        if template_id in TRANSLATION_GRAPHS:
+        if template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS:
             languages = payload.get("targetLanguages")
             supported = {"ru-RU", "en-US", "kk-KZ"}
             if (
@@ -267,6 +293,11 @@ class StudioApplication:
                     "translationBatchSize": translation_batch_size,
                 }
             )
+        if template_id in VOICE_GRAPHS:
+            voices = payload.get("targetVoices")
+            if not isinstance(voices, dict) or set(voices) != set(parameters["targetLanguages"]) or any(not isinstance(value, str) or not value.strip() for value in voices.values()):
+                raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
+            parameters["targetVoices"] = dict(voices)
         result = self.store.create_run(
             CreateRun(
                 operation_id=str(envelope["operationId"]),

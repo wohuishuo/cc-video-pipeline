@@ -19,9 +19,10 @@ Choose one of the workflow templates:
 - `Folder` or `URL` creates and verifies a Source Manifest.
 - `Folder+ASR` or `URL+ASR` continues through a verified Transcript Manifest.
 - `Folder+Translate` or `URL+Translate` continues through editable RU/EN/KK translation JSON/SRT.
+- `Folder+Voice` or `URL+Voice` continues through verified per-segment Edge MP3 clips.
 - `Localize` runs the compatibility prepared-folder Edge workflow.
 
-Exactly one workflow and one child process execute at a time. The six-step translation graph calls Source Intake, Transcription and Translation only through their public launchers.
+Exactly one workflow and one child process execute at a time. The eight-step voice graph calls Source Intake, Transcription, Translation and Voice Rendering only through their public launchers.
 
 ## Stop
 

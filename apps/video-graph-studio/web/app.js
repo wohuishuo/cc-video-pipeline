@@ -35,6 +35,16 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Serial translation", description: "Transcribe, verify and translate every language/media work item sequentially.", owner: "translation", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
     verify: { title: "Verify translations", description: "Require exact language/media coverage and matching JSON/SRT fingerprints.", owner: "translation", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
   },
+  "folder-voice": {
+    source: { title: "Folder intake", description: "Discover local media and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Serial voice rendering", description: "Translate and render one Edge TTS clip per segment with checkpoints.", owner: "voice-rendering", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify voice clips", description: "Check every MP3 hash, size and measured duration.", owner: "voice-rendering", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
+  "url-voice": {
+    source: { title: "URL intake", description: "Download one supported social video and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Serial voice rendering", description: "Translate and render one Edge TTS clip per segment with checkpoints.", owner: "voice-rendering", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify voice clips", description: "Check every MP3 hash, size and measured duration.", owner: "voice-rendering", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
 };
 
 const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
@@ -134,6 +144,7 @@ async function submitRun(event) {
   const urlMode = state.templateId.startsWith("url-");
   const transcriptionMode = state.templateId.endsWith("-transcription");
   const translationMode = state.templateId.endsWith("-translation");
+  const voiceMode = state.templateId.endsWith("-voice");
   const needsFolder = !urlMode;
   if ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl)) {
     toast("Choose a source folder or supported social URL.", true);
@@ -143,7 +154,7 @@ async function submitRun(event) {
     toast("Choose a source, language and target.", true);
     return;
   }
-  if (translationMode && !languages.length) {
+  if ((translationMode || voiceMode) && !languages.length) {
     toast("Choose at least one target language.", true);
     return;
   }
@@ -163,13 +174,19 @@ async function submitRun(event) {
       asrDevice,
       asrComputeType: asrDevice === "cpu" ? "int8" : asrDevice === "cuda" ? "float16" : "default",
     };
-    const payload = translationMode
+    const translationPayload = {
+      ...transcriptPayload,
+      targetLanguages: languages,
+      translationModel: "facebook/nllb-200-distilled-600M",
+      translationDevice: $("#translation-device").value,
+      translationBatchSize: Number($("#translation-batch-size").value),
+    };
+    const defaultVoices = { "ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural", "kk-KZ": "kk-KZ-DauletNeural" };
+    const payload = voiceMode
+      ? { ...translationPayload, targetVoices: Object.fromEntries(languages.map((language) => [language, defaultVoices[language]])) }
+      : translationMode
       ? {
-          ...transcriptPayload,
-          targetLanguages: languages,
-          translationModel: "facebook/nllb-200-distilled-600M",
-          translationDevice: $("#translation-device").value,
-          translationBatchSize: Number($("#translation-batch-size").value),
+          ...translationPayload,
         }
       : transcriptionMode
       ? transcriptPayload
@@ -208,7 +225,7 @@ function resetRunProjection() {
     node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
     node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
   });
-  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
+  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId.endsWith("-voice") ? "0 / 8" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
   $("#progress-bar").style.width = "0%";
   $("#run-id").textContent = "No active run";
   $("#activity-summary").textContent = "Waiting for a run";
@@ -220,7 +237,8 @@ function selectTemplate(templateId) {
   const urlMode = templateId.startsWith("url-");
   const transcriptionMode = templateId.endsWith("-transcription");
   const translationMode = templateId.endsWith("-translation");
-  const needsAsr = transcriptionMode || translationMode;
+  const voiceMode = templateId.endsWith("-voice");
+  const needsAsr = transcriptionMode || translationMode || voiceMode;
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
@@ -232,13 +250,13 @@ function selectTemplate(templateId) {
     element.hidden = !preparedMode;
     element.classList.toggle("control-muted", !preparedMode);
   });
-  $("#target-language-controls").hidden = !(preparedMode || translationMode);
+  $("#target-language-controls").hidden = !(preparedMode || translationMode || voiceMode);
   $$('input[name="language"]').forEach((input) => {
     input.disabled = preparedMode && input.value !== "ru-RU";
     input.closest("label").classList.toggle("unavailable", input.disabled);
   });
   $("#asr-controls").hidden = !needsAsr;
-  $("#translation-controls").hidden = !translationMode;
+  $("#translation-controls").hidden = !(translationMode || voiceMode);
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
@@ -252,11 +270,15 @@ function selectTemplate(templateId) {
           ? ["Folder intake", "Discover and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
           : templateId === "url-transcription"
             ? ["URL intake", "Download and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
-            : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
+            : voiceMode
+              ? [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · translation", "Serial voice rendering", "Edge TTS · per segment · resumable", "Verify voice clips", "MP3 · hashes · durations"]
+              : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
   const outputDetails = templateId === "prepared-localization"
     ? ["MP4 · H.264", "Local receipt"]
+    : voiceMode
+      ? ["Segment MP3", "Voice Manifest"]
     : translationMode || transcriptionMode
       ? ["JSON · SRT", translationMode ? "Translation Manifest" : "Transcript Manifest"]
       : ["Source Manifest", "SHA-256 receipt"];
@@ -264,7 +286,9 @@ function selectTemplate(templateId) {
   $("#output-evidence").textContent = outputDetails[1];
   const stepIds = templateId === "prepared-localization"
     ? ["source", "localize", "verify"]
-    : translationMode
+    : voiceMode
+      ? ["intake", "render-voice", "verify-voice"]
+      : translationMode
       ? ["intake", "translate", "verify-translation"]
       : transcriptionMode
       ? ["intake", "transcribe", "verify-transcript"]
@@ -280,7 +304,9 @@ function selectTemplate(templateId) {
           ? ["Folder intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
           : templateId === "url-transcription"
             ? ["URL intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
-            : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
+            : voiceMode
+              ? [urlMode ? "URL intake" : "Folder intake", "Source owner", "Render voice", "Serial clip loop", "Verify voice", "Audio policy"]
+              : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
   $(".workspace-label").textContent = templateId === "prepared-localization"
@@ -293,7 +319,9 @@ function selectTemplate(templateId) {
           ? "Folder Intake + Transcription"
           : templateId === "url-transcription"
             ? "URL Intake + Transcription"
-            : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
+            : voiceMode
+              ? `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation + Voice`
+              : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
   $$(".source-preview").forEach((element) => { element.textContent = (urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
   resetRunProjection();
   focusNode(state.selectedNode);
