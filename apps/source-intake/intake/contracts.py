@@ -45,6 +45,8 @@ class SourceSpec:
     kind: str
     value: str
     platform: str | None = None
+    max_height: int = 1080
+    transport_key: str | None = None
 
     @classmethod
     def folder(cls, value: str | Path) -> "SourceSpec":
@@ -54,14 +56,21 @@ class SourceSpec:
         return cls("folder", str(path))
 
     @classmethod
-    def url(cls, value: str) -> "SourceSpec":
+    def url(
+        cls, value: str, *, max_height: int = 1080, transport_key: str | None = None
+    ) -> "SourceSpec":
         platform = classify_url(value)
-        return cls("url", value, platform)
+        if max_height < 144:
+            raise IntakeError("UNSUPPORTED_SOURCE", "max height must be at least 144")
+        return cls("url", value, platform, max_height, transport_key)
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"kind": self.kind, "value": self.value}
         if self.platform:
             result["platform"] = self.platform
+            result["maxHeight"] = self.max_height
+        if self.transport_key:
+            result["transportKey"] = self.transport_key
         return result
 
 
@@ -93,4 +102,3 @@ class SourceManifest:
     @property
     def fingerprint(self) -> str:
         return hashlib.sha256(canonical_json(self.to_dict()).encode("utf-8")).hexdigest()
-

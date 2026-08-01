@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "name": "source-intake",
+  "summary": "Turn a local folder or supported social URL into a versioned local media manifest.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest tests/source_intake -q",
+  "inputs": ["local media folder or YouTube, Bilibili, Douyin, TikTok URL", "optional cookie file"],
+  "outputs": ["source-manifest.json", "intake-receipt.json"],
+  "dependencies": ["python>=3.12", "platform-io MVP for URL mode"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
+
