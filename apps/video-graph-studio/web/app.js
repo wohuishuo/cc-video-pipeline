@@ -157,6 +157,19 @@ function setRunControlsBusy(busy) {
   $$('#run-form input[name="template"]').forEach((input) => { input.disabled = busy; });
 }
 
+function resetRunProjection() {
+  state.currentRun = null;
+  $$(".graph-node").forEach((node) => {
+    node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
+    node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
+  });
+  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : "0 / 2";
+  $("#progress-bar").style.width = "0%";
+  $("#run-id").textContent = "No active run";
+  $("#activity-summary").textContent = "Waiting for a run";
+  $("#log-output").textContent = "Choose a source and run the graph. Durable logs will appear here.";
+}
+
 function selectTemplate(templateId) {
   state.templateId = templateId;
   const urlMode = templateId === "url-intake";
@@ -190,7 +203,8 @@ function selectTemplate(templateId) {
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
   $(".workspace-label").textContent = templateId === "prepared-localization" ? "Prepared Folder Localization" : templateId === "folder-intake" ? "Folder Source Intake" : "Social URL Intake";
-  if (!state.currentRun) $("#run-progress").textContent = templateId === "prepared-localization" ? "0 / 3" : "0 / 2";
+  $$(".source-preview").forEach((element) => { element.textContent = (urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
+  resetRunProjection();
   focusNode(state.selectedNode);
 }
 

@@ -49,3 +49,5 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'TEMPLATE_NODE_COPY' in script
     assert 'const copy = TEMPLATE_NODE_COPY[state.templateId][nodeId]' in script
     assert 'input.disabled = busy' in script
+    assert 'function resetRunProjection()' in script
+    assert 'state.currentRun = null' in script
