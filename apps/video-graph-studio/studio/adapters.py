@@ -517,3 +517,40 @@ class VerifyTranslationAdapter:
             return AdapterResult(False, {}, "translation artifact validation failed")
         on_log(f"Verified translation manifest with {len(translations)} translation(s)")
         return AdapterResult(True, {"manifest": str(manifest_path), "translationCount": len(translations)})
+
+
+class VoiceRenderingAdapter(CommandAdapter):
+    def __init__(self, launcher: Path, voice_root: Path):
+        super().__init__(); self.launcher=Path(launcher).resolve(); self.voice_root=Path(voice_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        committed=next((step.get("result") for step in context.get("steps",[]) if step.get("nodeId")=="translate" and step.get("status")=="COMPLETED"),None)
+        if not isinstance(committed,dict): return AdapterResult(False,{},"committed translation manifest missing")
+        manifest=Path(str(committed.get("manifest",""))).resolve()
+        if not manifest.is_file(): return AdapterResult(False,{},"translation manifest missing")
+        output=self.voice_root/str(context["runId"]); parameters=context["parameters"]
+        argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),str(manifest),"--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}"]
+        for language in parameters["targetLanguages"]: argv.extend(["--voice",f"{language}={parameters['targetVoices'][language]}"])
+        argv.append("--json")
+        result=super().execute(GraphNode(node.id,"command",{"argv":argv}),context,on_log,cancel_event)
+        receipt_path=output/"voice-receipt.json"
+        if not result.completed or not receipt_path.is_file(): return AdapterResult(False,result.details,result.error or "voice receipt missing")
+        try:
+            receipt=json.loads(receipt_path.read_text(encoding="utf-8-sig")); voice_manifest=Path(str(receipt["manifest"])).resolve()
+        except (OSError,KeyError,TypeError,json.JSONDecodeError) as error: return AdapterResult(False,result.details,f"invalid voice receipt: {error}")
+        if receipt.get("resultClass")!="COMPLETED" or not voice_manifest.is_file(): return AdapterResult(False,result.details,"Voice Rendering did not commit a manifest")
+        return AdapterResult(True,{**result.details,"receipt":str(receipt_path),"manifest":str(voice_manifest),"manifestSha256":receipt.get("manifestSha256"),"clipCount":len(receipt.get("items",[]))})
+
+
+class VerifyVoiceAdapter:
+    def execute(self,node,context,on_log,cancel_event):
+        committed=next((step.get("result") for step in context.get("steps",[]) if step.get("nodeId")=="render-voice" and step.get("status")=="COMPLETED"),None)
+        if not isinstance(committed,dict): return AdapterResult(False,{},"committed voice fact missing")
+        path=Path(str(committed.get("manifest",""))).resolve()
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=committed.get("manifestSha256"): return AdapterResult(False,{},"voice manifest fingerprint conflict")
+        try:
+            value=json.loads(path.read_text(encoding="utf-8")); clips=value["clips"]
+            valid=value.get("schemaVersion")==1 and bool(clips) and all(Path(row["clip"]["path"]).is_file() and Path(row["clip"]["path"]).stat().st_size==row["clip"]["size"] and hashlib.sha256(Path(row["clip"]["path"]).read_bytes()).hexdigest()==row["clip"]["sha256"] and float(row["clip"]["duration"])>0 for row in clips)
+        except (OSError,KeyError,TypeError,ValueError,json.JSONDecodeError): valid=False; clips=[]
+        if not valid: return AdapterResult(False,{},"voice artifact validation failed")
+        on_log(f"Verified voice manifest with {len(clips)} clip(s)"); return AdapterResult(True,{"manifest":str(path),"clipCount":len(clips)})
