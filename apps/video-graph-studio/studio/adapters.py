@@ -396,3 +396,124 @@ class VerifyTranscriptAdapter:
             return AdapterResult(False, {}, "transcript artifact validation failed")
         on_log(f"Verified transcript manifest with {len(transcripts)} transcript(s)")
         return AdapterResult(True, {"manifest": str(manifest_path), "transcriptCount": len(transcripts)})
+
+
+class TranslateTranscriptAdapter(CommandAdapter):
+    """Invokes the independent Translation public launcher."""
+
+    def __init__(self, launcher: Path, translation_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.translation_root = Path(translation_root).resolve()
+
+    def execute(
+        self,
+        node: GraphNode,
+        context: dict[str, Any],
+        on_log: Callable[[str], None],
+        cancel_event: threading.Event,
+    ) -> AdapterResult:
+        committed = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "transcribe" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed transcript manifest missing")
+        transcript_manifest = Path(str(committed.get("manifest", ""))).resolve()
+        if not transcript_manifest.is_file():
+            return AdapterResult(False, {}, "transcript manifest missing")
+        parameters = context["parameters"]
+        output = self.translation_root / str(context["runId"])
+        child_operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+            str(self.launcher), str(transcript_manifest), "--output-dir", str(output),
+            "--operation-id", child_operation_id,
+            "--model", str(parameters.get("translationModel", "facebook/nllb-200-distilled-600M")),
+            "--device", str(parameters.get("translationDevice", "auto")),
+            "--batch-size", str(parameters.get("translationBatchSize", 8)),
+        ]
+        for language in parameters.get("targetLanguages", []):
+            argv.extend(["--target-language", str(language)])
+        argv.append("--json")
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "translation-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "translation receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid translation receipt: {error}")
+        if receipt.get("resultClass") != "COMPLETED" or not manifest.is_file():
+            return AdapterResult(False, result.details, "Translation did not commit a manifest")
+        return AdapterResult(
+            True,
+            {
+                **result.details,
+                "receipt": str(receipt_path),
+                "manifest": str(manifest),
+                "manifestSha256": receipt.get("manifestSha256"),
+                "translationCount": len(receipt.get("items", [])),
+            },
+        )
+
+
+class VerifyTranslationAdapter:
+    """Verifies translated artifacts without taking Translation ownership."""
+
+    def execute(
+        self,
+        node: GraphNode,
+        context: dict[str, Any],
+        on_log: Callable[[str], None],
+        cancel_event: threading.Event,
+    ) -> AdapterResult:
+        committed = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "translate" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed translation fact missing")
+        manifest_path = Path(str(committed.get("manifest", ""))).resolve()
+        if not manifest_path.is_file():
+            return AdapterResult(False, {}, "translation manifest missing")
+        if hashlib.sha256(manifest_path.read_bytes()).hexdigest() != committed.get("manifestSha256"):
+            return AdapterResult(False, {}, "translation manifest fingerprint conflict")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            expected_media = manifest["expectedMediaIds"]
+            languages = manifest["targetLanguages"]
+            translations = manifest["translations"]
+            expected_coverage = [(language, media_id) for language in languages for media_id in expected_media]
+            actual_coverage = [(row["targetLanguage"], row["mediaId"]) for row in translations]
+            valid = (
+                manifest.get("schemaVersion") == 1
+                and bool(expected_media)
+                and bool(languages)
+                and actual_coverage == expected_coverage
+                and all(
+                    row["reviewStatus"] in {"MACHINE", "REVIEWED"}
+                    and int(row["segmentCount"]) > 0
+                    and Path(str(row["translationPath"])).is_file()
+                    and hashlib.sha256(Path(str(row["translationPath"])).read_bytes()).hexdigest() == row["translationSha256"]
+                    and Path(str(row["srtPath"])).is_file()
+                    and hashlib.sha256(Path(str(row["srtPath"])).read_bytes()).hexdigest() == row["srtSha256"]
+                    for row in translations
+                )
+            )
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            translations = []
+        if not valid:
+            return AdapterResult(False, {}, "translation artifact validation failed")
+        on_log(f"Verified translation manifest with {len(translations)} translation(s)")
+        return AdapterResult(True, {"manifest": str(manifest_path), "translationCount": len(translations)})
