@@ -22,6 +22,7 @@ Graph Definition owns graph revision/fingerprint. Workflow Run owns lifecycle/ve
 | Process + real child | strict process order; max active process = 1; failure checkpoint; successor suppression; cancellation cleanup |
 | HTTP + owners | real loopback requests for health, safe folders, create/replay/conflict/start and terminal projection |
 | Browser | semantic regions, local assets, versioned commands and terminal polling contract |
+| Source Intake composition | real public PowerShell child process; per-run output root; stable child operation ID; manifest fingerprint and media validation |
 
 ## Failure matrix
 
@@ -40,7 +41,7 @@ Graph Definition owns graph revision/fingerprint. Workflow Run owns lifecycle/ve
 tools\.venv\Scripts\python.exe -m pytest tests/video_graph_studio -q
 ```
 
-Current focused result: 21 tests pass. A real browser loaded the loopback server, observed `System ready`, opened the server-backed folder chooser and received a resolved allowed-root directory projection.
+Live browser evidence on 2026-08-02 loaded the loopback server and observed `System ready`; completed one local-folder intake; rejected a supplied Douyin creator-profile URL without publishing a success manifest; rejected an unavailable YouTube test video; then anonymously downloaded and verified the 19.014-second public YouTube video `jNQXAC9IVRw` as one MP4 source.
 
 ## Non-goals
 
