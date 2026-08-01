@@ -6,5 +6,6 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Source Intake](source-intake/delivery-ledger.md)
 - [Transcription](transcription/delivery-ledger.md)
 - [Translation](translation/delivery-ledger.md)
+- [Voice Rendering](voice-rendering/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

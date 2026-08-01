@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "voice-rendering",
+  "summary": "Serially synthesize verified voice clips from a Translation Manifest.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/voice_rendering_mvp -q",
+  "inputs": ["Translation Manifest", "exact target-language voice policy"],
+  "outputs": ["voice-manifest.json", "voice-receipt.json", "one MP3 per translated segment"],
+  "dependencies": ["python>=3.12", "edge-tts", "ffmpeg"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
