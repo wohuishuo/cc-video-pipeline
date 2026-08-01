@@ -1,1 +1,12 @@
-{"schema_version":1,"name":"transcription","summary":"Create JSON and SRT transcripts from media.","entrypoint":"run.ps1","install":"install.ps1","test":"python -m pytest tests/repository -q","inputs":["audio or video file"],"outputs":["transcript JSON","subtitle SRT"],"dependencies":["python>=3.12","faster-whisper or FunASR"],"delivery_level":"IMPLEMENTED"}
+{
+  "schema_version": 1,
+  "name": "transcription",
+  "summary": "Serially create verified transcript artifacts from a Source Intake manifest.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/transcription_mvp -q",
+  "inputs": ["Source Intake source manifest", "language and Faster Whisper adapter policy"],
+  "outputs": ["transcript-manifest.json", "transcription-receipt.json", "transcript JSON and SRT per media item"],
+  "dependencies": ["python>=3.12", "ffmpeg", "faster-whisper"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}

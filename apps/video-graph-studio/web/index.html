@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Video Graph Studio</title>
+  <link rel="stylesheet" href="/styles.css?v=1">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Video Graph Studio home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span><strong>Video Graph</strong><small>STUDIO</small></span>
+    </a>
+    <div class="topbar-center">
+      <span class="workspace-label">Prepared Folder Localization</span>
+      <span id="save-state" class="save-state">Graph v1 · saved</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="health-pill" class="health-pill"><i></i> Connecting</span>
+      <button id="toggle-activity" class="icon-button" type="button" aria-label="Toggle activity log">⌁</button>
+    </div>
+  </header>
+
+  <form id="run-form" class="runbar">
+    <fieldset class="choice-field template-field" aria-label="Workflow template">
+      <legend>Workflow</legend>
+      <label class="choice active"><input type="radio" name="template" value="prepared-localization" checked> Localize</label>
+      <label class="choice"><input type="radio" name="template" value="folder-intake"> Folder</label>
+      <label class="choice"><input type="radio" name="template" value="url-intake"> URL</label>
+      <label class="choice"><input type="radio" name="template" value="folder-transcription"> Folder+ASR</label>
+      <label class="choice"><input type="radio" name="template" value="url-transcription"> URL+ASR</label>
+    </fieldset>
+    <div class="field source-field">
+      <label for="source-root">Source folder</label>
+      <div class="input-action">
+        <input id="source-root" name="sourceRoot" autocomplete="off" placeholder="Choose a prepared video folder" required>
+        <button id="browse-folder" type="button">Browse</button>
+      </div>
+    </div>
+    <div id="url-source-field" class="field source-field" hidden>
+      <label for="source-url">Social video URL</label>
+      <div class="input-action">
+        <input id="source-url" name="sourceUrl" type="url" autocomplete="off" placeholder="Paste a YouTube, Bilibili, Douyin or TikTok URL">
+      </div>
+    </div>
+    <div id="asr-controls" class="asr-controls" hidden>
+      <div class="field asr-field">
+        <label for="source-language">Source language</label>
+        <select id="source-language" name="sourceLanguage">
+          <option value="auto">Auto detect</option>
+          <option value="zh">Chinese</option>
+          <option value="en">English</option>
+          <option value="ru">Russian</option>
+        </select>
+      </div>
+      <div class="field asr-field">
+        <label for="asr-model">ASR model</label>
+        <select id="asr-model" name="asrModel">
+          <option value="tiny">Tiny · fast</option>
+          <option value="small" selected>Small · balanced</option>
+          <option value="large-v3">Large v3 · quality</option>
+        </select>
+      </div>
+      <div class="field asr-field device-field">
+        <label for="asr-device">Device</label>
+        <select id="asr-device" name="asrDevice">
+          <option value="auto">Auto</option>
+          <option value="cpu">CPU</option>
+          <option value="cuda">CUDA</option>
+        </select>
+      </div>
+    </div>
+    <fieldset class="choice-field localization-only" aria-label="Target languages">
+      <legend>Languages</legend>
+      <label class="choice active"><input type="checkbox" name="language" value="ru-RU" checked> RU</label>
+      <label class="choice unavailable" title="Raw intake translation is the next slice"><input type="checkbox" name="language" value="en-US" disabled> EN</label>
+      <label class="choice unavailable"><input type="checkbox" name="language" value="kk-KZ" disabled> KK</label>
+    </fieldset>
+    <div class="field voice-field localization-only">
+      <label for="voice">Voice</label>
+      <select id="voice" name="voice">
+        <option value="ru-RU-DmitryNeural">Dmitry · Neural</option>
+        <option value="ru-RU-SvetlanaNeural">Svetlana · Neural</option>
+      </select>
+    </div>
+    <fieldset class="choice-field platforms localization-only" aria-label="Target platforms">
+      <legend>Targets</legend>
+      <label class="choice active"><input type="checkbox" name="platform" value="local" checked> Local</label>
+      <label class="choice unavailable"><input type="checkbox" name="platform" value="youtube" disabled> YouTube</label>
+      <label class="choice unavailable"><input type="checkbox" name="platform" value="tiktok" disabled> TikTok</label>
+    </fieldset>
+    <button id="run-button" class="run-button" type="submit"><span>▶</span> Run graph</button>
+  </form>
+
+  <main class="studio-layout">
+    <aside id="capability-palette" class="panel palette" aria-label="Capability palette">
+      <div class="panel-heading"><span>Capabilities</span><kbd>3</kbd></div>
+      <div class="search"><span>⌕</span><input aria-label="Filter capabilities" placeholder="Filter nodes"></div>
+      <section>
+        <h2>INPUT</h2>
+        <button class="palette-item" type="button" data-focus-node="source"><i class="node-icon source">⌑</i><span><span id="palette-source-title">Prepared folder</span><small id="palette-source-detail">Local query</small></span><b>+</b></button>
+      </section>
+      <section>
+        <h2>PROCESS</h2>
+        <button class="palette-item" type="button" data-focus-node="localize"><i class="node-icon process">◈</i><span><span id="palette-process-title">Edge localization</span><small id="palette-process-detail">Serial adapter</small></span><b>+</b></button>
+      </section>
+      <section>
+        <h2>OUTPUT</h2>
+        <button class="palette-item" type="button" data-focus-node="verify"><i class="node-icon output">✓</i><span><span id="palette-output-title">Verify outputs</span><small id="palette-output-detail">Receipt policy</small></span><b>+</b></button>
+      </section>
+      <div class="palette-foot"><span class="pulse-dot"></span><span>One worker<br><small>No parallel execution</small></span></div>
+    </aside>
+
+    <section id="workflow-canvas" class="workflow-canvas" aria-label="Workflow graph">
+      <div class="canvas-toolbar">
+        <button type="button" aria-label="Select tool" class="selected">↖</button>
+        <button type="button" aria-label="Fit graph" id="fit-graph">⌗</button>
+        <span></span>
+        <button type="button" aria-label="Zoom out">−</button><strong>100%</strong><button type="button" aria-label="Zoom in">＋</button>
+      </div>
+      <div class="canvas-grid" id="graph-grid">
+        <svg class="connections" viewBox="0 0 980 430" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M275 205 C350 205 345 205 420 205"></path>
+          <path d="M660 205 C725 205 720 205 785 205"></path>
+        </svg>
+        <article class="graph-node input-node" data-node-id="source" data-step-id="source" tabindex="0">
+          <header><span><i>⌑</i> INPUT</span><b class="node-status">READY</b></header>
+          <div class="node-body"><h3 id="source-node-title">Prepared folder</h3><p id="source-node-description">Validate batch manifest</p><dl><div><dt>Source</dt><dd class="source-preview">Not selected</dd></div><div><dt>Contract</dt><dd>Query · v1.0</dd></div></dl></div>
+          <span class="port output-port"></span>
+        </article>
+        <article class="graph-node process-node" data-node-id="localize" data-step-id="localize" tabindex="0">
+          <header><span><i>◈</i> PROCESS</span><b class="node-status">WAITING</b></header>
+          <div class="node-body"><h3 id="process-node-title">Edge localization</h3><p id="process-node-description">Voice · mix · hard subtitles</p><dl><div><dt>Mode</dt><dd>Strictly serial</dd></div><div><dt>Retry</dt><dd>Checkpointed</dd></div></dl></div>
+          <span class="port input-port"></span><span class="port output-port"></span>
+        </article>
+        <article class="graph-node output-node" data-node-id="verify" data-step-id="verify" tabindex="0">
+          <header><span><i>✓</i> OUTPUT</span><b class="node-status">WAITING</b></header>
+          <div class="node-body"><h3 id="output-node-title">Verify output</h3><p id="output-node-description">Inspect files and receipts</p><dl><div><dt>Format</dt><dd>MP4 · H.264</dd></div><div><dt>Evidence</dt><dd>Local receipt</dd></div></dl></div>
+          <span class="port input-port"></span>
+        </article>
+        <div class="canvas-note"><span>i</span><p><strong>Graph Engineering</strong> owns continuation only. Every node remains an independent, replaceable MVP.</p></div>
+      </div>
+    </section>
+
+    <aside id="node-inspector" class="panel inspector" aria-label="Node inspector">
+      <div class="panel-heading"><span>Inspector</span><button type="button" id="close-inspector" aria-label="Close inspector">×</button></div>
+      <div class="inspector-content">
+        <div class="inspector-icon process">◈</div>
+        <p class="eyebrow">SELECTED NODE</p>
+        <h2 id="inspector-title">Edge localization</h2>
+        <p id="inspector-description" class="muted">Generate Russian voice, mix original ambience and burn translated subtitles.</p>
+        <hr>
+        <h3>Execution</h3>
+        <div class="property"><span>State</span><b id="inspector-state" class="state waiting">WAITING</b></div>
+        <div class="property"><span>Owner</span><code>localization</code></div>
+        <div class="property"><span>Relationship</span><code>Adapter</code></div>
+        <div class="property"><span>Delivery</span><code>IMPLEMENTED</code></div>
+        <hr>
+        <h3>Run details</h3>
+        <div class="metric"><span>Progress</span><strong id="run-progress">0 / 3</strong></div>
+        <div class="progress-track"><i id="progress-bar"></i></div>
+        <p id="run-id" class="run-id">No active run</p>
+      </div>
+    </aside>
+  </main>
+
+  <section id="activity-log" class="activity" aria-label="Activity log">
+    <header><div><span class="live-dot"></span><strong>Activity</strong><small id="activity-summary">Waiting for a run</small></div><button id="clear-view" type="button">Clear view</button></header>
+    <pre id="log-output"><span class="log-muted">Select a folder and run the graph. Durable logs will appear here.</span></pre>
+  </section>
+
+  <dialog id="folder-dialog">
+    <form method="dialog" class="dialog-card">
+      <header><div><p class="eyebrow">LOCAL FILESYSTEM</p><h2>Choose source folder</h2></div><button value="cancel" aria-label="Close">×</button></header>
+      <div class="folder-path"><button id="folder-up" type="button" aria-label="Parent folder">↑</button><code id="current-folder">Loading…</code></div>
+      <div id="folder-list" class="folder-list"></div>
+      <footer><span id="folder-media-count">0 videos in this folder</span><button id="choose-folder" value="default" class="primary">Use this folder</button></footer>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js?v=1" defer></script>
+</body>
+</html>
