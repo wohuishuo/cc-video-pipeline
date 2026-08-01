@@ -5,7 +5,7 @@
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
 [![Tests](https://img.shields.io/badge/tests-52%20passing-22c55e)](scripts/test-all.ps1)
-[![MVPs](https://img.shields.io/badge/independent%20MVPs-9-8b5cf6)](apps/README.md)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-10-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
 [Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
@@ -14,7 +14,7 @@
 
 ---
 
-## One repository, nine focused programs
+## One repository, ten focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
 
@@ -58,6 +58,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **Voice Cloning** | Text + reference voice | Synthesized speech | `IMPLEMENTED` | [Open](apps/voice-cloning/README.md) |
 | **Remotion Studio** | Composition + project props | Preview or render | `IMPLEMENTED` | [Open](apps/remotion-studio/README.md) |
 | **Localization** | Transcript + translation + voice + timing | Localized derivative | `DESIGNED` | [Open](apps/localization/README.md) |
+| **Video Graph Studio** | Prepared folder + language + voice + target | Durable browser-managed workflow | `DOMAIN_VERIFIED` | [Open](apps/video-graph-studio/README.md) |
 
 ## Independent by design
 

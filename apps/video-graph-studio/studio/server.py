@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
 from pathlib import Path
+import webbrowser
 from urllib.parse import parse_qs, urlsplit
 
 from .api import StudioApplication
@@ -91,3 +93,71 @@ def create_server(
 
 _INVALID = object()
 
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Local Video Graph Studio control plane.")
+    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--data-root", type=Path, required=True)
+    parser.add_argument("--no-browser", action="store_true")
+    return parser
+
+
+def _allowed_roots(repository: Path) -> tuple[Path, ...]:
+    home = Path.home()
+    candidates = [repository, home / "Videos", home / "Documents", home / "Downloads", home / "Desktop"]
+    result: list[Path] = []
+    for candidate in candidates:
+        if candidate.exists():
+            resolved = candidate.resolve()
+            if resolved not in result:
+                result.append(resolved)
+    return tuple(result)
+
+
+def main(argv: list[str] | None = None) -> int:
+    from .adapters import PreparedFolderAdapter, PreparedFolderEdgeAdapter, VerifyOutputAdapter
+    from .engine import WorkflowEngine
+    from .store import RunStore
+
+    args = _parser().parse_args(argv)
+    repository = Path(__file__).resolve().parents[3]
+    args.data_root.mkdir(parents=True, exist_ok=True)
+    store = RunStore(args.data_root / "studio.db")
+    interrupted = store.interrupt_active()
+    if interrupted:
+        print(f"Recovered {interrupted} interrupted step(s).", flush=True)
+    edge_launcher = repository / "apps" / "localization" / "edge-russian.ps1"
+    engine = WorkflowEngine(
+        store,
+        {
+            "prepared-folder": PreparedFolderAdapter(),
+            "edge-localize": PreparedFolderEdgeAdapter(edge_launcher),
+            "verify-output": VerifyOutputAdapter(),
+        },
+    )
+    application = StudioApplication(store, engine, allowed_roots=_allowed_roots(repository))
+    server = create_server(
+        "127.0.0.1",
+        args.port,
+        application,
+        web_root=repository / "apps" / "video-graph-studio" / "web",
+    )
+    url = f"http://127.0.0.1:{server.server_port}/"
+    print(f"Video Graph Studio: {url}", flush=True)
+    print(f"Data root: {args.data_root.resolve()}", flush=True)
+    if not args.no_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever(poll_interval=0.25)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        active = engine.active_run_id
+        if active:
+            engine.cancel(active)
+        server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

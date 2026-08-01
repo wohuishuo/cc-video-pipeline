@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "video-graph-studio",
+  "summary": "Manage durable, serial video automation graphs from a local browser.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest tests/video_graph_studio -q",
+  "inputs": ["prepared media folder", "target languages", "voice", "target platforms"],
+  "outputs": ["durable run projection", "step receipts", "localized media references"],
+  "dependencies": ["python>=3.12", "sqlite3", "ffmpeg", "edge-tts", "localization MVP"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
