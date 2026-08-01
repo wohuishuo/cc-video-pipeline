@@ -44,6 +44,33 @@ INTAKE_GRAPHS = {
     for template_id, mode in (("folder-intake", "folder"), ("url-intake", "url"))
 }
 
+TRANSCRIPTION_GRAPHS = {
+    template_id: GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": template_id,
+            "revision": 1,
+            "nodes": [
+                {"id": "intake", "type": "source-intake", "config": {"mode": mode}},
+                {"id": "verify-source", "type": "verify-source", "config": {}},
+                {"id": "transcribe", "type": "transcribe-source", "config": {}},
+                {"id": "verify-transcript", "type": "verify-transcript", "config": {}},
+            ],
+            "edges": [
+                {"source": "intake", "target": "verify-source", "relationship": "Fact"},
+                {"source": "verify-source", "target": "transcribe", "relationship": "Fact"},
+                {"source": "transcribe", "target": "verify-transcript", "relationship": "Fact"},
+            ],
+        }
+    )
+    for template_id, mode in (
+        ("folder-transcription", "folder"),
+        ("url-transcription", "url"),
+    )
+}
+
+SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS}
+
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
 
@@ -109,7 +136,7 @@ class StudioApplication:
         if not isinstance(payload, dict):
             raise ContractError("REJECTED_MALFORMED", "payload must be an object")
         template_id = str(payload.get("templateId", "prepared-localization"))
-        if template_id in INTAKE_GRAPHS:
+        if template_id in SOURCE_GRAPHS:
             return self._create_intake_run(envelope, payload, template_id)
         if template_id != "prepared-localization":
             raise ContractError("REJECTED_MALFORMED", f"unknown templateId: {template_id}")
@@ -143,7 +170,8 @@ class StudioApplication:
     def _create_intake_run(
         self, envelope: dict[str, Any], payload: dict[str, Any], template_id: str
     ) -> tuple[int, dict[str, Any]]:
-        if template_id == "folder-intake":
+        folder_mode = template_id.startswith("folder-")
+        if folder_mode:
             source = Path(str(payload.get("sourceRoot", ""))).resolve()
             self._require_allowed(source)
             if not source.is_dir():
@@ -168,11 +196,28 @@ class StudioApplication:
                 "sourceUrl": value,
                 "maxHeight": int(payload.get("maxHeight", 1080)),
             }
+        if template_id in TRANSCRIPTION_GRAPHS:
+            source_language = str(payload.get("sourceLanguage", "auto")).strip()
+            model = str(payload.get("asrModel", "small")).strip()
+            device = str(payload.get("asrDevice", "auto")).strip()
+            compute_type = str(payload.get("asrComputeType", "default")).strip()
+            if not source_language or not model or not compute_type:
+                raise ContractError("REJECTED_MALFORMED", "ASR policy values are required")
+            if device not in {"auto", "cpu", "cuda"}:
+                raise ContractError("REJECTED_MALFORMED", "unsupported ASR device")
+            parameters.update(
+                {
+                    "sourceLanguage": source_language,
+                    "asrModel": model,
+                    "asrDevice": device,
+                    "asrComputeType": compute_type,
+                }
+            )
         result = self.store.create_run(
             CreateRun(
                 operation_id=str(envelope["operationId"]),
                 correlation_id=str(envelope["correlationId"]),
-                graph=INTAKE_GRAPHS[template_id],
+                graph=SOURCE_GRAPHS[template_id],
                 parameters=parameters,
             )
         )

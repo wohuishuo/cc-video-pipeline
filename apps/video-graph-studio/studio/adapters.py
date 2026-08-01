@@ -279,3 +279,120 @@ class VerifySourceAdapter:
             return AdapterResult(False, {}, "source manifest media validation failed")
         on_log(f"Verified source manifest with {len(media)} media file(s)")
         return AdapterResult(True, {"manifest": str(manifest_path), "mediaCount": len(media)})
+
+
+class TranscriptSourceAdapter(CommandAdapter):
+    """Invokes the independent Transcription public launcher."""
+
+    def __init__(self, launcher: Path, transcript_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.transcript_root = Path(transcript_root).resolve()
+
+    def execute(
+        self,
+        node: GraphNode,
+        context: dict[str, Any],
+        on_log: Callable[[str], None],
+        cancel_event: threading.Event,
+    ) -> AdapterResult:
+        intake = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "intake" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(intake, dict):
+            return AdapterResult(False, {}, "committed source manifest missing")
+        source_manifest = Path(str(intake.get("manifest", ""))).resolve()
+        if not source_manifest.is_file():
+            return AdapterResult(False, {}, "source manifest missing")
+        parameters = context["parameters"]
+        output = self.transcript_root / str(context["runId"])
+        child_operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+            str(self.launcher), str(source_manifest), "--output-dir", str(output),
+            "--operation-id", child_operation_id,
+            "--language", str(parameters.get("sourceLanguage", "auto")),
+            "--model", str(parameters.get("asrModel", "small")),
+            "--device", str(parameters.get("asrDevice", "auto")),
+            "--compute-type", str(parameters.get("asrComputeType", "default")),
+            "--json",
+        ]
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "transcription-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "transcription receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid transcription receipt: {error}")
+        if receipt.get("resultClass") != "COMPLETED" or not manifest.is_file():
+            return AdapterResult(False, result.details, "Transcription did not commit a manifest")
+        return AdapterResult(
+            True,
+            {
+                **result.details,
+                "receipt": str(receipt_path),
+                "manifest": str(manifest),
+                "manifestSha256": receipt.get("manifestSha256"),
+                "transcriptCount": len(receipt.get("items", [])),
+            },
+        )
+
+
+class VerifyTranscriptAdapter:
+    """Verifies transcript artifacts without taking Transcription ownership."""
+
+    def execute(
+        self,
+        node: GraphNode,
+        context: dict[str, Any],
+        on_log: Callable[[str], None],
+        cancel_event: threading.Event,
+    ) -> AdapterResult:
+        committed = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "transcribe" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed transcript fact missing")
+        manifest_path = Path(str(committed.get("manifest", ""))).resolve()
+        if not manifest_path.is_file():
+            return AdapterResult(False, {}, "transcript manifest missing")
+        if hashlib.sha256(manifest_path.read_bytes()).hexdigest() != committed.get("manifestSha256"):
+            return AdapterResult(False, {}, "transcript manifest fingerprint conflict")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            expected = manifest["expectedMediaIds"]
+            transcripts = manifest["transcripts"]
+            valid = (
+                manifest.get("schemaVersion") == 1
+                and bool(expected)
+                and [row["mediaId"] for row in transcripts] == expected
+                and all(
+                    Path(str(row["sourcePath"])).is_file()
+                    and hashlib.sha256(Path(str(row["sourcePath"])).read_bytes()).hexdigest() == row["sourceSha256"]
+                    and Path(str(row["transcriptPath"])).is_file()
+                    and hashlib.sha256(Path(str(row["transcriptPath"])).read_bytes()).hexdigest() == row["transcriptSha256"]
+                    and Path(str(row["srtPath"])).is_file()
+                    and hashlib.sha256(Path(str(row["srtPath"])).read_bytes()).hexdigest() == row["srtSha256"]
+                    and int(row["segmentCount"]) > 0
+                    for row in transcripts
+                )
+            )
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            transcripts = []
+        if not valid:
+            return AdapterResult(False, {}, "transcript artifact validation failed")
+        on_log(f"Verified transcript manifest with {len(transcripts)} transcript(s)")
+        return AdapterResult(True, {"manifest": str(manifest_path), "transcriptCount": len(transcripts)})
