@@ -15,6 +15,11 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'id="workflow-canvas"' in html
     assert 'id="node-inspector"' in html
     assert 'id="activity-log"' in html
+    assert 'aria-label="Workflow template"' in html
+    assert 'value="prepared-localization"' in html
+    assert 'value="folder-intake"' in html
+    assert 'value="url-intake"' in html
+    assert 'id="source-url"' in html
     assert "onclick=" not in html.lower()
 
 
@@ -33,4 +38,11 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'contractVersion: "1.0"' in script
     assert "crypto.randomUUID()" in script
     assert 'TERMINAL_STATES.has(run.status)' in script
-
+    assert "templateId" in script
+    assert 'sourceUrl' in script
+    assert 'folder-intake' in script
+    assert 'url-intake' in script
+    assert 'sourceRoot.required = !urlMode' in script
+    assert 'sourceUrl.required = urlMode' in script
+    assert 'node.dataset.stepId' in script
+    assert 'dataset.stepId = stepIds[index]' in script

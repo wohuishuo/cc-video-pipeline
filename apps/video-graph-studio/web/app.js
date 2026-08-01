@@ -5,7 +5,7 @@ const NODE_COPY = {
   verify: { title: "Verify output", description: "Require inspectable video files and matching execution receipts.", owner: "output-verification", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
 };
 
-const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize" };
+const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -95,10 +95,16 @@ function selectFolder() {
 async function submitRun(event) {
   event.preventDefault();
   const sourceRoot = $("#source-root").value.trim();
+  const sourceUrl = $("#source-url").value.trim();
   const languages = $$('input[name="language"]:checked').map((item) => item.value);
   const platforms = $$('input[name="platform"]:checked').map((item) => item.value);
   const voice = $("#voice").value;
-  if (!sourceRoot || !languages.length || !platforms.length) {
+  const needsFolder = state.templateId !== "url-intake";
+  if ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl)) {
+    toast("Choose a source folder or supported social URL.", true);
+    return;
+  }
+  if (state.templateId === "prepared-localization" && (!languages.length || !platforms.length)) {
     toast("Choose a source, language and target.", true);
     return;
   }
@@ -107,10 +113,15 @@ async function submitRun(event) {
   button.disabled = true;
   button.innerHTML = "<span>◌</span> Creating…";
   try {
+    const payload = state.templateId === "url-intake"
+      ? { templateId: state.templateId, sourceUrl, maxHeight: 1080 }
+      : state.templateId === "folder-intake"
+        ? { templateId: state.templateId, sourceRoot }
+        : { templateId: state.templateId, sourceRoot, languages, voice, platforms };
     const create = await api("/api/v1/runs", {
       method: "POST",
       body: JSON.stringify({
-        ...envelope("CMD-RUN-CREATE", correlationId, { sourceRoot, languages, voice, platforms }),
+        ...envelope("CMD-RUN-CREATE", correlationId, payload),
         contractId: "CMD-RUN-CREATE",
       }),
     });
@@ -126,6 +137,35 @@ async function submitRun(event) {
     button.disabled = false;
     button.innerHTML = "<span>▶</span> Run graph";
   }
+}
+
+function selectTemplate(templateId) {
+  state.templateId = templateId;
+  const urlMode = templateId === "url-intake";
+  const sourceRoot = $("#source-root");
+  const sourceUrl = $("#source-url");
+  $("#url-source-field").hidden = !urlMode;
+  sourceRoot.closest(".source-field").hidden = urlMode;
+  sourceRoot.required = !urlMode;
+  sourceUrl.required = urlMode;
+  const intakeMode = templateId !== "prepared-localization";
+  $$('[aria-label="Target languages"], .voice-field, [aria-label="Target platforms"]').forEach((element) => {
+    element.classList.toggle("control-muted", intakeMode);
+  });
+  $$('.template-field .choice').forEach((label) => {
+    label.classList.toggle("active", label.querySelector("input").value === templateId);
+  });
+  const copy = templateId === "prepared-localization"
+    ? ["Prepared folder", "Validate batch manifest", "Edge localization", "Voice · mix · hard subtitles", "Verify output", "Inspect files and receipts"]
+    : templateId === "folder-intake"
+      ? ["Local folder", "Resolve an allowed source", "Discover media", "Build deterministic manifest", "Verify source", "Check files and receipt"]
+      : ["Social URL", "YouTube · Bilibili · Douyin · TikTok", "Download 1080p", "Anonymous first · cookie optional", "Verify source", "Check files and receipt"];
+  ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
+    .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
+  const stepIds = templateId === "prepared-localization" ? ["source", "localize", "verify"] : ["", "intake", "verify"];
+  $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
+  $(".workspace-label").textContent = templateId === "prepared-localization" ? "Prepared Folder Localization" : templateId === "folder-intake" ? "Folder Source Intake" : "Social URL Intake";
+  focusNode(state.selectedNode);
 }
 
 async function pollRun(runId) {
@@ -150,11 +190,12 @@ async function pollRun(runId) {
 function renderRun(run) {
   const byNode = Object.fromEntries(run.steps.map((step) => [step.nodeId, step]));
   $$(".graph-node").forEach((node) => {
-    const step = byNode[node.dataset.nodeId];
-    const status = (step?.status || "WAITING").toLowerCase();
+    const step = byNode[node.dataset.stepId];
+    const fallbackStatus = node.dataset.stepId ? "WAITING" : "READY";
+    const status = (step?.status || fallbackStatus).toLowerCase();
     node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
     if (["running", "completed", "failed", "cancelled", "interrupted"].includes(status)) node.classList.add(status);
-    node.querySelector(".node-status").textContent = step?.status || "WAITING";
+    node.querySelector(".node-status").textContent = step?.status || fallbackStatus;
   });
   const complete = run.steps.filter((step) => step.status === "COMPLETED").length;
   $("#run-progress").textContent = `${complete} / ${run.steps.length}`;
@@ -178,8 +219,9 @@ function focusNode(nodeId) {
   properties[0].textContent = copy.owner;
   properties[1].textContent = copy.relationship;
   properties[2].textContent = copy.delivery;
-  const step = state.currentRun?.steps.find((item) => item.nodeId === nodeId);
-  $("#inspector-state").textContent = step?.status || "WAITING";
+  const node = $(`.graph-node[data-node-id="${nodeId}"]`);
+  const step = state.currentRun?.steps.find((item) => item.nodeId === node?.dataset.stepId);
+  $("#inspector-state").textContent = step?.status || (node?.dataset.stepId ? "WAITING" : "READY");
 }
 
 function bindEvents() {
@@ -192,9 +234,11 @@ function bindEvents() {
   $$(".graph-node").forEach((node) => node.addEventListener("click", () => focusNode(node.dataset.nodeId)));
   $$('[data-focus-node]').forEach((button) => button.addEventListener("click", () => focusNode(button.dataset.focusNode)));
   $("#source-root").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
+  $("#source-url").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
+  $$('input[name="template"]').forEach((input) => input.addEventListener("change", () => selectTemplate(input.value)));
 }
 
 bindEvents();
 checkHealth();
 focusNode("localize");
-
+selectTemplate("prepared-localization");

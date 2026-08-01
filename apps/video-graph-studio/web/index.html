@@ -24,11 +24,23 @@
   </header>
 
   <form id="run-form" class="runbar">
+    <fieldset class="choice-field template-field" aria-label="Workflow template">
+      <legend>Workflow</legend>
+      <label class="choice active"><input type="radio" name="template" value="prepared-localization" checked> Localize</label>
+      <label class="choice"><input type="radio" name="template" value="folder-intake"> Folder</label>
+      <label class="choice"><input type="radio" name="template" value="url-intake"> URL</label>
+    </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
       <div class="input-action">
         <input id="source-root" name="sourceRoot" autocomplete="off" placeholder="Choose a prepared video folder" required>
         <button id="browse-folder" type="button">Browse</button>
+      </div>
+    </div>
+    <div id="url-source-field" class="field source-field" hidden>
+      <label for="source-url">Social video URL</label>
+      <div class="input-action">
+        <input id="source-url" name="sourceUrl" type="url" autocomplete="off" placeholder="Paste a YouTube, Bilibili, Douyin or TikTok URL">
       </div>
     </div>
     <fieldset class="choice-field" aria-label="Target languages">
@@ -84,19 +96,19 @@
           <path d="M275 205 C350 205 345 205 420 205"></path>
           <path d="M660 205 C725 205 720 205 785 205"></path>
         </svg>
-        <article class="graph-node input-node" data-node-id="source" tabindex="0">
+        <article class="graph-node input-node" data-node-id="source" data-step-id="source" tabindex="0">
           <header><span><i>⌑</i> INPUT</span><b class="node-status">READY</b></header>
-          <div class="node-body"><h3>Prepared folder</h3><p>Validate batch manifest</p><dl><div><dt>Source</dt><dd class="source-preview">Not selected</dd></div><div><dt>Contract</dt><dd>Query · v1.0</dd></div></dl></div>
+          <div class="node-body"><h3 id="source-node-title">Prepared folder</h3><p id="source-node-description">Validate batch manifest</p><dl><div><dt>Source</dt><dd class="source-preview">Not selected</dd></div><div><dt>Contract</dt><dd>Query · v1.0</dd></div></dl></div>
           <span class="port output-port"></span>
         </article>
-        <article class="graph-node process-node" data-node-id="localize" tabindex="0">
+        <article class="graph-node process-node" data-node-id="localize" data-step-id="localize" tabindex="0">
           <header><span><i>◈</i> PROCESS</span><b class="node-status">WAITING</b></header>
-          <div class="node-body"><h3>Edge localization</h3><p>Voice · mix · hard subtitles</p><dl><div><dt>Mode</dt><dd>Strictly serial</dd></div><div><dt>Retry</dt><dd>Checkpointed</dd></div></dl></div>
+          <div class="node-body"><h3 id="process-node-title">Edge localization</h3><p id="process-node-description">Voice · mix · hard subtitles</p><dl><div><dt>Mode</dt><dd>Strictly serial</dd></div><div><dt>Retry</dt><dd>Checkpointed</dd></div></dl></div>
           <span class="port input-port"></span><span class="port output-port"></span>
         </article>
-        <article class="graph-node output-node" data-node-id="verify" tabindex="0">
+        <article class="graph-node output-node" data-node-id="verify" data-step-id="verify" tabindex="0">
           <header><span><i>✓</i> OUTPUT</span><b class="node-status">WAITING</b></header>
-          <div class="node-body"><h3>Verify output</h3><p>Inspect files and receipts</p><dl><div><dt>Format</dt><dd>MP4 · H.264</dd></div><div><dt>Evidence</dt><dd>Local receipt</dd></div></dl></div>
+          <div class="node-body"><h3 id="output-node-title">Verify output</h3><p id="output-node-description">Inspect files and receipts</p><dl><div><dt>Format</dt><dd>MP4 · H.264</dd></div><div><dt>Evidence</dt><dd>Local receipt</dd></div></dl></div>
           <span class="port input-port"></span>
         </article>
         <div class="canvas-note"><span>i</span><p><strong>Graph Engineering</strong> owns continuation only. Every node remains an independent, replaceable MVP.</p></div>
@@ -143,4 +155,3 @@
   <script src="/app.js?v=1" defer></script>
 </body>
 </html>
-
