@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from .contracts import ContractError, GraphDefinition
 from .engine import WorkflowEngine
@@ -26,6 +27,22 @@ PREPARED_FOLDER_GRAPH = GraphDefinition.from_dict(
         ],
     }
 )
+
+INTAKE_GRAPHS = {
+    template_id: GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": template_id,
+            "revision": 1,
+            "nodes": [
+                {"id": "intake", "type": "source-intake", "config": {"mode": mode}},
+                {"id": "verify", "type": "verify-source", "config": {}},
+            ],
+            "edges": [{"source": "intake", "target": "verify", "relationship": "Fact"}],
+        }
+    )
+    for template_id, mode in (("folder-intake", "folder"), ("url-intake", "url"))
+}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
@@ -91,6 +108,11 @@ class StudioApplication:
         payload = envelope.get("payload")
         if not isinstance(payload, dict):
             raise ContractError("REJECTED_MALFORMED", "payload must be an object")
+        template_id = str(payload.get("templateId", "prepared-localization"))
+        if template_id in INTAKE_GRAPHS:
+            return self._create_intake_run(envelope, payload, template_id)
+        if template_id != "prepared-localization":
+            raise ContractError("REJECTED_MALFORMED", f"unknown templateId: {template_id}")
         source = Path(str(payload.get("sourceRoot", ""))).resolve()
         self._require_allowed(source)
         languages = payload.get("languages")
@@ -110,6 +132,47 @@ class StudioApplication:
                 operation_id=str(envelope["operationId"]),
                 correlation_id=str(envelope["correlationId"]),
                 graph=PREPARED_FOLDER_GRAPH,
+                parameters=parameters,
+            )
+        )
+        status = 201 if result.result_class == "COMPLETED" else 200
+        if result.result_class == "REJECTED_CONFLICT":
+            status = 409
+        return status, {"resultClass": result.result_class, "value": result.value}
+
+    def _create_intake_run(
+        self, envelope: dict[str, Any], payload: dict[str, Any], template_id: str
+    ) -> tuple[int, dict[str, Any]]:
+        if template_id == "folder-intake":
+            source = Path(str(payload.get("sourceRoot", ""))).resolve()
+            self._require_allowed(source)
+            if not source.is_dir():
+                raise ContractError("REJECTED_NOT_FOUND", f"folder does not exist: {source}")
+            parameters = {
+                "templateId": template_id,
+                "sourceKind": "folder",
+                "sourceRoot": str(source),
+            }
+        else:
+            value = str(payload.get("sourceUrl", ""))
+            parsed = urlparse(value)
+            host = (parsed.hostname or "").lower()
+            hosts = ("youtube.com", "youtu.be", "bilibili.com", "b23.tv", "douyin.com", "tiktok.com")
+            if parsed.scheme != "https" or not any(
+                host == suffix or host.endswith("." + suffix) for suffix in hosts
+            ):
+                raise ContractError("REJECTED_MALFORMED", "unsupported social source URL")
+            parameters = {
+                "templateId": template_id,
+                "sourceKind": "url",
+                "sourceUrl": value,
+                "maxHeight": int(payload.get("maxHeight", 1080)),
+            }
+        result = self.store.create_run(
+            CreateRun(
+                operation_id=str(envelope["operationId"]),
+                correlation_id=str(envelope["correlationId"]),
+                graph=INTAKE_GRAPHS[template_id],
                 parameters=parameters,
             )
         )
@@ -193,4 +256,3 @@ class StudioApplication:
                 "deliveryLevel": "DOMAIN_VERIFIED",
             },
         ]
-
