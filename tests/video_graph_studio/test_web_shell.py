@@ -29,6 +29,8 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'id="asr-device"' in html
     assert 'id="translation-device"' in html
     assert 'id="translation-batch-size"' in html
+    assert 'id="output-format"' in html
+    assert 'id="output-evidence"' in html
     assert "onclick=" not in html.lower()
 
 
@@ -61,6 +63,11 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'targetLanguages' in script
     assert 'translationDevice' in script
     assert 'translationBatchSize' in script
+    assert '"JSON · SRT"' in script
+    assert '"Source Manifest"' in script
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+    assert ".template-field{flex:1 0 100%}" in styles
+    assert ".runbar { height: 126px;" in styles
     assert 'sourceRoot.required = !urlMode' in script
     assert 'sourceUrl.required = urlMode' in script
     assert 'node.dataset.stepId' in script

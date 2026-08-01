@@ -255,6 +255,13 @@ function selectTemplate(templateId) {
             : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
+  const outputDetails = templateId === "prepared-localization"
+    ? ["MP4 · H.264", "Local receipt"]
+    : translationMode || transcriptionMode
+      ? ["JSON · SRT", translationMode ? "Translation Manifest" : "Transcript Manifest"]
+      : ["Source Manifest", "SHA-256 receipt"];
+  $("#output-format").textContent = outputDetails[0];
+  $("#output-evidence").textContent = outputDetails[1];
   const stepIds = templateId === "prepared-localization"
     ? ["source", "localize", "verify"]
     : translationMode

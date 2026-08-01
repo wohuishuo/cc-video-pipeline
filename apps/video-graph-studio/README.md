@@ -14,7 +14,14 @@ The launcher opens `http://127.0.0.1:8765`. It never binds to the LAN. To run wi
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 -NoBrowser -Port 8765
 ```
 
-Choose a folder that already contains `russian/batch-manifest.json`, choose an Edge voice, and run the graph. Exactly one workflow and one child process execute at a time.
+Choose one of the workflow templates:
+
+- `Folder` or `URL` creates and verifies a Source Manifest.
+- `Folder+ASR` or `URL+ASR` continues through a verified Transcript Manifest.
+- `Folder+Translate` or `URL+Translate` continues through editable RU/EN/KK translation JSON/SRT.
+- `Localize` runs the compatibility prepared-folder Edge workflow.
+
+Exactly one workflow and one child process execute at a time. The six-step translation graph calls Source Intake, Transcription and Translation only through their public launchers.
 
 ## Stop
 
@@ -27,7 +34,7 @@ The default data root is `%LOCALAPPDATA%\VideoGraphStudio`. Override it with `-D
 ## Current evidence boundary
 
 - Graph, run, process, HTTP and browser contracts are implemented and contract-tested.
+- Source Intake, Transcription and Translation manifest workflows are domain verified; one public YouTube download and one local Faster Whisper run have live evidence.
 - Edge localization is a replaceable online adapter and may return retryable service failures.
-- YouTube, Bilibili, Douyin and TikTok download/upload controls remain later independent slices.
+- Creator-profile discovery and authenticated uploads remain later independent slices.
 - No cloud account, billing, remote access or production platform claim is made.
-

@@ -7,7 +7,7 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 1 | Durable graph control plane | contracts, SQLite replay/conflict, serial real process, browser smoke | Complete |
 | 2 | Folder and single-video URL intake | manifest/receipt, browser folder run, live YouTube run | Complete |
 | 3 | Source manifest to transcript artifacts | one-media owner, fake-adapter tests, real ASR smoke, graph checkpoint | Complete |
-| 4 | Transcript to editable translations | adapter-neutral schema, exact timing, review/edit loop | In progress |
+| 4 | Transcript to editable translations | adapter-neutral schema, exact timing, editable machine output, real NLLB receipt | Complete |
 | 5 | Translation to voice/subtitle assets | serial segment receipts, selectable voices, failure resume | Pending |
 | 6 | Assets to localized video | audio policy, subtitle render, FFprobe verification | Pending |
 | 7 | Creator-profile batch discovery | profile enumeration manifest, bounded pagination, dedup/replay | Pending |
