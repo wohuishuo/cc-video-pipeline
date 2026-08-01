@@ -2,6 +2,11 @@
 
 ## System map
 
+The canonical target map and ownership catalog are:
+
+- [System component map](system-component-map.md)
+- [Component catalog](component-catalog.md)
+
 ```mermaid
 flowchart LR
     Browser["Browser / future mobile client"] -->|Command, Query| API["Loopback HTTP adapter"]
@@ -24,4 +29,3 @@ The workflow process manager owns only continuation, checkpoint order and termin
 - Projection consumes committed state after mutation and cannot authorize work.
 - Platform-specific cookies and tokens terminate at their adapter boundary.
 - A future hosted API or mobile client replaces the transport/presentation adapter without moving state ownership.
-

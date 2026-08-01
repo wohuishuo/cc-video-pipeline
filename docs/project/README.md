@@ -21,3 +21,14 @@ Creator result
 
 The structure follows the proven documentation chain in `roblox-city-scavenger`, adapted to local and future hosted video automation.
 
+## Operating set
+
+- [Creator Automation Studio product definition](product/creator-automation-studio.md)
+- [Video automation capability map](capabilities/video-automation-capability-map.md)
+- [System component map](architecture/system-component-map.md)
+- [Component catalog](architecture/component-catalog.md)
+- [Graph and Loop Engineering operating model](engineering/graph-loop-operating-model.md)
+- [Capability roadmap](planning/capability-roadmap.md)
+- [Delivery evidence index](evidence/README.md)
+- [Dependency review](reviews/graph-loop-dependency-review.md)
+- [Training: independent MVPs to browser workflow](../training/01-independent-video-mvps-to-browser-workflow.md)

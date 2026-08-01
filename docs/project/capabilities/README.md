@@ -1,5 +1,7 @@
 # Capability Catalog
 
+See the [full video automation capability map](video-automation-capability-map.md) for build order, substitutes and evidence gates.
+
 | Capability | Owns | Public result | Reusable boundary |
 | --- | --- | --- | --- |
 | Graph Definition | immutable graph revision and fingerprint | validated DAG and deterministic order | JSON contract |
@@ -13,4 +15,3 @@
 | Output Verification | inspectable output evidence | verified output fact | filesystem policy |
 
 Capabilities may be tested with fixed specifications or fake adapters only when the substitute preserves authority and idempotency boundaries. Fake Edge output never proves Microsoft service availability or production publication.
-
