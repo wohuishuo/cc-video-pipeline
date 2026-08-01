@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "translation",
+  "summary": "Serially publish editable multilingual translations from a Transcript Manifest.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/translation_mvp -q",
+  "inputs": ["Transcription transcript manifest", "ordered target languages and translation adapter policy"],
+  "outputs": ["translation-manifest.json", "translation-receipt.json", "editable translation JSON and SRT per media and language"],
+  "dependencies": ["python>=3.12", "transformers", "torch", "sentencepiece"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
