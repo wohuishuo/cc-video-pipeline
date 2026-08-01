@@ -1,8 +1,20 @@
 const TERMINAL_STATES = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
-const NODE_COPY = {
-  source: { title: "Prepared folder", description: "Resolve the folder and validate its localization batch manifest.", owner: "source-intake", relationship: "Query", delivery: "DOMAIN_VERIFIED" },
-  localize: { title: "Edge localization", description: "Generate Russian voice, mix original ambience and burn translated subtitles.", owner: "localization", relationship: "Adapter", delivery: "IMPLEMENTED" },
-  verify: { title: "Verify output", description: "Require inspectable video files and matching execution receipts.", owner: "output-verification", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+const TEMPLATE_NODE_COPY = {
+  "prepared-localization": {
+    source: { title: "Prepared folder", description: "Resolve the folder and validate its localization batch manifest.", owner: "source-intake", relationship: "Query", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Edge localization", description: "Generate Russian voice, mix original ambience and burn translated subtitles.", owner: "localization", relationship: "Adapter", delivery: "IMPLEMENTED" },
+    verify: { title: "Verify output", description: "Require inspectable video files and matching execution receipts.", owner: "output-verification", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
+  "folder-intake": {
+    source: { title: "Local folder", description: "Resolve one allowed local folder without copying its media.", owner: "source-intake", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Discover media", description: "Build a deterministic manifest and idempotent intake receipt.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify source", description: "Check every declared media path and digest before continuation.", owner: "source-intake", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
+  "url-intake": {
+    source: { title: "Social URL", description: "Accept one supported YouTube, Bilibili, Douyin or TikTok URL.", owner: "source-intake", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Download 1080p", description: "Invoke Platform I/O anonymously first with bounded quality fallback.", owner: "platform-io", relationship: "Adapter", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify source", description: "Check downloaded media and commit a reusable source manifest.", owner: "source-intake", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
 };
 
 const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
@@ -111,6 +123,7 @@ async function submitRun(event) {
   const correlationId = crypto.randomUUID();
   const button = $("#run-button");
   button.disabled = true;
+  setRunControlsBusy(true);
   button.innerHTML = "<span>◌</span> Creating…";
   try {
     const payload = state.templateId === "url-intake"
@@ -135,8 +148,13 @@ async function submitRun(event) {
   } catch (error) {
     toast(error.message, true);
     button.disabled = false;
+    setRunControlsBusy(false);
     button.innerHTML = "<span>▶</span> Run graph";
   }
+}
+
+function setRunControlsBusy(busy) {
+  $$('#run-form input[name="template"]').forEach((input) => { input.disabled = busy; });
 }
 
 function selectTemplate(templateId) {
@@ -164,7 +182,15 @@ function selectTemplate(templateId) {
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
   const stepIds = templateId === "prepared-localization" ? ["source", "localize", "verify"] : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
+  const paletteCopy = templateId === "prepared-localization"
+    ? ["Prepared folder", "Local query", "Edge localization", "Serial adapter", "Verify outputs", "Receipt policy"]
+    : templateId === "folder-intake"
+      ? ["Local folder", "Local input", "Discover media", "Serial command", "Verify source", "Manifest policy"]
+      : ["Social URL", "Remote input", "Download 1080p", "Platform adapter", "Verify source", "Manifest policy"];
+  ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
+    .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
   $(".workspace-label").textContent = templateId === "prepared-localization" ? "Prepared Folder Localization" : templateId === "folder-intake" ? "Folder Source Intake" : "Social URL Intake";
+  if (!state.currentRun) $("#run-progress").textContent = templateId === "prepared-localization" ? "0 / 3" : "0 / 2";
   focusNode(state.selectedNode);
 }
 
@@ -176,6 +202,7 @@ async function pollRun(runId) {
     renderRun(run);
     if (TERMINAL_STATES.has(run.status)) {
       $("#run-button").disabled = false;
+      setRunControlsBusy(false);
       $("#run-button").innerHTML = "<span>▶</span> Run graph";
       await checkHealth();
       return;
@@ -212,7 +239,7 @@ function renderRun(run) {
 function focusNode(nodeId) {
   state.selectedNode = nodeId;
   $$(".graph-node").forEach((node) => node.classList.toggle("selected", node.dataset.nodeId === nodeId));
-  const copy = NODE_COPY[nodeId];
+  const copy = TEMPLATE_NODE_COPY[state.templateId][nodeId];
   $("#inspector-title").textContent = copy.title;
   $("#inspector-description").textContent = copy.description;
   const properties = $$(".property code");

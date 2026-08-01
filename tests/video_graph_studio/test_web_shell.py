@@ -46,3 +46,6 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'sourceUrl.required = urlMode' in script
     assert 'node.dataset.stepId' in script
     assert 'dataset.stepId = stepIds[index]' in script
+    assert 'TEMPLATE_NODE_COPY' in script
+    assert 'const copy = TEMPLATE_NODE_COPY[state.templateId][nodeId]' in script
+    assert 'input.disabled = busy' in script
