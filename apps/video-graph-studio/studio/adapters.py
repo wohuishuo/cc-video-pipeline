@@ -686,6 +686,155 @@ class VerifyCreatorManifestAdapter:
         on_log(f"Verified creator manifest with {len(items)} video URL(s)"); return AdapterResult(True,{"manifest":str(path),"itemCount":len(items)})
 
 
+class CreatorBatchAdapter(CommandAdapter):
+    """Invoke the independent Creator Batch continuation owner."""
+
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.output_root = Path(output_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        committed = next((
+            step.get("result") for step in context.get("steps", [])
+            if step.get("nodeId") == "discover-creator" and step.get("status") == "COMPLETED"
+        ), None)
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed Creator Manifest fact missing")
+        creator_manifest = Path(str(committed.get("manifest", ""))).resolve()
+        if not creator_manifest.is_file() or hashlib.sha256(creator_manifest.read_bytes()).hexdigest() != committed.get("manifestSha256"):
+            return AdapterResult(False, {}, "Creator Manifest fingerprint conflict")
+        parameters = context["parameters"]
+        output = self.output_root / str(context["runId"])
+        operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),
+            "localize", str(creator_manifest),
+            "--output-dir", str(output),
+            "--operation-id", operation_id,
+            "--source-language", str(parameters["sourceLanguage"]),
+            "--asr-model", str(parameters["asrModel"]),
+            "--asr-device", str(parameters["asrDevice"]),
+            "--asr-compute-type", str(parameters["asrComputeType"]),
+            "--translation-model", str(parameters["translationModel"]),
+            "--translation-device", str(parameters["translationDevice"]),
+            "--translation-batch-size", str(parameters["translationBatchSize"]),
+            "--source-volume", str(parameters["sourceVolume"]),
+        ]
+        for language in parameters["targetLanguages"]:
+            argv.extend(["--target-language", language])
+            argv.extend(["--voice", f"{language}={parameters['targetVoices'][language]}"])
+        if parameters.get("authenticationFile"):
+            argv.extend(["--cookies", str(parameters["authenticationFile"])])
+        argv.append("--json")
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "creator-batch-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "Creator Batch receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+            expected_sha = str(receipt["manifestSha256"])
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid Creator Batch receipt: {error}")
+        valid = (
+            receipt.get("schemaVersion") == 1
+            and receipt.get("operationId") == operation_id
+            and receipt.get("resultClass") == "COMPLETED"
+            and manifest.is_file()
+            and hashlib.sha256(manifest.read_bytes()).hexdigest() == expected_sha
+            and int(receipt.get("itemCount", 0)) > 0
+            and int(receipt.get("completedCount", receipt.get("itemCount", 0))) == int(receipt.get("itemCount", 0))
+        )
+        if not valid:
+            return AdapterResult(False, result.details, "Creator Batch did not commit complete coverage")
+        return AdapterResult(True, {
+            **result.details,
+            "receipt": str(receipt_path),
+            "manifest": str(manifest),
+            "manifestSha256": expected_sha,
+            "itemCount": int(receipt["itemCount"]),
+        })
+
+
+class VerifyCreatorBatchAdapter:
+    """Verify aggregate item/language coverage and every derivative fact."""
+
+    def execute(self, node, context, on_log, cancel_event):
+        results = {
+            step.get("nodeId"): step.get("result")
+            for step in context.get("steps", [])
+            if step.get("status") == "COMPLETED"
+        }
+        creator_fact = results.get("discover-creator")
+        batch_fact = results.get("localize-creator-batch")
+        if not isinstance(creator_fact, dict) or not isinstance(batch_fact, dict):
+            return AdapterResult(False, {}, "committed Creator and Batch facts are required")
+        creator_path = Path(str(creator_fact.get("manifest", ""))).resolve()
+        batch_path = Path(str(batch_fact.get("manifest", ""))).resolve()
+        if (
+            not creator_path.is_file()
+            or hashlib.sha256(creator_path.read_bytes()).hexdigest() != creator_fact.get("manifestSha256")
+            or not batch_path.is_file()
+            or hashlib.sha256(batch_path.read_bytes()).hexdigest() != batch_fact.get("manifestSha256")
+        ):
+            return AdapterResult(False, {}, "Creator Batch fingerprint conflict")
+        try:
+            creator = json.loads(creator_path.read_text(encoding="utf-8-sig"))
+            batch = json.loads(batch_path.read_text(encoding="utf-8-sig"))
+            creator_ids = [str(row["id"]) for row in creator["items"]]
+            items = batch["items"]
+            languages = list(context["parameters"]["targetLanguages"])
+            valid = (
+                batch.get("schemaVersion") == 1
+                and Path(str(batch["creatorManifest"])).resolve() == creator_path
+                and batch.get("creatorManifestSha256") == creator_fact.get("manifestSha256")
+                and batch.get("expectedItemIds") == creator_ids
+                and batch.get("targetLanguages") == languages
+                and batch.get("maximumActiveItems") == 1
+                and [int(row["ordinal"]) for row in items] == list(range(1, len(creator_ids) + 1))
+                and [str(row["id"]) for row in items] == creator_ids
+            )
+            derivative_count = 0
+            for row in items:
+                localization_path = Path(str(row["localizationManifest"])).resolve()
+                if not localization_path.is_file() or hashlib.sha256(localization_path.read_bytes()).hexdigest() != row["localizationManifestSha256"]:
+                    valid = False
+                    break
+                localization = json.loads(localization_path.read_text(encoding="utf-8-sig"))
+                media_ids = localization["expectedMediaIds"]
+                derivatives = localization["derivatives"]
+                expected = [(language, media_id) for language in languages for media_id in media_ids]
+                actual = [(value["targetLanguage"], value["mediaId"]) for value in derivatives]
+                valid = valid and (
+                    localization.get("schemaVersion") == 1
+                    and localization.get("targetLanguages") == languages
+                    and bool(media_ids)
+                    and actual == expected
+                    and len(derivatives) == int(row["derivativeCount"])
+                    and all(
+                        (file := Path(str(value["path"]))).is_file()
+                        and file.stat().st_size == int(value["size"])
+                        and hashlib.sha256(file.read_bytes()).hexdigest() == value["sha256"]
+                        and float(value["duration"]) > 0
+                        and int(value["width"]) > 0
+                        and int(value["height"]) > 0
+                        and bool(value["videoCodec"])
+                        and bool(value["audioCodec"])
+                        for value in derivatives
+                    )
+                )
+                derivative_count += len(derivatives)
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            derivative_count = 0
+            items = []
+        if not valid:
+            return AdapterResult(False, {}, "Creator Batch artifact validation failed")
+        on_log(f"Verified {len(items)} creator item(s) and {derivative_count} localized derivative(s)")
+        return AdapterResult(True, {"manifest": str(batch_path), "itemCount": len(items), "derivativeCount": derivative_count})
+
+
 class PublicationPlanAdapter(CommandAdapter):
     def __init__(self,launcher:Path,output_root:Path):super().__init__(); self.launcher=Path(launcher).resolve(); self.output_root=Path(output_root).resolve()
     def execute(self,node,context,on_log,cancel_event):

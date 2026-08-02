@@ -28,6 +28,7 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'value="folder-dub"' in html
     assert 'value="url-dub"' in html
     assert 'value="creator-profile"' in html
+    assert 'value="creator-batch-dub"' in html
     assert 'value="publication-plan"' in html
     assert 'value="publication-execute"' in html
     assert 'value="youtube-connect"' in html
@@ -60,8 +61,8 @@ def test_shell_has_creator_controls_and_workflow_regions():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=1"' in html
-    assert 'src="/app.js?v=4"' in html
+    assert 'href="/styles.css?v=2"' in html
+    assert 'src="/app.js?v=6"' in html
     assert "https://" not in html
     assert "http://" not in html
 
@@ -90,6 +91,8 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'url-dub' in script
     assert 'sourceVolume' in script
     assert 'creator-profile' in script
+    assert 'creator-batch-dub' in script
+    assert 'creatorBatchMode' in script
     assert 'maxItems' in script
     assert 'authenticationFile' in script
     assert 'publication-plan' in script
@@ -113,6 +116,8 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     assert ".template-field{flex:1 0 100%}" in styles
     assert ".runbar { height: 126px;" in styles
+    assert ".runbar.creator-batch-mode { height: 180px;" in styles
+    assert '$("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode)' in script
     assert 'sourceRoot.required = !urlMode' in script
     assert 'sourceUrl.required = urlMode' in script
     assert 'node.dataset.stepId' in script

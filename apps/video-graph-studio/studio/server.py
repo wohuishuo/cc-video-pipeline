@@ -220,6 +220,7 @@ def build_runtime(
         PreparedFolderEdgeAdapter,
         LocalizedVideoAdapter,
         CreatorDiscoveryAdapter,
+        CreatorBatchAdapter,
         PublicationPlanAdapter,
         PublicationExecuteAdapter,
         SourceIntakeAdapter,
@@ -233,6 +234,7 @@ def build_runtime(
         VerifyVoiceAdapter,
         VerifyLocalizationAdapter,
         VerifyCreatorManifestAdapter,
+        VerifyCreatorBatchAdapter,
         VerifyPublicationPlanAdapter,
         VerifyPublicationExecutionAdapter,
         YouTubeConnectAdapter,
@@ -257,6 +259,7 @@ def build_runtime(
     voice_launcher = repository / "apps" / "voice-rendering" / "run.ps1"
     localization_launcher = repository / "apps" / "localization" / "run.ps1"
     creator_discovery_launcher = repository / "apps" / "creator-discovery" / "run.ps1"
+    creator_batch_launcher = repository / "apps" / "creator-batch" / "run.ps1"
     publication_launcher = repository / "apps" / "publication" / "run.ps1"
     youtube_oauth_launcher = repository / "apps" / "youtube-oauth-bootstrap" / "run.ps1"
     credential_vault_launcher = repository / "apps" / "credential-vault" / "run.ps1"
@@ -295,6 +298,10 @@ def build_runtime(
                 creator_discovery_launcher, artifact_root / "creators"
             ),
             "verify-creator": VerifyCreatorManifestAdapter(),
+            "localize-creator-batch": CreatorBatchAdapter(
+                creator_batch_launcher, artifact_root / "creator-batches"
+            ),
+            "verify-creator-batch": VerifyCreatorBatchAdapter(),
             "plan-publication": PublicationPlanAdapter(
                 publication_launcher, artifact_root / "publication-plans"
             ),

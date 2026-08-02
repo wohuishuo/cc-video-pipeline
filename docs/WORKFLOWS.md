@@ -14,6 +14,22 @@ flowchart LR
 
 Discovery commits canonical URLs only. Downloading every item is a separate, explicitly selected composition so a large profile cannot silently consume storage or network bandwidth.
 
+Select **Creator+Dub** when that explicit composition is intended:
+
+```mermaid
+flowchart LR
+    MANIFEST["Creator Manifest"] --> LOOP["Creator Batch"]
+    LOOP -->|"one item"| INTAKE["Source Intake"]
+    INTAKE --> ASR["Transcription"]
+    ASR --> TR["Translation"]
+    TR --> VOICE["Voice Rendering"]
+    VOICE --> LOC["Localization"]
+    LOC -->|"committed fact"| LOOP
+    LOOP --> BATCH[("Creator Batch Manifest")]
+```
+
+The loop continues after an item failure, but the aggregate manifest is withheld until every item has verified language and derivative coverage. Repeating the same operation reuses hash-verified items and retries only incomplete or stale items.
+
 ## Research a reference video
 
 ```mermaid

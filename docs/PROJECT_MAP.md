@@ -24,6 +24,8 @@ flowchart TB
 
 `apps/` contains public applications. Each application owns one result and has an independent launcher, installer, manifest, README, tests, and evidence.
 
+`apps/creator-batch/` is the reusable cross-item continuation owner. It consumes Creator Discovery facts and public child-MVP facts; it does not own or import media-processing internals.
+
 ## Shared contracts
 
 `packages/` may contain versioned schemas and small process primitives. Shared packages never coordinate an application workflow or own project state.

@@ -17,6 +17,7 @@ EXPECTED_APPS = {
     "resource-budget",
     "youtube-publisher",
     "youtube-oauth-bootstrap",
+    "creator-batch",
 }
 
 
