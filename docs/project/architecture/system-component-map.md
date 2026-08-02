@@ -37,6 +37,7 @@ flowchart TB
 | Graph revision/fingerprint | Graph Definition | Run admission, browser projection |
 | Workspace identity/credential lifecycle | Workspace Access | admission adapters, operators |
 | Workspace state/artifact/temp namespace and capacity projection | Workspace Storage | Workspace Runtime Router, operators |
+| Client command/endpoint compatibility bundle | Client Contracts | browser, future mobile and hosted clients |
 | Run lifecycle/version | Workflow Run Owner | Process, dashboard |
 | Start-request order/claim | Durable Start Queue | Process, dashboard |
 | Step checkpoint/continuation | Workflow Process Manager | Run projection, recovery |
@@ -56,6 +57,7 @@ flowchart LR
     Desktop["Desktop browser"] --> Contracts["Command / Query contracts v1"]
     Mobile["Future mobile app"] --> Contracts
     Hosted["Future hosted console"] --> Contracts
+    Owner["Client Contracts"] --> Contracts
     Contracts --> Admission["Authentication + admission adapter"]
     Admission --> Runs["Same Run and Process owners"]
 ```
