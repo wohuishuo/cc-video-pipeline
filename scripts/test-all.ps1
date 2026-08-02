@@ -33,7 +33,8 @@ try {
     "tests\resource_budget_mvp",
     "tests\youtube_publisher_mvp",
     "tests\youtube_oauth_mvp",
-    "tests\creator_batch_mvp"
+    "tests\creator_batch_mvp",
+    "tests\publication_batch_mvp"
   )
   & $python -m pytest --import-mode=importlib @suites -q
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

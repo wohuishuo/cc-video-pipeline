@@ -26,6 +26,8 @@ flowchart TB
 
 `apps/creator-batch/` is the reusable cross-item continuation owner. It consumes Creator Discovery facts and public child-MVP facts; it does not own or import media-processing internals.
 
+`apps/publication-batch/` is the reusable cross-derivative planning owner. It consumes Localization facts and invokes Publication through its public launcher; it does not own localized media, upload state or credentials.
+
 ## Shared contracts
 
 `packages/` may contain versioned schemas and small process primitives. Shared packages never coordinate an application workflow or own project state.

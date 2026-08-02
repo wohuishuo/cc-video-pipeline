@@ -835,6 +835,180 @@ class VerifyCreatorBatchAdapter:
         return AdapterResult(True, {"manifest": str(batch_path), "itemCount": len(items), "derivativeCount": derivative_count})
 
 
+class PublicationBatchPlanAdapter(CommandAdapter):
+    """Invoke Publication Batch from the committed Localization fact."""
+
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.output_root = Path(output_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        committed = next((
+            step.get("result") for step in context.get("steps", [])
+            if step.get("nodeId") == "localize-video" and step.get("status") == "COMPLETED"
+        ), None)
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed Localization fact missing")
+        localization = Path(str(committed.get("manifest", ""))).resolve()
+        if not localization.is_file() or hashlib.sha256(localization.read_bytes()).hexdigest() != committed.get("manifestSha256"):
+            return AdapterResult(False, {}, "Localization Manifest fingerprint conflict")
+        parameters = context["parameters"]
+        metadata = Path(str(parameters.get("metadataTemplatePath", ""))).resolve()
+        output = self.output_root / str(context["runId"])
+        operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),
+            "plan", str(localization), "--metadata-template", str(metadata),
+        ]
+        for platform in parameters["targetPlatforms"]:
+            argv.extend(["--target", f"{platform}={parameters['targetAccounts'][platform]}"])
+        for platform in parameters["targetPlatforms"]:
+            if platform in parameters.get("credentialIds", {}):
+                argv.extend(["--credential", f"{platform}={parameters['credentialIds'][platform]}"])
+        argv.extend(["--output-dir", str(output), "--operation-id", operation_id, "--json"])
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "publication-batch-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "Publication Batch receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+            manifest_sha = str(receipt["manifestSha256"])
+            item_count = int(receipt["itemCount"])
+            completed_count = int(receipt["completedCount"])
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid Publication Batch receipt: {error}")
+        if (
+            receipt.get("schemaVersion") != 1
+            or receipt.get("operationId") != operation_id
+            or receipt.get("resultClass") != "COMPLETED"
+            or item_count <= 0
+            or completed_count != item_count
+            or not manifest.is_file()
+            or hashlib.sha256(manifest.read_bytes()).hexdigest() != manifest_sha
+        ):
+            return AdapterResult(False, result.details, "Publication Batch did not commit complete coverage")
+        try:
+            aggregate = json.loads(manifest.read_text(encoding="utf-8-sig"))
+            job_count = int(aggregate["totalJobCount"])
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid Publication Batch Plan: {error}")
+        return AdapterResult(True, {
+            **result.details,
+            "receipt": str(receipt_path),
+            "manifest": str(manifest),
+            "manifestSha256": manifest_sha,
+            "itemCount": item_count,
+            "jobCount": job_count,
+        })
+
+
+class VerifyPublicationBatchPlanAdapter:
+    """Verify derivative, metadata, child-plan and platform coverage."""
+
+    def execute(self, node, context, on_log, cancel_event):
+        results = {
+            step.get("nodeId"): step.get("result")
+            for step in context.get("steps", [])
+            if step.get("status") == "COMPLETED"
+        }
+        localization_fact = results.get("localize-video")
+        batch_fact = results.get("plan-publication-batch")
+        if not isinstance(localization_fact, dict) or not isinstance(batch_fact, dict):
+            return AdapterResult(False, {}, "committed Localization and Publication Batch facts are required")
+        localization_path = Path(str(localization_fact.get("manifest", ""))).resolve()
+        aggregate_path = Path(str(batch_fact.get("manifest", ""))).resolve()
+        if (
+            not localization_path.is_file()
+            or hashlib.sha256(localization_path.read_bytes()).hexdigest() != localization_fact.get("manifestSha256")
+            or not aggregate_path.is_file()
+            or hashlib.sha256(aggregate_path.read_bytes()).hexdigest() != batch_fact.get("manifestSha256")
+        ):
+            return AdapterResult(False, {}, "Publication Batch fingerprint conflict")
+        parameters = context.get("parameters", {})
+        expected_targets = []
+        credentials = parameters.get("credentialIds", {})
+        for platform in parameters.get("targetPlatforms", []):
+            row = {"platform": platform, "account": parameters.get("targetAccounts", {}).get(platform)}
+            if platform in credentials:
+                row["credentialId"] = credentials[platform]
+            expected_targets.append(row)
+        try:
+            localization = json.loads(localization_path.read_text(encoding="utf-8-sig"))
+            aggregate = json.loads(aggregate_path.read_text(encoding="utf-8-sig"))
+            derivatives = localization["derivatives"]
+            items = aggregate["items"]
+            expected_keys = [f"{row['targetLanguage']}:{row['mediaId']}" for row in derivatives]
+            metadata_template = Path(str(parameters["metadataTemplatePath"])).resolve()
+            valid = (
+                aggregate.get("schemaVersion") == 1
+                and Path(str(aggregate["localizationManifest"])).resolve() == localization_path
+                and aggregate.get("localizationManifestSha256") == localization_fact.get("manifestSha256")
+                and Path(str(aggregate["metadataTemplate"])).resolve() == metadata_template
+                and metadata_template.is_file()
+                and aggregate.get("metadataTemplateSha256") == hashlib.sha256(metadata_template.read_bytes()).hexdigest()
+                and aggregate.get("targetLanguages") == localization["targetLanguages"]
+                and aggregate.get("expectedMediaIds") == localization["expectedMediaIds"]
+                and aggregate.get("targets") == expected_targets
+                and aggregate.get("public") is False
+                and aggregate.get("maximumActiveItems") == 1
+                and aggregate.get("expectedDerivativeKeys") == expected_keys
+                and len(items) == len(derivatives)
+            )
+            total_jobs = 0
+            for ordinal, (derivative, item) in enumerate(zip(derivatives, items), 1):
+                derivative_path = Path(str(derivative["path"])).resolve()
+                metadata_path = Path(str(item["metadataPath"])).resolve()
+                plan_path = Path(str(item["publicationPlan"])).resolve()
+                plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+                jobs = plan["jobs"]
+                actual_targets = [
+                    {
+                        key: job[key]
+                        for key in ("platform", "account", "credentialId")
+                        if key in job
+                    }
+                    for job in jobs
+                ]
+                item_valid = (
+                    item["ordinal"] == ordinal
+                    and item["targetLanguage"] == derivative["targetLanguage"]
+                    and item["mediaId"] == derivative["mediaId"]
+                    and Path(str(item["derivativePath"])).resolve() == derivative_path
+                    and item["derivativeSha256"] == derivative["sha256"]
+                    and derivative_path.is_file()
+                    and derivative_path.stat().st_size == int(derivative["size"])
+                    and hashlib.sha256(derivative_path.read_bytes()).hexdigest() == derivative["sha256"]
+                    and metadata_path.is_file()
+                    and hashlib.sha256(metadata_path.read_bytes()).hexdigest() == item["metadataSha256"]
+                    and plan_path.is_file()
+                    and hashlib.sha256(plan_path.read_bytes()).hexdigest() == item["publicationPlanSha256"]
+                    and plan.get("schemaVersion") == 1
+                    and plan.get("public") is False
+                    and Path(str(plan["video"]["path"])).resolve() == derivative_path
+                    and plan["video"]["sha256"] == derivative["sha256"]
+                    and Path(str(plan["metadata"]["path"])).resolve() == metadata_path
+                    and plan["metadata"]["sha256"] == item["metadataSha256"]
+                    and len(jobs) == len(expected_targets)
+                    and int(item["jobCount"]) == len(jobs)
+                    and [int(job["ordinal"]) for job in jobs] == list(range(1, len(jobs) + 1))
+                    and all(len(str(job["id"])) == 64 and job["visibility"] == "private-or-draft" for job in jobs)
+                    and actual_targets == expected_targets
+                )
+                valid = valid and item_valid
+                total_jobs += len(jobs)
+            valid = valid and aggregate.get("totalJobCount") == total_jobs
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            items = []
+            total_jobs = 0
+        if not valid:
+            return AdapterResult(False, {}, "Publication Batch artifact validation failed")
+        on_log(f"Verified {len(items)} derivative plan(s) and {total_jobs} platform job(s)")
+        return AdapterResult(True, {"manifest": str(aggregate_path), "itemCount": len(items), "jobCount": total_jobs})
+
+
 class PublicationPlanAdapter(CommandAdapter):
     def __init__(self,launcher:Path,output_root:Path):super().__init__(); self.launcher=Path(launcher).resolve(); self.output_root=Path(output_root).resolve()
     def execute(self,node,context,on_log,cancel_event):

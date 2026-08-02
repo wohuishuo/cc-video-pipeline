@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "publication-batch",
+  "summary": "Plan every localized derivative for ordered private or draft platform targets.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/publication_batch_mvp -q",
+  "inputs": ["Localization Manifest", "metadata template JSON", "platform/account targets", "optional credential references"],
+  "outputs": ["publication-batch-plan.json", "publication-batch-receipt.json", "rendered metadata and one Publication Plan per derivative"],
+  "dependencies": ["python>=3.12", "Publication public launcher"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
