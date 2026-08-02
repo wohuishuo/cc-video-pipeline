@@ -172,11 +172,18 @@ class ResourceBudget:
             row = self._required_reservation(connection, workspace_id, reservation_id)
             if row["status"] != "ACTIVE":
                 raise BudgetError("REJECTED_EXPIRED", "reservation is not active")
+            if (
+                row["generation"] == expected_generation + 1
+                and row["last_renewed_from"] == expected_generation
+                and row["ttl_seconds"] == ttl_seconds
+            ):
+                return BudgetResult("DUPLICATE_COMPLETED", self._public(row))
             if row["generation"] != expected_generation:
                 raise BudgetError("REJECTED_STALE", "reservation generation is stale")
             connection.execute(
-                "UPDATE reservations SET generation=generation+1,ttl_seconds=?,expires_at=?,updated_at=? WHERE workspace_id=? AND reservation_id=?",
+                "UPDATE reservations SET generation=generation+1,last_renewed_from=?,ttl_seconds=?,expires_at=?,updated_at=? WHERE workspace_id=? AND reservation_id=?",
                 (
+                    expected_generation,
                     ttl_seconds,
                     _timestamp(now + timedelta(seconds=ttl_seconds)),
                     _timestamp(now),
@@ -275,6 +282,7 @@ class ResourceBudget:
                     ttl_seconds INTEGER NOT NULL,
                     status TEXT NOT NULL CHECK(status IN ('ACTIVE','RELEASED','EXPIRED')),
                     generation INTEGER NOT NULL,
+                    last_renewed_from INTEGER,
                     expires_at TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,

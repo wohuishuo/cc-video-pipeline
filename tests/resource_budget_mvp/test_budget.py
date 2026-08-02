@@ -66,6 +66,7 @@ def test_renew_and_release_require_current_generation_and_are_idempotent(tmp_pat
     budget.reserve("alpha", "run-one", bytes_requested=40, slots=1, ttl_seconds=30)
 
     renewed = budget.renew("alpha", "run-one", expected_generation=1, ttl_seconds=60)
+    renewed_replay = budget.renew("alpha", "run-one", expected_generation=1, ttl_seconds=60)
     try:
         budget.release("alpha", "run-one", expected_generation=1)
     except BudgetError as error:
@@ -76,6 +77,8 @@ def test_renew_and_release_require_current_generation_and_are_idempotent(tmp_pat
     replay = budget.release("alpha", "run-one", expected_generation=2)
 
     assert renewed.value["generation"] == 2
+    assert renewed_replay.result_class == "DUPLICATE_COMPLETED"
+    assert renewed_replay.value["generation"] == 2
     assert released.result_class == "COMPLETED"
     assert replay.result_class == "DUPLICATE_COMPLETED"
     assert budget.snapshot("alpha").value["availableBytes"] == 100
