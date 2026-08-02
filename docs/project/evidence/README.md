@@ -25,5 +25,6 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Client Contracts Studio HTTP discovery drill](client-contracts/studio-http-discovery-drill.md)
 - [Resource Budget](resource-budget/delivery-ledger.md)
 - [YouTube Publisher](youtube-publisher/delivery-ledger.md)
+- [YouTube OAuth Bootstrap](youtube-oauth-bootstrap/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

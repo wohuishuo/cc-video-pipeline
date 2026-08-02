@@ -235,6 +235,8 @@ def build_runtime(
         VerifyCreatorManifestAdapter,
         VerifyPublicationPlanAdapter,
         VerifyPublicationExecutionAdapter,
+        YouTubeConnectAdapter,
+        VerifyYouTubeCredentialAdapter,
     )
     from .engine import WorkflowEngine
     from .resource_leases import ResourceLeaseCoordinator
@@ -256,6 +258,8 @@ def build_runtime(
     localization_launcher = repository / "apps" / "localization" / "run.ps1"
     creator_discovery_launcher = repository / "apps" / "creator-discovery" / "run.ps1"
     publication_launcher = repository / "apps" / "publication" / "run.ps1"
+    youtube_oauth_launcher = repository / "apps" / "youtube-oauth-bootstrap" / "run.ps1"
+    credential_vault_launcher = repository / "apps" / "credential-vault" / "run.ps1"
     lease_coordinator = None
     if resource_budget_commands is not None:
         lease_coordinator = ResourceLeaseCoordinator(
@@ -299,6 +303,12 @@ def build_runtime(
                 publication_launcher, artifact_root / "publication-executions"
             ),
             "verify-publication-execution": VerifyPublicationExecutionAdapter(),
+            "connect-youtube": YouTubeConnectAdapter(
+                youtube_oauth_launcher, artifact_root / "youtube-connections"
+            ),
+            "verify-youtube-credential": VerifyYouTubeCredentialAdapter(
+                credential_vault_launcher
+            ),
         },
         execution_gate=execution_gate,
         lease_coordinator=lease_coordinator,

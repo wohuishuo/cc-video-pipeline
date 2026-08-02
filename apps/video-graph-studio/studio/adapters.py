@@ -739,3 +739,59 @@ class VerifyPublicationExecutionAdapter:
         valid=value.get("schemaVersion")==1 and value.get("public") is False and Path(str(value.get("plan",""))).resolve()==plan and value.get("planSha256")==confirmation and bool(publications) and all(row.get("status")=="COMPLETED" and row.get("platform")=="youtube" and bool(str(row.get("externalId","")).strip()) for row in publications)
         if not valid:return AdapterResult(False,{},"publication manifest validation failed")
         on_log(f"Verified {len(publications)} private publication receipt(s)");return AdapterResult(True,{"manifest":str(path),"publicationCount":len(publications)})
+
+
+class YouTubeConnectAdapter(CommandAdapter):
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__(); self.launcher = Path(launcher).resolve(); self.output_root = Path(output_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        parameters = context["parameters"]; output = self.output_root / str(context["runId"]); operation_id = f"{context['runId']}:step:{node.id}"
+        argv = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher), "connect", "--client-config", str(parameters["clientConfigPath"]), "--vault", str(parameters["credentialVaultPath"]), "--credential-id", str(parameters["credentialId"]), "--label", str(parameters["label"]), "--output-dir", str(output), "--operation-id", operation_id, "--json"]
+        def safe_log(line: str) -> None:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                event = None
+            if isinstance(event, dict) and event.get("event") == "authorization" and "url" in event:
+                on_log("YouTube consent opened in the system browser; ephemeral authorization parameters were not persisted.")
+                return
+            on_log(line)
+
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, safe_log, cancel_event); receipt_path = output / "youtube-oauth-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "YouTube OAuth receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid YouTube OAuth receipt: {error}")
+        valid = receipt.get("schemaVersion") == 1 and receipt.get("operationId") == operation_id and receipt.get("resultClass") == "COMPLETED" and receipt.get("credentialId") == parameters["credentialId"] and receipt.get("provider") == "youtube" and receipt.get("status") == "ACTIVE" and receipt.get("scope") == "https://www.googleapis.com/auth/youtube.upload"
+        if not valid:
+            return AdapterResult(False, result.details, "YouTube OAuth receipt validation failed")
+        return AdapterResult(True, {**result.details, "receipt": str(receipt_path), "receiptSha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(), "credentialId": parameters["credentialId"]})
+
+
+class VerifyYouTubeCredentialAdapter:
+    def __init__(self, vault_launcher: Path, *, runner=subprocess.run):
+        self.vault_launcher = Path(vault_launcher).resolve(); self.runner = runner
+
+    def execute(self, node, context, on_log, cancel_event):
+        parameters = context["parameters"]
+        committed = next((step.get("result") for step in context.get("steps", []) if step.get("nodeId") == "connect-youtube" and step.get("status") == "COMPLETED"), None)
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed YouTube OAuth fact missing")
+        receipt = Path(str(committed.get("receipt", ""))).resolve()
+        if not receipt.is_file() or hashlib.sha256(receipt.read_bytes()).hexdigest() != committed.get("receiptSha256"):
+            return AdapterResult(False, {}, "YouTube OAuth receipt fingerprint conflict")
+        argv = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.vault_launcher), "describe", "--vault", str(parameters["credentialVaultPath"]), "--credential-id", str(parameters["credentialId"]), "--json"]
+        try:
+            completed = self.runner(argv, text=True, capture_output=True, encoding="utf-8", errors="replace")
+            payload = json.loads(completed.stdout)
+        except (OSError, json.JSONDecodeError):
+            return AdapterResult(False, {}, "Credential Vault describe failed")
+        value = payload.get("value", {}) if isinstance(payload, dict) else {}
+        valid = completed.returncode == 0 and payload.get("resultClass") in {"COMPLETED", "DUPLICATE_COMPLETED"} and value.get("credentialId") == parameters["credentialId"] and value.get("provider") == "youtube" and value.get("status") == "ACTIVE"
+        if not valid:
+            return AdapterResult(False, {}, "Credential Vault did not confirm an active YouTube credential")
+        on_log(f"Verified active YouTube credential: {parameters['credentialId']}")
+        return AdapterResult(True, {"credentialId": parameters["credentialId"], "provider": "youtube", "status": "ACTIVE"})

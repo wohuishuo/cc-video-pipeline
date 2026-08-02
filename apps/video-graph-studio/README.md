@@ -72,6 +72,7 @@ Choose one of the workflow templates:
 - `Creator` enumerates a YouTube/Bilibili/Douyin/TikTok profile into a verified Creator Manifest without downloading media.
 - `Publish Plan` fingerprints one finished video and metadata file into private/draft jobs for selected platforms. It never uploads.
 - `Publish Execute` resolves one completed private YouTube plan from the same workspace and requires its exact SHA-256 plus a Credential Vault path before invoking guarded execution. It is a separate explicit Graph.
+- `Connect YouTube` opens the system browser for desktop OAuth, stores the refresh credential through Credential Vault and independently verifies the active provider-bound fact. OAuth secrets never enter Studio state.
 - `Localize` runs the compatibility prepared-folder Edge workflow.
 
 Submit several workflows without waiting for the previous one to finish. Start requests are stored in a durable FIFO queue while exactly one workflow and one child process execute at a time. The Inspector's Queue & Recent list lets you reopen and monitor recent runs. The ten-step dubbing graph calls Source Intake, Transcription, Translation, Voice Rendering and Localization only through their public launchers.
@@ -109,9 +110,10 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
 - Guarded private YouTube execution is now browser-operable as a separate confirmed Graph and is domain verified through real Publication/Vault composition with a fake platform boundary. No real authenticated upload is claimed.
+- YouTube account connection is browser-operable through the independent OAuth Bootstrap and Vault public CLIs with state/PKCE and redaction tests. No real Google consent was performed by the automated evidence.
 - Optional Workspace Access admission is domain verified through its public CLI boundary with real scope separation, wrong-workspace denial and secret-redaction evidence.
 - Multi-workspace routing is domain verified with two credentials, two SQLite state roots, isolated run projections, cross-workspace denial and one shared global execution gate.
 - Optional Resource Budget composition is domain verified with reserve-before-run, renewable generation fencing, durable wait/requeue, terminal release and a real CLI-to-Studio child-process drill.
 - Client Contracts discovery is domain verified through its public CLI and an unauthenticated loopback HTTP endpoint; the browser fails closed before mutation when discovery is unavailable.
-- Authenticated upload execution remains a later independent slice.
+- The internal authenticated upload adapter and OAuth bootstrap are domain verified; a deliberate real-account private upload remains pending.
 - No cloud account, billing, remote access or production platform claim is made.

@@ -70,6 +70,11 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Execute guarded publication", description: "Require the exact plan SHA and ask Publication to compose Vault and Platform I/O.", owner: "publication", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
     verify: { title: "Verify platform receipt", description: "Require a fingerprinted manifest and non-empty external publication identity.", owner: "publication", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
   },
+  "youtube-connect": {
+    source: { title: "Google desktop client", description: "Select one local Google desktop OAuth client JSON without copying its secret into Studio.", owner: "youtube-oauth-bootstrap", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Connect YouTube", description: "Open the system browser, validate loopback state and PKCE, then store refresh credentials through Vault.", owner: "youtube-oauth-bootstrap", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify credential", description: "Ask Credential Vault to confirm one active provider-bound YouTube credential.", owner: "credential-vault", relationship: "Query", delivery: "DOMAIN_VERIFIED" },
+  },
 };
 
 const state = { currentRun: null, recentRuns: [], pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization", accessRequired: false, workspaceId: sessionStorage.getItem("videoGraph.workspaceId") || "", contracts: null };
@@ -287,13 +292,14 @@ async function submitRun(event) {
   const creatorMode = state.templateId === "creator-profile";
   const publicationMode = state.templateId === "publication-plan";
   const publicationExecuteMode = state.templateId === "publication-execute";
+  const youtubeConnectMode = state.templateId === "youtube-connect";
   const urlMode = state.templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = state.templateId.endsWith("-transcription");
   const translationMode = state.templateId.endsWith("-translation");
   const voiceMode = state.templateId.endsWith("-voice");
   const dubMode = state.templateId.endsWith("-dub");
-  const needsFolder = !urlMode && !publicationMode && !publicationExecuteMode;
-  if (!publicationMode && !publicationExecuteMode && ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl))) {
+  const needsFolder = !urlMode && !publicationMode && !publicationExecuteMode && !youtubeConnectMode;
+  if (!publicationMode && !publicationExecuteMode && !youtubeConnectMode && ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl))) {
     toast("Choose a source folder or supported social URL.", true);
     return;
   }
@@ -312,6 +318,10 @@ async function submitRun(event) {
   }
   if (publicationExecuteMode && (!$("#publication-plan-run-id").value.trim() || !$("#publication-confirmation").value.trim() || !$("#credential-vault-path").value.trim())) {
     toast("Choose a completed plan run, its exact SHA-256 and Credential Vault.", true);
+    return;
+  }
+  if (youtubeConnectMode && (!$("#youtube-client-config").value.trim() || !$("#youtube-vault-path").value.trim() || !$("#youtube-credential-id").value.trim() || !$("#youtube-credential-label").value.trim())) {
+    toast("Choose the Google desktop client JSON, Credential Vault, credential ID and label.", true);
     return;
   }
   const correlationId = crypto.randomUUID();
@@ -340,7 +350,9 @@ async function submitRun(event) {
     const defaultVoices = { "ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural", "kk-KZ": "kk-KZ-DauletNeural" };
     const voicePayload = { ...translationPayload, targetVoices: Object.fromEntries(languages.map((language) => [language, defaultVoices[language]])) };
     const youtubeCredentialId = $("#publication-credential-id").value.trim();
-    const payload = publicationMode
+    const payload = youtubeConnectMode
+      ? { templateId: state.templateId, clientConfigPath: $("#youtube-client-config").value.trim(), credentialVaultPath: $("#youtube-vault-path").value.trim(), credentialId: $("#youtube-credential-id").value.trim(), label: $("#youtube-credential-label").value.trim() }
+      : publicationMode
       ? { templateId: state.templateId, videoPath: $("#publication-video").value.trim(), metadataPath: $("#publication-metadata").value.trim(), targetPlatforms: publicationTargets, account: $("#publication-account").value.trim(), credentialIds: youtubeCredentialId && publicationTargets.includes("youtube") ? { youtube: youtubeCredentialId } : {}, public: false }
       : publicationExecuteMode
       ? { templateId: state.templateId, planRunId: $("#publication-plan-run-id").value.trim(), confirmation: $("#publication-confirmation").value.trim(), credentialVaultPath: $("#credential-vault-path").value.trim() }
@@ -407,7 +419,9 @@ function selectTemplate(templateId) {
   const creatorMode = templateId === "creator-profile";
   const publicationMode = templateId === "publication-plan";
   const publicationExecuteMode = templateId === "publication-execute";
+  const youtubeConnectMode = templateId === "youtube-connect";
   const publicationAnyMode = publicationMode || publicationExecuteMode;
+  const standaloneMode = publicationAnyMode || youtubeConnectMode;
   const urlMode = templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = templateId.endsWith("-transcription");
   const translationMode = templateId.endsWith("-translation");
@@ -417,8 +431,8 @@ function selectTemplate(templateId) {
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
-  sourceRoot.closest(".source-field").hidden = urlMode || publicationAnyMode;
-  sourceRoot.required = !urlMode && !publicationAnyMode;
+  sourceRoot.closest(".source-field").hidden = urlMode || standaloneMode;
+  sourceRoot.required = !urlMode && !standaloneMode;
   sourceUrl.required = urlMode;
   const preparedMode = templateId === "prepared-localization";
   $$(".prepared-only").forEach((element) => {
@@ -435,12 +449,15 @@ function selectTemplate(templateId) {
   $("#creator-controls").hidden = !creatorMode;
   $("#publication-controls").hidden = !publicationMode;
   $("#publication-execution-controls").hidden = !publicationExecuteMode;
+  $("#youtube-connect-controls").hidden = !youtubeConnectMode;
   if (publicationExecuteMode) populateLatestPublicationPlan();
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
-  const copy = templateId === "publication-execute"
-    ? ["Verified plan run", "Same workspace Â· exact SHA-256", "Execute private YouTube upload", "Credential Vault Â· Platform I/O", "Verify publication receipt", "External ID Â· manifest fingerprint"]
+  const copy = templateId === "youtube-connect"
+    ? ["Google desktop client", "Local config · secret stays out of Studio", "Connect YouTube", "System browser · state · PKCE · Vault", "Verify credential", "Provider · ACTIVE · upload scope"]
+    : templateId === "publication-execute"
+    ? ["Verified plan run", "Same workspace · exact SHA-256", "Execute private YouTube upload", "Credential Vault · Platform I/O", "Verify publication receipt", "External ID · manifest fingerprint"]
     : templateId === "publication-plan"
     ? ["Finished video", "Local derivative · editable metadata", "Build publication plan", "Fingerprint only · no upload", "Verify publication plan", "Private/draft jobs · plan SHA-256"]
     : templateId === "creator-profile"
@@ -462,7 +479,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = templateId === "publication-execute"
+  const outputDetails = templateId === "youtube-connect"
+    ? ["Vault credential", "Redacted OAuth receipt"]
+    : templateId === "publication-execute"
     ? ["Publication Manifest", "External platform ID"]
     : templateId === "publication-plan"
     ? ["JSON plan", "Plan SHA-256"]
@@ -479,7 +498,9 @@ function selectTemplate(templateId) {
       : ["Source Manifest", "SHA-256 receipt"];
   $("#output-format").textContent = outputDetails[0];
   $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = templateId === "publication-execute"
+  const stepIds = templateId === "youtube-connect"
+    ? ["", "connect-youtube", "verify-youtube-credential"]
+    : templateId === "publication-execute"
     ? ["", "execute-publication", "verify-publication-execution"]
     : templateId === "publication-plan"
     ? ["", "plan-publication", "verify-publication-plan"]
@@ -497,7 +518,9 @@ function selectTemplate(templateId) {
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = templateId === "publication-execute"
+  const paletteCopy = templateId === "youtube-connect"
+    ? ["Desktop OAuth client", "Local input", "Connect YouTube", "System-browser consent", "Verify Vault credential", "Provider/status policy"]
+    : templateId === "publication-execute"
     ? ["Verified plan run", "Committed fact", "Execute publication", "Guarded command", "Verify receipt", "External identity policy"]
     : templateId === "publication-plan"
     ? ["Finished video", "Local input", "Build publication plan", "No platform contact", "Verify plan", "Confirmation policy"]
@@ -520,7 +543,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = templateId === "publication-execute"
+  $(".workspace-label").textContent = templateId === "youtube-connect"
+    ? "Connect YouTube Account"
+    : templateId === "publication-execute"
     ? "Guarded Private YouTube Execution"
     : templateId === "publication-plan"
     ? "Guarded Publication Planning"
@@ -541,7 +566,7 @@ function selectTemplate(templateId) {
             : voiceMode
               ? `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation + Voice`
               : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
-  $$(".source-preview").forEach((element) => { element.textContent = (publicationExecuteMode ? $("#publication-plan-run-id").value : publicationMode ? $("#publication-video").value : urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
+  $$(".source-preview").forEach((element) => { element.textContent = (youtubeConnectMode ? $("#youtube-client-config").value : publicationExecuteMode ? $("#publication-plan-run-id").value : publicationMode ? $("#publication-video").value : urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
   resetRunProjection();
   focusNode(state.selectedNode);
 }
@@ -620,6 +645,7 @@ function bindEvents() {
   $("#source-url").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
   $("#publication-video").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
   $("#publication-plan-run-id").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
+  $("#youtube-client-config").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
   $$('input[name="template"]').forEach((input) => input.addEventListener("change", () => selectTemplate(input.value)));
 }
 

@@ -200,6 +200,21 @@ PUBLICATION_EXECUTION_GRAPHS = {
     )
 }
 
+YOUTUBE_CONNECT_GRAPHS = {
+    "youtube-connect": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "youtube-connect",
+            "revision": 1,
+            "nodes": [
+                {"id": "connect-youtube", "type": "connect-youtube", "config": {}},
+                {"id": "verify-youtube-credential", "type": "verify-youtube-credential", "config": {}},
+            ],
+            "edges": [{"source": "connect-youtube", "target": "verify-youtube-credential", "relationship": "Fact"}],
+        }
+    )
+}
+
 SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **CREATOR_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
@@ -277,6 +292,8 @@ class StudioApplication:
             return self._create_publication_plan_run(envelope, payload, template_id)
         if template_id in PUBLICATION_EXECUTION_GRAPHS:
             return self._create_publication_execution_run(envelope, payload, template_id)
+        if template_id in YOUTUBE_CONNECT_GRAPHS:
+            return self._create_youtube_connect_run(envelope, payload, template_id)
         if template_id != "prepared-localization":
             raise ContractError("REJECTED_MALFORMED", f"unknown templateId: {template_id}")
         source = Path(str(payload.get("sourceRoot", ""))).resolve()
@@ -364,6 +381,27 @@ class StudioApplication:
         status=201 if result.result_class=="COMPLETED" else 200
         if result.result_class=="REJECTED_CONFLICT": status=409
         return status,{"resultClass":result.result_class,"value":result.value}
+
+    def _create_youtube_connect_run(self, envelope, payload, template_id):
+        client_config = Path(str(payload.get("clientConfigPath", ""))).resolve()
+        self._require_allowed(client_config)
+        if not client_config.is_file() or client_config.suffix.lower() != ".json":
+            raise ContractError("REJECTED_NOT_FOUND", "Google desktop OAuth client JSON does not exist")
+        vault = Path(str(payload.get("credentialVaultPath", ""))).resolve()
+        home = Path.home().resolve()
+        if vault.suffix.lower() != ".json" or not vault.is_relative_to(home):
+            raise ContractError("REJECTED_MALFORMED", "credentialVaultPath must be a JSON path inside the user home directory")
+        credential_id = str(payload.get("credentialId", "")).strip()
+        label = str(payload.get("label", "")).strip()
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", credential_id):
+            raise ContractError("REJECTED_MALFORMED", "credentialId is invalid")
+        if not label or len(label) > 100:
+            raise ContractError("REJECTED_MALFORMED", "label must contain 1 to 100 characters")
+        parameters = {"templateId": template_id, "clientConfigPath": str(client_config), "credentialVaultPath": str(vault), "credentialId": credential_id, "label": label}
+        result = self.store.create_run(CreateRun(operation_id=str(envelope["operationId"]), correlation_id=str(envelope["correlationId"]), graph=YOUTUBE_CONNECT_GRAPHS[template_id], parameters=parameters))
+        status = 201 if result.result_class == "COMPLETED" else 200
+        if result.result_class == "REJECTED_CONFLICT": status = 409
+        return status, {"resultClass": result.result_class, "value": result.value}
 
     def _create_intake_run(
         self, envelope: dict[str, Any], payload: dict[str, Any], template_id: str
