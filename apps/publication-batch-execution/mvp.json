@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "publication-batch-execution",
+  "summary": "Execute every confirmed private YouTube child plan strictly serially with durable unknown fencing.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/publication_batch_execution_mvp -q",
+  "inputs": ["Publication Batch Plan", "exact SHA-256 confirmation", "Credential Vault path"],
+  "outputs": ["publication-batch-execution-manifest.json", "publication-batch-execution-receipt.json", "verified child Publication facts"],
+  "dependencies": ["python>=3.12", "Publication public launcher", "Credential Vault public launcher"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
