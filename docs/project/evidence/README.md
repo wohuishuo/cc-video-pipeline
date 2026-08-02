@@ -10,5 +10,7 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Voice Rendering](voice-rendering/delivery-ledger.md)
 - [Localization](localization/delivery-ledger.md)
 - [Publication](publication/delivery-ledger.md)
+- [Video Graph Studio process-loss recovery drill](video-graph-studio/recovery-drill.md)
+- [Operations readiness](operations-readiness/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

@@ -4,8 +4,8 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-191%20passing-22c55e)](scripts/test-all.ps1)
-[![MVPs](https://img.shields.io/badge/independent%20MVPs-13-8b5cf6)](apps/README.md)
+[![Tests](https://img.shields.io/badge/tests-193%20passing-22c55e)](scripts/test-all.ps1)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-15-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
 [Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
@@ -14,7 +14,7 @@
 
 ---
 
-## One repository, thirteen focused programs
+## One repository, fifteen focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
 
@@ -147,6 +147,9 @@ Every program has a `docs/mvp/<name>/` brief, capability DAG, evidence record, a
 ## Documentation
 
 - [Architecture and ownership](docs/ARCHITECTURE.md)
+- [Project system and Graph Engineering](docs/project/README.md)
+- [System blueprints and public contracts](docs/project/architecture/design/README.md)
+- [Lifecycle and operations tutorial](docs/training/02-lifecycle-and-operations-verification.md)
 - [Creator workflows](docs/WORKFLOWS.md)
 - [Contributing a new MVP](docs/CONTRIBUTING.md)
 - [Repository map](docs/PROJECT_MAP.md)

@@ -6,6 +6,8 @@ The canonical target map and ownership catalog are:
 
 - [System component map](system-component-map.md)
 - [Component catalog](component-catalog.md)
+- [System design blueprints](design/blueprints/README.md)
+- [Public contract catalog](design/contracts/README.md)
 
 ```mermaid
 flowchart LR
@@ -29,3 +31,7 @@ The workflow process manager owns only continuation, checkpoint order and termin
 - Projection consumes committed state after mutation and cannot authorize work.
 - Platform-specific cookies and tokens terminate at their adapter boundary.
 - A future hosted API or mobile client replaces the transport/presentation adapter without moving state ownership.
+
+## Design record rule
+
+Every new capability needs both an owner blueprint and a public contract before it may be composed into a graph. The blueprint explains lifecycle and failure semantics; the contract defines the smallest replaceable boundary. Generated artifacts and runtime evidence belong in delivery ledgers, not in architecture documents.

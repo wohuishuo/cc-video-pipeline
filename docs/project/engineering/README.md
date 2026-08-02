@@ -1,5 +1,12 @@
 # Engineering Rules
 
+## Operating documents
+
+- [Graph and Loop Engineering](graph-loop-operating-model.md)
+- [State ownership rules](rules/state-ownership-rules.md)
+- [Delivery operating model](rules/delivery-operating-model.md)
+- [Review checklist](rules/review-checklist.md)
+
 ## Contract and lifecycle
 
 - Commands carry `contractId`, `contractVersion`, `operationId` and `correlationId`.
@@ -20,4 +27,3 @@
 ## Evidence levels
 
 `DESIGNED`, `IMPLEMENTED`, `DOMAIN_VERIFIED`, `PLATFORM_INTEGRATED` and `PRODUCTION_VERIFIED` are distinct. Contract tests cannot prove external Edge availability, authenticated social publication, crash-safe cloud durability, security, scale or commercial operations.
-
