@@ -461,10 +461,11 @@ class StudioApplication:
         except KeyError as error:
             raise ContractError("REJECTED_NOT_FOUND", "creator discovery run does not exist") from error
         catalog = project_creator_catalog(creator_run)
-        if not catalog["complete"] or catalog["truncated"]:
+        allow_partial_catalog = payload.get("allowPartialCatalog") is True
+        if (not catalog["complete"] or catalog["truncated"]) and not allow_partial_catalog:
             raise ContractError(
                 "REJECTED_CONFLICT",
-                "creator campaign requires a complete creator catalog; discover all videos first",
+                "creator campaign requires a complete creator catalog or explicit partial-catalog consent",
             )
         requested = payload.get("selectedVideoIds")
         if (
@@ -577,6 +578,7 @@ class StudioApplication:
             "creatorRunId": creator_run_id,
             "creatorManifestPath": str(Path(discovery_fact["manifest"]).resolve()),
             "creatorManifestSha256": str(discovery_fact["manifestSha256"]),
+            "allowPartialCatalog": allow_partial_catalog,
             "selectedVideoIds": selected,
             "sourceLanguage": source_language,
             "asrModel": asr_model,
