@@ -4,6 +4,7 @@ Evidence is organized by capability owner. Every ledger records supported comple
 
 - [Video Graph Studio](video-graph-studio/delivery-ledger.md)
 - [Source Intake](source-intake/delivery-ledger.md)
+- [Creator Discovery](creator-discovery/delivery-ledger.md)
 - [Transcription](transcription/delivery-ledger.md)
 - [Translation](translation/delivery-ledger.md)
 - [Voice Rendering](voice-rendering/delivery-ledger.md)

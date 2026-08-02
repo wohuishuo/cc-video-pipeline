@@ -10,7 +10,7 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 4 | Transcript to editable translations | adapter-neutral schema, exact timing, editable machine output, real NLLB receipt | Complete |
 | 5 | Translation to voice clips | serial segment receipts, selectable voices, failure resume, real Edge receipt | Complete |
 | 6 | Assets to localized video | audio policy, subtitle render, FFprobe verification | Complete; live ten-step browser run |
-| 7 | Creator-profile batch discovery | profile enumeration manifest, bounded pagination, dedup/replay | Pending |
+| 7 | Creator-profile batch discovery | profile enumeration manifest, bounded pagination, dedup/replay | Complete; real bounded Douyin profile run |
 | 8 | Guarded multi-platform publication | prepared plan, explicit execute, private/draft evidence | Pending |
 | 9 | Hosted/mobile foundation | auth, tenancy, remote storage, resource budgets, security evidence | Pending |
 

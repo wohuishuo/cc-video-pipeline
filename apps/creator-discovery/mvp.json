@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "creator-discovery",
+  "summary": "Enumerate one creator profile into a durable canonical video manifest.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/creator_discovery_mvp -q",
+  "inputs": ["supported HTTPS creator profile URL", "maximum item count", "optional Netscape cookie file"],
+  "outputs": ["creator-manifest.json", "discovery-receipt.json"],
+  "dependencies": ["python>=3.12", "yt-dlp", "pinned f2 for Douyin"],
+  "delivery_level": "PLATFORM_INTEGRATED"
+}
