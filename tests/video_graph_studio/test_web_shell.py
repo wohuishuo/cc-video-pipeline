@@ -73,7 +73,7 @@ def test_shell_has_creator_controls_and_workflow_regions():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=3"' in html
+    assert 'href="/styles.css?v=4"' in html
     assert 'src="/app.js?v=8"' in html
     assert "https://" not in html
     assert "http://" not in html
@@ -136,7 +136,7 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert '"JSON · SRT"' in script
     assert '"Source Manifest"' in script
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    assert ".template-field{flex:1 0 100%}" in styles
+    assert ".template-field{flex:1 0 100%;min-width:0;overflow-x:auto" in styles
     assert ".runbar { height: 126px;" in styles
     assert ".runbar.creator-batch-mode { height: 180px;" in styles
     assert ".runbar.release-mode { height: 220px;" in styles
