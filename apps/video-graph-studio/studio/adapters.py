@@ -652,3 +652,35 @@ class VerifyLocalizationAdapter:
             return AdapterResult(False, {}, "localized derivative validation failed")
         on_log(f"Verified localization manifest with {len(derivatives)} derivative(s)")
         return AdapterResult(True, {"manifest": str(path), "derivativeCount": len(derivatives)})
+
+
+class CreatorDiscoveryAdapter(CommandAdapter):
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__(); self.launcher=Path(launcher).resolve(); self.output_root=Path(output_root).resolve()
+
+    def execute(self,node,context,on_log,cancel_event):
+        parameters=context["parameters"]; output=self.output_root/str(context["runId"])
+        argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),"profile",str(parameters["sourceUrl"]),"--max-items",str(parameters.get("maxItems",0)),"--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}"]
+        if parameters.get("authenticationFile"): argv.extend(["--cookies",str(parameters["authenticationFile"])])
+        argv.append("--json")
+        result=super().execute(GraphNode(node.id,"command",{"argv":argv}),context,on_log,cancel_event); receipt_path=output/"discovery-receipt.json"
+        if not result.completed or not receipt_path.is_file(): return AdapterResult(False,result.details,result.error or "discovery receipt missing")
+        try: receipt=json.loads(receipt_path.read_text(encoding="utf-8-sig")); manifest=Path(str(receipt["manifest"])).resolve()
+        except (OSError,KeyError,TypeError,json.JSONDecodeError) as error: return AdapterResult(False,result.details,f"invalid discovery receipt: {error}")
+        if receipt.get("resultClass")!="COMPLETED" or not manifest.is_file(): return AdapterResult(False,result.details,"Creator Discovery did not commit a manifest")
+        return AdapterResult(True,{**result.details,"receipt":str(receipt_path),"manifest":str(manifest),"manifestSha256":receipt.get("manifestSha256"),"itemCount":int(receipt.get("itemCount",0))})
+
+
+class VerifyCreatorManifestAdapter:
+    def execute(self,node,context,on_log,cancel_event):
+        committed=next((step.get("result") for step in context.get("steps",[]) if step.get("nodeId")=="discover-creator" and step.get("status")=="COMPLETED"),None)
+        if not isinstance(committed,dict): return AdapterResult(False,{},"committed creator fact missing")
+        path=Path(str(committed.get("manifest",""))).resolve()
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=committed.get("manifestSha256"): return AdapterResult(False,{},"creator manifest fingerprint conflict")
+        try:
+            value=json.loads(path.read_text(encoding="utf-8-sig")); items=value["items"]; maximum=int(value["maxItems"])
+            ids=[str(row["id"]) for row in items]
+            valid=value.get("schemaVersion")==1 and value.get("platform") in {"youtube","bilibili","douyin","tiktok"} and bool(items) and [int(row["ordinal"]) for row in items]==list(range(1,len(items)+1)) and len(ids)==len(set(ids)) and all(str(row["url"]).startswith("https://") and bool(str(row["title"]).strip()) for row in items) and (maximum==0 or len(items)<=maximum)
+        except (OSError,KeyError,TypeError,ValueError,json.JSONDecodeError): valid=False; items=[]
+        if not valid: return AdapterResult(False,{},"creator manifest validation failed")
+        on_log(f"Verified creator manifest with {len(items)} video URL(s)"); return AdapterResult(True,{"manifest":str(path),"itemCount":len(items)})

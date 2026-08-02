@@ -152,7 +152,22 @@ LOCALIZATION_GRAPHS = {
     for template_id, mode in (("folder-dub", "folder"), ("url-dub", "url"))
 }
 
-SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS}
+CREATOR_GRAPHS = {
+    "creator-profile": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "creator-profile",
+            "revision": 1,
+            "nodes": [
+                {"id": "discover-creator", "type": "discover-creator", "config": {}},
+                {"id": "verify-creator", "type": "verify-creator", "config": {}},
+            ],
+            "edges": [{"source": "discover-creator", "target": "verify-creator", "relationship": "Fact"}],
+        }
+    )
+}
+
+SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **CREATOR_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
@@ -278,6 +293,27 @@ class StudioApplication:
                 "sourceKind": "url",
                 "sourceUrl": value,
                 "maxHeight": int(payload.get("maxHeight", 1080)),
+            }
+        if template_id in CREATOR_GRAPHS:
+            try:
+                max_items = int(payload.get("maxItems", 0))
+            except (TypeError, ValueError) as error:
+                raise ContractError("REJECTED_MALFORMED", "maxItems must be zero or a positive integer") from error
+            if not 0 <= max_items <= 10000:
+                raise ContractError("REJECTED_MALFORMED", "maxItems must be between 0 and 10000")
+            authentication = str(payload.get("authenticationFile", "")).strip()
+            authentication_path = None
+            if authentication:
+                authentication_path = Path(authentication).resolve()
+                home = Path.home().resolve()
+                if not authentication_path.is_file() or not authentication_path.is_relative_to(home):
+                    raise ContractError("REJECTED_MALFORMED", "authenticationFile must be an existing file inside the user home directory")
+            parameters = {
+                "templateId": template_id,
+                "sourceKind": "creator-profile",
+                "sourceUrl": value,
+                "maxItems": max_items,
+                "authenticationFile": str(authentication_path) if authentication_path else None,
             }
         if template_id in TRANSCRIPTION_GRAPHS or template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS:
             source_language = str(payload.get("sourceLanguage", "auto")).strip()

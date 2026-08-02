@@ -55,6 +55,11 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Localized video composition", description: "Compose translated voice, quiet source audio and burned subtitles into H.264/AAC MP4.", owner: "localization", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
     verify: { title: "Verify localized videos", description: "Require exact language/media coverage and matching derivative fingerprints.", owner: "localization", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
   },
+  "creator-profile": {
+    source: { title: "Creator profile", description: "Accept one supported creator or channel URL and an optional local authentication file.", owner: "creator-discovery", relationship: "Input", delivery: "PLATFORM_INTEGRATED" },
+    localize: { title: "Enumerate profile", description: "Page serially, canonicalize URLs, deduplicate IDs and checkpoint the cursor.", owner: "creator-discovery", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
+    verify: { title: "Verify creator manifest", description: "Require ordered unique URLs and a matching manifest fingerprint.", owner: "creator-discovery", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
+  },
 };
 
 const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
@@ -151,7 +156,8 @@ async function submitRun(event) {
   const languages = $$('input[name="language"]:checked').map((item) => item.value);
   const platforms = $$('input[name="platform"]:checked').map((item) => item.value);
   const voice = $("#voice").value;
-  const urlMode = state.templateId.startsWith("url-");
+  const creatorMode = state.templateId === "creator-profile";
+  const urlMode = state.templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = state.templateId.endsWith("-transcription");
   const translationMode = state.templateId.endsWith("-translation");
   const voiceMode = state.templateId.endsWith("-voice");
@@ -194,7 +200,9 @@ async function submitRun(event) {
     };
     const defaultVoices = { "ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural", "kk-KZ": "kk-KZ-DauletNeural" };
     const voicePayload = { ...translationPayload, targetVoices: Object.fromEntries(languages.map((language) => [language, defaultVoices[language]])) };
-    const payload = dubMode
+    const payload = creatorMode
+      ? { templateId: state.templateId, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined }
+      : dubMode
       ? { ...voicePayload, sourceVolume: 0.12 }
       : voiceMode
       ? voicePayload
@@ -248,7 +256,8 @@ function resetRunProjection() {
 
 function selectTemplate(templateId) {
   state.templateId = templateId;
-  const urlMode = templateId.startsWith("url-");
+  const creatorMode = templateId === "creator-profile";
+  const urlMode = templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = templateId.endsWith("-transcription");
   const translationMode = templateId.endsWith("-translation");
   const voiceMode = templateId.endsWith("-voice");
@@ -272,10 +281,13 @@ function selectTemplate(templateId) {
   });
   $("#asr-controls").hidden = !needsAsr;
   $("#translation-controls").hidden = !(translationMode || voiceMode || dubMode);
+  $("#creator-controls").hidden = !creatorMode;
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
-  const copy = templateId === "prepared-localization"
+  const copy = templateId === "creator-profile"
+    ? ["Creator profile", "YouTube · Bilibili · Douyin · TikTok", "Enumerate profile", "Serial pages · deduplicated · resumable", "Verify creator manifest", "Canonical URLs · cursor · fingerprint"]
+    : templateId === "prepared-localization"
     ? ["Prepared folder", "Validate batch manifest", "Edge localization", "Voice · mix · hard subtitles", "Verify output", "Inspect files and receipts"]
     : templateId === "folder-intake"
       ? ["Local folder", "Resolve an allowed source", "Discover media", "Build deterministic manifest", "Verify source", "Check files and receipt"]
@@ -292,7 +304,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = templateId === "prepared-localization"
+  const outputDetails = templateId === "creator-profile"
+    ? ["Canonical URLs", "Creator Manifest"]
+    : templateId === "prepared-localization"
     ? ["MP4 · H.264", "Local receipt"]
     : dubMode
       ? ["H.264 · AAC", "Localization Manifest"]
@@ -303,7 +317,9 @@ function selectTemplate(templateId) {
       : ["Source Manifest", "SHA-256 receipt"];
   $("#output-format").textContent = outputDetails[0];
   $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = templateId === "prepared-localization"
+  const stepIds = templateId === "creator-profile"
+    ? ["", "discover-creator", "verify-creator"]
+    : templateId === "prepared-localization"
     ? ["source", "localize", "verify"]
     : dubMode
       ? ["intake", "localize-video", "verify-localization"]
@@ -315,7 +331,9 @@ function selectTemplate(templateId) {
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = templateId === "prepared-localization"
+  const paletteCopy = templateId === "creator-profile"
+    ? ["Creator profile", "Remote input", "Enumerate profile", "Serial page loop", "Verify creator manifest", "Coverage policy"]
+    : templateId === "prepared-localization"
     ? ["Prepared folder", "Local query", "Edge localization", "Serial adapter", "Verify outputs", "Receipt policy"]
     : templateId === "folder-intake"
       ? ["Local folder", "Local input", "Discover media", "Serial command", "Verify source", "Manifest policy"]
@@ -332,7 +350,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = templateId === "prepared-localization"
+  $(".workspace-label").textContent = templateId === "creator-profile"
+    ? "Creator Profile Discovery"
+    : templateId === "prepared-localization"
     ? "Prepared Folder Localization"
     : templateId === "folder-intake"
       ? "Folder Source Intake"

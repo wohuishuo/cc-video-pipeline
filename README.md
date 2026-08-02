@@ -4,7 +4,7 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-165%20passing-22c55e)](scripts/test-all.ps1)
+[![Tests](https://img.shields.io/badge/tests-179%20passing-22c55e)](scripts/test-all.ps1)
 [![MVPs](https://img.shields.io/badge/independent%20MVPs-13-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
@@ -55,6 +55,7 @@ The arrows describe useful composition, not mandatory coupling.
 |---|---|---|---|---|
 | **Platform I/O** | URL or finished video | Verified download or guarded upload receipt | `DOMAIN_VERIFIED` | [Open](apps/platform-io/README.md) |
 | **Source Intake** | Local folder or supported social URL | Deterministic source manifest + receipt | `DOMAIN_VERIFIED` | [Open](apps/source-intake/README.md) |
+| **Creator Discovery** | YouTube/Bilibili/Douyin/TikTok creator URL | Ordered canonical video manifest | `PLATFORM_INTEGRATED` | [Open](apps/creator-discovery/README.md) |
 | **Channel Research** | Platform source reference | Reproducible research dossier | `DOMAIN_VERIFIED` | [Open](apps/channel-research/README.md) |
 | **Transcription** | Source manifest + ASR policy | Verified transcript manifest + JSON/SRT | `DOMAIN_VERIFIED` | [Open](apps/transcription/README.md) |
 | **Translation** | Transcript manifest + target languages | Editable translation manifest + JSON/SRT | `DOMAIN_VERIFIED` | [Open](apps/translation/README.md) |

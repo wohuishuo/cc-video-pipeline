@@ -2,6 +2,18 @@
 
 Applications are useful alone. These workflows show common compositions through files; none of them creates a new shared state owner.
 
+## Discover a creator batch
+
+```mermaid
+flowchart LR
+    PROFILE["Creator profile URL"] --> DISCOVER["Creator Discovery"]
+    DISCOVER --> MANIFEST[("Creator Manifest")]
+    MANIFEST --> INTAKE["Source Intake per selected URL"]
+    INTAKE --> MEDIA[("Source Manifests")]
+```
+
+Discovery commits canonical URLs only. Downloading every item is a separate, explicitly selected composition so a large profile cannot silently consume storage or network bandwidth.
+
 ## Research a reference video
 
 ```mermaid
