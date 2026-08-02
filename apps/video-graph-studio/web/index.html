@@ -37,6 +37,7 @@
       <label class="choice"><input type="radio" name="template" value="url-voice"> URL+Voice</label>
       <label class="choice"><input type="radio" name="template" value="folder-dub"> Folder+Dub</label>
       <label class="choice"><input type="radio" name="template" value="url-dub"> URL+Dub</label>
+      <label class="choice"><input type="radio" name="template" value="creator-profile"> Creator</label>
     </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
@@ -94,6 +95,16 @@
           <option value="8" selected>8</option>
           <option value="16">16</option>
         </select>
+      </div>
+    </div>
+    <div id="creator-controls" class="asr-controls" hidden>
+      <div class="field asr-field device-field">
+        <label for="creator-max-items">Max videos</label>
+        <input id="creator-max-items" name="maxItems" type="number" min="0" max="10000" value="20">
+      </div>
+      <div class="field source-field">
+        <label for="authentication-file">Authentication file</label>
+        <input id="authentication-file" name="authenticationFile" autocomplete="off" placeholder="Optional Netscape cookies.txt">
       </div>
     </div>
     <fieldset id="target-language-controls" class="choice-field" aria-label="Target languages">

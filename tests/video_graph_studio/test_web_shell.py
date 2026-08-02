@@ -27,6 +27,9 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'value="url-voice"' in html
     assert 'value="folder-dub"' in html
     assert 'value="url-dub"' in html
+    assert 'value="creator-profile"' in html
+    assert 'id="creator-max-items"' in html
+    assert 'id="authentication-file"' in html
     assert 'id="source-url"' in html
     assert 'id="source-language"' in html
     assert 'id="asr-model"' in html
@@ -66,6 +69,9 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'folder-dub' in script
     assert 'url-dub' in script
     assert 'sourceVolume' in script
+    assert 'creator-profile' in script
+    assert 'maxItems' in script
+    assert 'authenticationFile' in script
     assert 'targetVoices' in script
     assert 'sourceLanguage' in script
     assert 'asrModel' in script
