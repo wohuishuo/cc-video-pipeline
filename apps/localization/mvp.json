@@ -8,5 +8,5 @@
   "inputs": ["Source Manifest", "Translation Manifest", "Voice Manifest", "explicit audio/subtitle policy"],
   "outputs": ["localization-manifest.json", "localization-receipt.json", "probe-verified H.264/AAC MP4 derivatives"],
   "dependencies": ["python>=3.12", "ffmpeg", "ffprobe"],
-  "delivery_level": "DOMAIN_VERIFIED"
+  "delivery_level": "PLATFORM_INTEGRATED"
 }

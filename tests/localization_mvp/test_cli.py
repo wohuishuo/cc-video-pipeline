@@ -28,7 +28,7 @@ def test_cli_accepts_three_explicit_manifests_and_emits_result(tmp_path,capsys):
 
 def test_public_launcher_manifest_readme_and_help_match_new_boundary():
     manifest=json.loads((APP/"mvp.json").read_text(encoding="utf-8"))
-    assert manifest["name"]=="localization" and manifest["delivery_level"]=="DOMAIN_VERIFIED"
+    assert manifest["name"]=="localization" and manifest["delivery_level"]=="PLATFORM_INTEGRATED"
     assert "Source Manifest" in manifest["inputs"] and "Voice Manifest" in manifest["inputs"]
     assert (APP/manifest["entrypoint"]).is_file() and (APP/manifest["install"]).is_file()
     readme=(APP/"README.md").read_text(encoding="utf-8")

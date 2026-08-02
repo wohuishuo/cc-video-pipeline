@@ -554,3 +554,101 @@ class VerifyVoiceAdapter:
         except (OSError,KeyError,TypeError,ValueError,json.JSONDecodeError): valid=False; clips=[]
         if not valid: return AdapterResult(False,{},"voice artifact validation failed")
         on_log(f"Verified voice manifest with {len(clips)} clip(s)"); return AdapterResult(True,{"manifest":str(path),"clipCount":len(clips)})
+
+
+class LocalizedVideoAdapter(CommandAdapter):
+    """Compose localized derivatives from the three upstream manifest owners."""
+
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.output_root = Path(output_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        results = {
+            step.get("nodeId"): step.get("result")
+            for step in context.get("steps", [])
+            if step.get("status") == "COMPLETED"
+        }
+        source = results.get("intake")
+        translation = results.get("translate")
+        voice = results.get("render-voice")
+        if not all(isinstance(value, dict) for value in (source, translation, voice)):
+            return AdapterResult(False, {}, "committed Source, Translation and Voice facts are required")
+        manifests = [Path(str(value.get("manifest", ""))).resolve() for value in (source, translation, voice)]
+        if not all(path.is_file() for path in manifests):
+            return AdapterResult(False, {}, "upstream composition manifest missing")
+        output = self.output_root / str(context["runId"])
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),
+            *(str(path) for path in manifests),
+            "--output-dir", str(output),
+            "--operation-id", f"{context['runId']}:step:{node.id}",
+            "--source-volume", str(context["parameters"].get("sourceVolume", 0.12)),
+            "--json",
+        ]
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "localization-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "localization receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid localization receipt: {error}")
+        if receipt.get("resultClass") != "COMPLETED" or not manifest.is_file():
+            return AdapterResult(False, result.details, "Localization did not commit a manifest")
+        items = receipt.get("items", [])
+        return AdapterResult(True, {
+            **result.details,
+            "receipt": str(receipt_path),
+            "manifest": str(manifest),
+            "manifestSha256": receipt.get("manifestSha256"),
+            "derivativeCount": len(items),
+        })
+
+
+class VerifyLocalizationAdapter:
+    """Verify derivative coverage, media metadata and immutable fingerprints."""
+
+    def execute(self, node, context, on_log, cancel_event):
+        committed = next((
+            step.get("result") for step in context.get("steps", [])
+            if step.get("nodeId") == "localize-video" and step.get("status") == "COMPLETED"
+        ), None)
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed localization fact missing")
+        path = Path(str(committed.get("manifest", ""))).resolve()
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != committed.get("manifestSha256"):
+            return AdapterResult(False, {}, "localization manifest fingerprint conflict")
+        try:
+            value = json.loads(path.read_text(encoding="utf-8-sig"))
+            languages = value["targetLanguages"]
+            media_ids = value["expectedMediaIds"]
+            derivatives = value["derivatives"]
+            expected = [(language, media_id) for language in languages for media_id in media_ids]
+            actual = [(row["targetLanguage"], row["mediaId"]) for row in derivatives]
+            valid = (
+                value.get("schemaVersion") == 1
+                and bool(languages)
+                and bool(media_ids)
+                and actual == expected
+                and all(
+                    (file := Path(str(row["path"]))).is_file()
+                    and file.stat().st_size == row["size"]
+                    and hashlib.sha256(file.read_bytes()).hexdigest() == row["sha256"]
+                    and float(row["duration"]) > 0
+                    and int(row["width"]) > 0
+                    and int(row["height"]) > 0
+                    and bool(row["videoCodec"])
+                    and bool(row["audioCodec"])
+                    for row in derivatives
+                )
+            )
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            derivatives = []
+        if not valid:
+            return AdapterResult(False, {}, "localized derivative validation failed")
+        on_log(f"Verified localization manifest with {len(derivatives)} derivative(s)")
+        return AdapterResult(True, {"manifest": str(path), "derivativeCount": len(derivatives)})

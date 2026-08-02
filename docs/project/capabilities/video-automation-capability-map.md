@@ -39,8 +39,8 @@ flowchart LR
 | S01-S04 | Source Intake | `DOMAIN_VERIFIED`; live YouTube evidence | profile enumeration and three remaining platforms |
 | T01-T03 | Transcription | `DOMAIN_VERIFIED`; real Tiny/CPU and browser graph evidence | representative quality, GPU and recovery evidence |
 | L01-L03 | Translation | `DOMAIN_VERIFIED`; adapter-neutral serial loop and editable artifacts | real local NLLB smoke, reviewed-text republish and quality sampling |
-| V01 | Voice segment loop | `DOMAIN_VERIFIED`; adapter-neutral receipt, real Edge RU+KK completion and failed-clip resume | Graph composition and representative voice/service evidence |
-| C01-C03 | Subtitle, audio and composition | partial implementation | independently verified media derivative |
+| V01 | Voice segment loop | `DOMAIN_VERIFIED`; adapter-neutral receipt, real Edge RU+KK completion, failed-clip resume and ten-step browser composition | representative voice/service quality evidence |
+| C01-C03 | Subtitle, audio and composition | `PLATFORM_INTEGRATED`; serial recovery tests, real FFmpeg/FFprobe RU+KK derivatives and browser graph evidence | long-form quality and crash/power-loss evidence |
 | P01-P02 | Publication | guarded preparation exists | authenticated private/draft evidence per platform |
 
 ## Required substitutes

@@ -118,6 +118,7 @@ def build_runtime(repository: Path, data_root: Path):
     from .adapters import (
         PreparedFolderAdapter,
         PreparedFolderEdgeAdapter,
+        LocalizedVideoAdapter,
         SourceIntakeAdapter,
         TranscriptSourceAdapter,
         TranslateTranscriptAdapter,
@@ -127,6 +128,7 @@ def build_runtime(repository: Path, data_root: Path):
         VerifyTranscriptAdapter,
         VerifyTranslationAdapter,
         VerifyVoiceAdapter,
+        VerifyLocalizationAdapter,
     )
     from .engine import WorkflowEngine
     from .store import RunStore
@@ -141,6 +143,7 @@ def build_runtime(repository: Path, data_root: Path):
     transcription_launcher = repository / "apps" / "transcription" / "run.ps1"
     translation_launcher = repository / "apps" / "translation" / "run.ps1"
     voice_launcher = repository / "apps" / "voice-rendering" / "run.ps1"
+    localization_launcher = repository / "apps" / "localization" / "run.ps1"
     engine = WorkflowEngine(
         store,
         {
@@ -159,6 +162,10 @@ def build_runtime(repository: Path, data_root: Path):
             "verify-translation": VerifyTranslationAdapter(),
             "render-voice": VoiceRenderingAdapter(voice_launcher, data_root / "voices"),
             "verify-voice": VerifyVoiceAdapter(),
+            "localize-video": LocalizedVideoAdapter(
+                localization_launcher, data_root / "localized"
+            ),
+            "verify-localization": VerifyLocalizationAdapter(),
         },
     )
     application = StudioApplication(store, engine, allowed_roots=_allowed_roots(repository))

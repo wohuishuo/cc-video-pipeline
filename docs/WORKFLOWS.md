@@ -32,7 +32,7 @@ flowchart LR
     LOC --> LOCALIZED[(Localized master)]
 ```
 
-Localization is currently `DESIGNED`; the diagram documents the intended public file contracts, not a production-verification claim.
+Localization is `PLATFORM_INTEGRATED`: its public manifest workflow and a real local FFmpeg/FFprobe browser run are verified. Production operations and social publication remain separate, unproven capabilities.
 
 ## Transcribe and translate from the browser
 
