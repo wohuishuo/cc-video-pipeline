@@ -433,6 +433,7 @@ class TranslateTranscriptAdapter(CommandAdapter):
             "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
             str(self.launcher), str(transcript_manifest), "--output-dir", str(output),
             "--operation-id", child_operation_id,
+            "--provider", str(parameters.get("translationProvider", "nllb")),
             "--model", str(parameters.get("translationModel", "facebook/nllb-200-distilled-600M")),
             "--device", str(parameters.get("translationDevice", "auto")),
             "--batch-size", str(parameters.get("translationBatchSize", 8)),
@@ -686,6 +687,104 @@ class VerifyCreatorManifestAdapter:
         on_log(f"Verified creator manifest with {len(items)} video URL(s)"); return AdapterResult(True,{"manifest":str(path),"itemCount":len(items)})
 
 
+class CreatorSelectionAdapter(CommandAdapter):
+    """Invoke the independent Creator Selection capability."""
+
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.output_root = Path(output_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        parameters = context["parameters"]
+        source = Path(str(parameters.get("creatorManifestPath", ""))).resolve()
+        expected_sha = str(parameters.get("creatorManifestSha256", ""))
+        if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != expected_sha:
+            return AdapterResult(False, {}, "Creator Manifest fingerprint conflict")
+        output = self.output_root / str(context["runId"])
+        operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),
+            "select", str(source),
+        ]
+        for identity in parameters["selectedVideoIds"]:
+            argv.extend(["--video-id", str(identity)])
+        argv.extend(["--output-dir", str(output), "--operation-id", operation_id, "--json"])
+        result = super().execute(
+            GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event
+        )
+        receipt_path = output / "creator-selection-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "Creator Selection receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+            manifest_sha = str(receipt["manifestSha256"])
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid Creator Selection receipt: {error}")
+        if (
+            receipt.get("schemaVersion") != 1
+            or receipt.get("operationId") != operation_id
+            or receipt.get("resultClass") != "COMPLETED"
+            or receipt.get("selectedItemIds") != parameters["selectedVideoIds"]
+            or not manifest.is_file()
+            or hashlib.sha256(manifest.read_bytes()).hexdigest() != manifest_sha
+        ):
+            return AdapterResult(False, result.details, "Creator Selection did not commit exact coverage")
+        return AdapterResult(
+            True,
+            {
+                **result.details,
+                "receipt": str(receipt_path),
+                "manifest": str(manifest),
+                "manifestSha256": manifest_sha,
+                "itemCount": len(parameters["selectedVideoIds"]),
+            },
+        )
+
+
+class VerifyCreatorSelectionAdapter:
+    """Verify source lineage and exact selected-item coverage."""
+
+    def execute(self, node, context, on_log, cancel_event):
+        committed = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "select-creator-videos"
+                and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed Creator Selection fact missing")
+        path = Path(str(committed.get("manifest", ""))).resolve()
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != committed.get("manifestSha256"):
+            return AdapterResult(False, {}, "Creator Selection fingerprint conflict")
+        parameters = context["parameters"]
+        try:
+            value = json.loads(path.read_text(encoding="utf-8-sig"))
+            items = value["items"]
+            identities = [str(item["id"]) for item in items]
+            valid = (
+                value.get("schemaVersion") == 1
+                and Path(str(value["creatorManifest"])).resolve()
+                == Path(str(parameters["creatorManifestPath"])).resolve()
+                and value.get("creatorManifestSha256") == parameters["creatorManifestSha256"]
+                and value.get("selectedItemIds") == parameters["selectedVideoIds"]
+                and identities == parameters["selectedVideoIds"]
+                and [int(item["ordinal"]) for item in items] == list(range(1, len(items) + 1))
+                and len(identities) == len(set(identities))
+            )
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            valid = False
+            identities = []
+        if not valid:
+            return AdapterResult(False, {}, "Creator Selection validation failed")
+        on_log(f"Verified exact Creator Selection with {len(identities)} video(s)")
+        return AdapterResult(True, {"manifest": str(path), "itemCount": len(identities)})
+
+
 class CreatorBatchAdapter(CommandAdapter):
     """Invoke the independent Creator Batch continuation owner."""
 
@@ -696,8 +795,9 @@ class CreatorBatchAdapter(CommandAdapter):
 
     def execute(self, node, context, on_log, cancel_event):
         committed = next((
-            step.get("result") for step in context.get("steps", [])
-            if step.get("nodeId") == "discover-creator" and step.get("status") == "COMPLETED"
+            step.get("result") for source_node in ("select-creator-videos", "discover-creator")
+            for step in context.get("steps", [])
+            if step.get("nodeId") == source_node and step.get("status") == "COMPLETED"
         ), None)
         if not isinstance(committed, dict):
             return AdapterResult(False, {}, "committed Creator Manifest fact missing")
@@ -717,6 +817,7 @@ class CreatorBatchAdapter(CommandAdapter):
             "--asr-device", str(parameters["asrDevice"]),
             "--asr-compute-type", str(parameters["asrComputeType"]),
             "--translation-model", str(parameters["translationModel"]),
+            "--translation-provider", str(parameters.get("translationProvider", "nllb")),
             "--translation-device", str(parameters["translationDevice"]),
             "--translation-batch-size", str(parameters["translationBatchSize"]),
             "--source-volume", str(parameters["sourceVolume"]),
@@ -766,7 +867,7 @@ class VerifyCreatorBatchAdapter:
             for step in context.get("steps", [])
             if step.get("status") == "COMPLETED"
         }
-        creator_fact = results.get("discover-creator")
+        creator_fact = results.get("select-creator-videos") or results.get("discover-creator")
         batch_fact = results.get("localize-creator-batch")
         if not isinstance(creator_fact, dict) or not isinstance(batch_fact, dict):
             return AdapterResult(False, {}, "committed Creator and Batch facts are required")

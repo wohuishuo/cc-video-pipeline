@@ -26,6 +26,8 @@ flowchart TB
 
 `apps/creator-batch/` is the reusable cross-item continuation owner. It consumes Creator Discovery facts and public child-MVP facts; it does not own or import media-processing internals.
 
+`apps/creator-selection/` is the immutable subset owner between Creator Discovery and Creator Batch. It preserves source order, rejects unknown or duplicate IDs and never downloads media.
+
 `apps/publication-batch/` is the reusable cross-derivative planning owner. It consumes Localization facts and invokes Publication through its public launcher; it does not own localized media, upload state or credentials.
 
 `apps/publication-batch-execution/` is the reusable cross-plan execution owner. It consumes an exact confirmed Publication Batch fact and invokes Publication and Credential Vault only through their public launchers; it owns continuation and aggregate verification, never child upload state or secret material.

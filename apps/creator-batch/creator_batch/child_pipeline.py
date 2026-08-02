@@ -133,6 +133,8 @@ class PublicMvpItemProcessor:
             str(root / "translation"),
             "--operation-id",
             f"{child_prefix}:translation",
+            "--provider",
+            batch_policy.translation_provider,
             "--model",
             batch_policy.translation_model,
             "--device",

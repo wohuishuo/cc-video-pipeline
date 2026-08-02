@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 from typing import Any
 from urllib.parse import urlparse
 
 from .contracts import ContractError, GraphDefinition
+from .creator_catalog import project_creator_catalog
 from .engine import WorkflowEngine
+from .language_catalog import SUPPORTED_LANGUAGE_LOCALES, language_rows
 from .store import CreateRun, RunStore
 from .workflow_catalog import build_workflow_catalog
 
@@ -210,6 +213,27 @@ CREATOR_BATCH_GRAPHS = {
     )
 }
 
+CREATOR_CAMPAIGN_GRAPHS = {
+    "creator-campaign": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "creator-campaign",
+            "revision": 1,
+            "nodes": [
+                {"id": "select-creator-videos", "type": "select-creator-videos", "config": {}},
+                {"id": "verify-selection", "type": "verify-selection", "config": {}},
+                {"id": "localize-creator-batch", "type": "localize-creator-batch", "config": {}},
+                {"id": "verify-creator-batch", "type": "verify-creator-batch", "config": {}},
+            ],
+            "edges": [
+                {"source": "select-creator-videos", "target": "verify-selection", "relationship": "Fact"},
+                {"source": "verify-selection", "target": "localize-creator-batch", "relationship": "Fact"},
+                {"source": "localize-creator-batch", "target": "verify-creator-batch", "relationship": "Fact"},
+            ],
+        }
+    )
+}
+
 PUBLICATION_GRAPHS = {
     "publication-plan": GraphDefinition.from_dict(
         {
@@ -281,6 +305,7 @@ ALL_WORKFLOW_GRAPHS = {
     **PUBLICATION_EXECUTION_GRAPHS,
     **PUBLICATION_BATCH_EXECUTION_GRAPHS,
     **YOUTUBE_CONNECT_GRAPHS,
+    **CREATOR_CAMPAIGN_GRAPHS,
 }
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
@@ -318,6 +343,16 @@ class StudioApplication:
                 return 200, {"contractVersion": "1.0", **self.store.queue_snapshot()}
             if method == "GET" and path == "/api/v1/capabilities":
                 return 200, {"contractVersion": "1.0", "capabilities": self._capabilities()}
+            if method == "GET" and path == "/api/v1/languages":
+                return 200, {"contractVersion": "1.0", "languages": language_rows()}
+            if method == "GET" and path == "/api/v1/translation-providers":
+                return 200, {
+                    "contractVersion": "1.0",
+                    "providers": [
+                        {"id": "nllb", "name": "NLLB (local)", "ready": True, "defaultModel": "facebook/nllb-200-distilled-600M"},
+                        {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()), "defaultModel": "deepseek-v4-flash", "credentialEnvironment": "DEEPSEEK_API_KEY"},
+                    ],
+                }
             if method == "GET" and path == "/api/v1/folders":
                 return self._folders(query)
             if method == "GET" and path == "/api/v1/runs":
@@ -327,6 +362,11 @@ class StudioApplication:
             prefix = "/api/v1/runs/"
             if path.startswith(prefix):
                 suffix = path[len(prefix) :]
+                if suffix.endswith("/creator-catalog") and method == "GET":
+                    run_id = suffix[: -len("/creator-catalog")]
+                    if not run_id or "/" in run_id:
+                        raise ContractError("REJECTED_MALFORMED", "invalid creator catalog run ID")
+                    return 200, project_creator_catalog(self.store.get_run(run_id))
                 if "/" not in suffix and method == "GET":
                     return 200, self.store.get_run(suffix)
                 if suffix.endswith("/start") and method == "POST":
@@ -354,6 +394,8 @@ class StudioApplication:
         template_id = str(payload.get("templateId", "prepared-localization"))
         if template_id in SOURCE_GRAPHS:
             return self._create_intake_run(envelope, payload, template_id)
+        if template_id in CREATOR_CAMPAIGN_GRAPHS:
+            return self._create_creator_campaign_run(envelope, payload, template_id)
         if template_id in PUBLICATION_GRAPHS:
             return self._create_publication_plan_run(envelope, payload, template_id)
         if template_id in PUBLICATION_EXECUTION_GRAPHS:
@@ -383,6 +425,150 @@ class StudioApplication:
                 operation_id=str(envelope["operationId"]),
                 correlation_id=str(envelope["correlationId"]),
                 graph=PREPARED_FOLDER_GRAPH,
+                parameters=parameters,
+            )
+        )
+        status = 201 if result.result_class == "COMPLETED" else 200
+        if result.result_class == "REJECTED_CONFLICT":
+            status = 409
+        return status, {"resultClass": result.result_class, "value": result.value}
+
+    def _create_creator_campaign_run(
+        self, envelope: dict[str, Any], payload: dict[str, Any], template_id: str
+    ) -> tuple[int, dict[str, Any]]:
+        forbidden = {"creatorManifestPath", "creatorManifestSha256", "authenticationFile"}
+        if forbidden.intersection(payload):
+            raise ContractError("REJECTED_MALFORMED", "creator artifact paths are resolved by Studio")
+        creator_run_id = str(payload.get("creatorRunId", "")).strip()
+        if not creator_run_id:
+            raise ContractError("REJECTED_MALFORMED", "creatorRunId is required")
+        try:
+            creator_run = self.store.get_run(creator_run_id)
+        except KeyError as error:
+            raise ContractError("REJECTED_NOT_FOUND", "creator discovery run does not exist") from error
+        catalog = project_creator_catalog(creator_run)
+        requested = payload.get("selectedVideoIds")
+        if (
+            not isinstance(requested, list)
+            or not requested
+            or not all(isinstance(value, str) and value.strip() for value in requested)
+            or len(set(requested)) != len(requested)
+        ):
+            raise ContractError("REJECTED_MALFORMED", "selectedVideoIds must be a non-empty unique list")
+        requested_set = set(requested)
+        known = {item["id"] for item in catalog["items"]}
+        if not requested_set.issubset(known):
+            raise ContractError("REJECTED_MALFORMED", "selectedVideoIds contains an unknown creator video")
+        selected = [item["id"] for item in catalog["items"] if item["id"] in requested_set]
+        discovery_fact = next(
+            step["result"]
+            for step in creator_run["steps"]
+            if step["nodeId"] == "discover-creator" and step["status"] == "COMPLETED"
+        )
+        languages = payload.get("targetLanguages")
+        supported = set(SUPPORTED_LANGUAGE_LOCALES)
+        if (
+            not isinstance(languages, list)
+            or not languages
+            or len(set(languages)) != len(languages)
+            or not all(isinstance(value, str) and value in supported for value in languages)
+        ):
+            raise ContractError("REJECTED_MALFORMED", "targetLanguages must be a unique supported list")
+        voices = payload.get("targetVoices")
+        if (
+            not isinstance(voices, dict)
+            or set(voices) != set(languages)
+            or any(not isinstance(value, str) or not value.strip() for value in voices.values())
+        ):
+            raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
+        source_language = str(payload.get("sourceLanguage", "auto")).strip()
+        asr_model = str(payload.get("asrModel", "small")).strip()
+        asr_device = str(payload.get("asrDevice", "auto")).strip()
+        asr_compute_type = str(payload.get("asrComputeType", "default")).strip()
+        translation_provider = str(payload.get("translationProvider", "nllb")).strip().lower()
+        default_translation_model = "deepseek-v4-flash" if translation_provider == "deepseek" else "facebook/nllb-200-distilled-600M"
+        translation_model = str(payload.get("translationModel", default_translation_model)).strip()
+        translation_device = str(payload.get("translationDevice", "auto")).strip()
+        try:
+            translation_batch_size = int(payload.get("translationBatchSize", 8))
+            source_volume = float(payload.get("sourceVolume", 0.12))
+        except (TypeError, ValueError) as error:
+            raise ContractError("REJECTED_MALFORMED", "campaign numeric policy is invalid") from error
+        if (
+            not source_language
+            or not asr_model
+            or not asr_compute_type
+            or translation_provider not in {"nllb", "deepseek"}
+            or not translation_model
+            or asr_device not in {"auto", "cpu", "cuda"}
+            or translation_device not in {"auto", "cpu", "cuda"}
+            or not 1 <= translation_batch_size <= 64
+            or not 0 <= source_volume <= 1
+        ):
+            raise ContractError("REJECTED_MALFORMED", "campaign processing policy is invalid")
+        if translation_provider == "deepseek" and not os.environ.get("DEEPSEEK_API_KEY", "").strip():
+            raise ContractError("REJECTED_MALFORMED", "DeepSeek translation requires DEEPSEEK_API_KEY")
+        raw_destination_plans = payload.get("destinationPlans")
+        if (
+            not isinstance(raw_destination_plans, list)
+            or [row.get("locale") if isinstance(row, dict) else None for row in raw_destination_plans] != list(languages)
+        ):
+            raise ContractError("REJECTED_MALFORMED", "destinationPlans must exactly cover selected languages in order")
+        destination_plans: list[dict[str, Any]] = []
+        supported_platforms = {"youtube", "bilibili", "douyin", "tiktok"}
+        for row in raw_destination_plans:
+            targets = row.get("targets")
+            if (
+                not isinstance(targets, list)
+                or not targets
+                or any(not isinstance(target, dict) for target in targets)
+            ):
+                raise ContractError("REJECTED_MALFORMED", "every language requires at least one destination")
+            platforms = [target.get("platform") for target in targets]
+            if (
+                len(set(platforms)) != len(platforms)
+                or not all(platform in supported_platforms for platform in platforms)
+                or any(not isinstance(target.get("account"), str) or not target["account"].strip() or len(target["account"].strip()) > 128 for target in targets)
+            ):
+                raise ContractError("REJECTED_MALFORMED", "destination platform and account policy is invalid")
+            destination_plans.append(
+                {
+                    "locale": row["locale"],
+                    "targets": [
+                        {
+                            "platform": target["platform"],
+                            "account": target["account"].strip(),
+                            "executionStatus": "READY_PRIVATE" if target["platform"] == "youtube" else "PLAN_ONLY",
+                        }
+                        for target in targets
+                    ],
+                }
+            )
+        parameters = {
+            "templateId": template_id,
+            "creatorRunId": creator_run_id,
+            "creatorManifestPath": str(Path(discovery_fact["manifest"]).resolve()),
+            "creatorManifestSha256": str(discovery_fact["manifestSha256"]),
+            "selectedVideoIds": selected,
+            "sourceLanguage": source_language,
+            "asrModel": asr_model,
+            "asrDevice": asr_device,
+            "asrComputeType": asr_compute_type,
+            "translationModel": translation_model,
+            "translationProvider": translation_provider,
+            "translationDevice": translation_device,
+            "translationBatchSize": translation_batch_size,
+            "targetLanguages": list(languages),
+            "targetVoices": {language: voices[language].strip() for language in languages},
+            "sourceVolume": source_volume,
+            "destinationPlans": destination_plans,
+            "authenticationFile": creator_run.get("parameters", {}).get("authenticationFile"),
+        }
+        result = self.store.create_run(
+            CreateRun(
+                operation_id=str(envelope["operationId"]),
+                correlation_id=str(envelope["correlationId"]),
+                graph=CREATOR_CAMPAIGN_GRAPHS[template_id],
                 parameters=parameters,
             )
         )
@@ -620,7 +806,7 @@ class StudioApplication:
             )
         if template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS or release_mode or creator_batch_mode:
             languages = payload.get("targetLanguages")
-            supported = {"ru-RU", "en-US", "kk-KZ"}
+            supported = set(SUPPORTED_LANGUAGE_LOCALES)
             if (
                 not isinstance(languages, list)
                 or not languages
@@ -628,16 +814,21 @@ class StudioApplication:
                 or len(set(languages)) != len(languages)
             ):
                 raise ContractError("REJECTED_MALFORMED", "targetLanguages must be a unique supported list")
-            translation_model = str(payload.get("translationModel", "facebook/nllb-200-distilled-600M")).strip()
+            translation_provider = str(payload.get("translationProvider", "nllb")).strip().lower()
+            default_translation_model = "deepseek-v4-flash" if translation_provider == "deepseek" else "facebook/nllb-200-distilled-600M"
+            translation_model = str(payload.get("translationModel", default_translation_model)).strip()
             translation_device = str(payload.get("translationDevice", "auto")).strip()
             translation_batch_size = int(payload.get("translationBatchSize", 8))
-            if not translation_model or translation_device not in {"auto", "cpu", "cuda"}:
+            if translation_provider not in {"nllb", "deepseek"} or not translation_model or translation_device not in {"auto", "cpu", "cuda"}:
                 raise ContractError("REJECTED_MALFORMED", "unsupported translation policy")
+            if translation_provider == "deepseek" and not os.environ.get("DEEPSEEK_API_KEY", "").strip():
+                raise ContractError("REJECTED_MALFORMED", "DeepSeek translation requires DEEPSEEK_API_KEY")
             if not 1 <= translation_batch_size <= 64:
                 raise ContractError("REJECTED_MALFORMED", "translationBatchSize must be between 1 and 64")
             parameters.update(
                 {
                     "targetLanguages": list(languages),
+                    "translationProvider": translation_provider,
                     "translationModel": translation_model,
                     "translationDevice": translation_device,
                     "translationBatchSize": translation_batch_size,

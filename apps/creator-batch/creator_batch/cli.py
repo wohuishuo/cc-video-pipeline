@@ -40,6 +40,7 @@ def parser() -> argparse.ArgumentParser:
     localize.add_argument("--asr-device", default="auto", choices=("auto", "cpu", "cuda"))
     localize.add_argument("--asr-compute-type", default="default")
     localize.add_argument("--translation-model", default="facebook/nllb-200-distilled-600M")
+    localize.add_argument("--translation-provider", default="nllb", choices=("nllb", "deepseek"))
     localize.add_argument("--translation-device", default="auto", choices=("auto", "cpu", "cuda"))
     localize.add_argument("--translation-batch-size", type=int, default=8)
     localize.add_argument("--source-volume", type=float, default=0.12)
@@ -84,6 +85,7 @@ def main(
             asr_device=args.asr_device,
             asr_compute_type=args.asr_compute_type,
             translation_model=args.translation_model,
+            translation_provider=args.translation_provider,
             translation_device=args.translation_device,
             translation_batch_size=args.translation_batch_size,
             source_volume=args.source_volume,

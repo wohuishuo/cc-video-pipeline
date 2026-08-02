@@ -8,6 +8,7 @@ The public interface is the launcher inside each `apps/<name>/` directory. Paths
 | Upload one private YouTube video through the Data API | YouTube Publisher | `apps/youtube-publisher/run.ps1` |
 | Connect a YouTube account into Credential Vault | YouTube OAuth Bootstrap | `apps/youtube-oauth-bootstrap/run.ps1` |
 | Localize every video from a Creator Manifest serially | Creator Batch | `apps/creator-batch/run.ps1` |
+| Select an exact subset from a Creator Manifest | Creator Selection | `apps/creator-selection/run.ps1` |
 | Plan every localized derivative for target platforms serially | Publication Batch | `apps/publication-batch/run.ps1` |
 | Execute a confirmed private YouTube release batch serially | Publication Batch Execution | `apps/publication-batch-execution/run.ps1` |
 | Transcribe media | Transcription | `apps/transcription/run.ps1` |

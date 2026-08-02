@@ -11,12 +11,28 @@ Translation converts a verified `transcript-manifest.json` into editable multili
   --operation-id translation-001 `
   --target-language ru-RU `
   --target-language en-US `
+  --provider nllb `
   --device auto `
   --batch-size 8 `
   --json
 ```
 
-Supported target language policies are `ru-RU`, `en-US` and `kk-KZ`. Short forms `ru`, `en` and `kk` normalize to those values. The default production adapter is local Meta NLLB and loads lazily when the first item begins.
+The public language contract currently contains 20 searchable locales. The default production adapter is local Meta NLLB and loads lazily when the first item begins.
+
+For quality-first cloud translation, set the credential only in the process environment and choose DeepSeek. The credential is never accepted as a command argument, written to receipts or included in adapter identity.
+
+```powershell
+$env:DEEPSEEK_API_KEY = "your-key"
+.\apps\translation\run.ps1 C:\work\transcript-manifest.json `
+  --output-dir C:\work\translation-deepseek `
+  --operation-id translation-deepseek-001 `
+  --target-language ru-RU `
+  --provider deepseek `
+  --model deepseek-v4-flash `
+  --json
+```
+
+Both adapters publish exactly the same Translation Manifest contract. DeepSeek responses must contain exactly one non-empty translated string for every source subtitle segment; malformed or partial coverage is retried a bounded number of times and then fails without publishing a manifest.
 
 ## Owned artifacts
 

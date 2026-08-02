@@ -19,6 +19,7 @@ def policy():
         asr_device="cpu",
         asr_compute_type="int8",
         translation_device="cpu",
+        translation_provider="deepseek",
         translation_batch_size=4,
         source_volume=0.08,
     )
@@ -77,6 +78,7 @@ def test_public_processor_calls_each_owner_in_order_with_committed_predecessor_f
     assert all(str(path.resolve()) in calls[4] for path in (manifests["source-intake"], manifests["translation"], manifests["voice-rendering"]))
     assert calls[0][-4:] == ["--max-height", "1080", "--cookies", str(cookies.resolve())]
     assert calls[2].count("--target-language") == 2
+    assert calls[2][calls[2].index("--provider") + 1] == "deepseek"
     assert calls[3].count("--voice") == 2
 
 

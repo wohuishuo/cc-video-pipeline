@@ -89,7 +89,7 @@ def test_translation_template_rejects_duplicate_or_unsupported_languages(tmp_pat
     app, store = application(tmp_path)
     source = tmp_path / "media"
     source.mkdir()
-    for languages in (["ru-RU", "ru-RU"], ["fr-FR"], []):
+    for languages in (["ru-RU", "ru-RU"], ["xx-XX"], []):
         status, response = app.handle(
             "POST", "/api/v1/runs", {},
             envelope({"templateId": "folder-translation", "sourceRoot": str(source), "targetLanguages": languages}),
@@ -97,6 +97,28 @@ def test_translation_template_rejects_duplicate_or_unsupported_languages(tmp_pat
         assert status == 400
         assert response["resultClass"] == "REJECTED_MALFORMED"
     assert store.list_runs() == []
+
+
+def test_translation_template_admits_deepseek_by_environment_reference_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "not-persisted-secret")
+    app, store = application(tmp_path)
+    source = tmp_path / "media"
+    source.mkdir()
+    body = {
+        "templateId": "folder-translation",
+        "sourceRoot": str(source),
+        "targetLanguages": ["es-ES"],
+        "translationProvider": "deepseek",
+        "translationModel": "deepseek-v4-pro",
+    }
+
+    status, response = app.handle("POST", "/api/v1/runs", {}, envelope(body))
+    run = store.get_run(response["value"]["runId"])
+
+    assert status == 201
+    assert run["parameters"]["translationProvider"] == "deepseek"
+    assert run["parameters"]["translationModel"] == "deepseek-v4-pro"
+    assert "not-persisted-secret" not in json.dumps(run)
 
 
 def write_translation_fact(tmp_path):
