@@ -28,8 +28,6 @@ if (-not (Test-Path -LiteralPath $python)) {
     throw "Python 3.12 runtime not found. Run apps/video-graph-studio/install.ps1 first."
 }
 
-$env:PYTHONPATH = $appRoot
-$env:PYTHONUTF8 = "1"
 $arguments = @("-m", "studio.server", "--port", $Port, "--data-root", $DataRoot)
 if ($NoBrowser) { $arguments += "--no-browser" }
 if ([bool]$ResourceBudgetDatabase -ne ($ResourceReservationBytes -gt 0)) {
@@ -49,5 +47,19 @@ if ($StorageRegistry) {
     if ([bool]$AccessRegistry -ne [bool]$WorkspaceId) { throw "AccessRegistry and WorkspaceId must be provided together." }
     if ($AccessRegistry) { $arguments += @("--access-registry", $AccessRegistry, "--workspace-id", $WorkspaceId) }
 }
-& $python @arguments
-exit $LASTEXITCODE
+
+$previousPythonPath = $env:PYTHONPATH
+$previousPythonUtf8 = $env:PYTHONUTF8
+$exitCode = 1
+Push-Location -LiteralPath $appRoot
+try {
+    $env:PYTHONPATH = $appRoot
+    $env:PYTHONUTF8 = "1"
+    & $python @arguments
+    $exitCode = $LASTEXITCODE
+} finally {
+    Pop-Location
+    $env:PYTHONPATH = $previousPythonPath
+    $env:PYTHONUTF8 = $previousPythonUtf8
+}
+exit $exitCode
