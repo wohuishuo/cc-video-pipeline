@@ -28,6 +28,8 @@ flowchart TB
 
 `apps/publication-batch/` is the reusable cross-derivative planning owner. It consumes Localization facts and invokes Publication through its public launcher; it does not own localized media, upload state or credentials.
 
+`apps/publication-batch-execution/` is the reusable cross-plan execution owner. It consumes an exact confirmed Publication Batch fact and invokes Publication and Credential Vault only through their public launchers; it owns continuation and aggregate verification, never child upload state or secret material.
+
 ## Shared contracts
 
 `packages/` may contain versioned schemas and small process primitives. Shared packages never coordinate an application workflow or own project state.

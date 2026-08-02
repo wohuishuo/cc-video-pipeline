@@ -70,6 +70,7 @@ Choose one of the workflow templates:
 - `Folder+Voice` or `URL+Voice` continues through verified per-segment Edge MP3 clips.
 - `Folder+Dub` or `URL+Dub` runs all ten owner steps and produces verified subtitle-burned H.264/AAC derivatives.
 - `Folder+Release` or `URL+Release` adds Publication Batch after those ten steps and prepares a verified private/draft plan for every localized derivative and selected platform. It never uploads.
+- `Release Execute` resolves one completed Release batch from the same workspace, requires the exact batch-plan SHA and a Credential Vault path, then executes credential-backed private YouTube children strictly one at a time. It is a separate explicit Graph; an uncertain upload is fenced instead of retried.
 - `Creator` enumerates a YouTube/Bilibili/Douyin/TikTok profile into a verified Creator Manifest without downloading media.
 - `Creator+Dub` enumerates the profile, then uses the independent Creator Batch owner to download, transcribe, translate, synthesize and localize exactly one video at a time with resumable item checkpoints.
 - `Publish Plan` fingerprints one finished video and metadata file into private/draft jobs for selected platforms. It never uploads.
@@ -89,12 +90,15 @@ flowchart LR
     C --> O["Verified MP4 derivatives"]
     O --> B["Publication Batch"]
     B --> P["Private/draft platform plans"]
+    P --> E["Publication Batch Execution"]
+    E --> R["Verified private YouTube results"]
     G["Graph Studio"] -. "commands and observes" .-> I
     G -. "commands and observes" .-> T
     G -. "commands and observes" .-> L
     G -. "commands and observes" .-> V
     G -. "commands and observes" .-> C
     G -. "commands and observes" .-> B
+    G -. "commands and observes" .-> E
 ```
 
 ## Stop
@@ -115,6 +119,7 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
 - Creator Batch is domain verified through strict-serial, continue-after-failure, partial-resume, stale-repair and real Discovery-fact composition tests. A live multi-item browser batch is not yet claimed.
 - Publication Batch and the 12-node Folder/URL Release Graphs are domain verified through exact derivative/target coverage, rendered metadata hashes, strict-serial child planning, resumable failure checkpoints and independent aggregate verification. A live started multi-derivative Release run is not yet claimed.
+- Publication Batch Execution and the separate two-node Release Execute Graph are domain verified through exact batch confirmation, private-YouTube preflight, strict-serial child execution, hash-fenced resume, uncertain-outcome preservation and independent aggregate verification. A real 1280 x 720 browser drill proved admission and layout without starting the run; no authenticated batch upload is claimed.
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
 - Guarded private YouTube execution is now browser-operable as a separate confirmed Graph and is domain verified through real Publication/Vault composition with a fake platform boundary. No real authenticated upload is claimed.
 - YouTube account connection is browser-operable through the independent OAuth Bootstrap and Vault public CLIs with state/PKCE and redaction tests. No real Google consent was performed by the automated evidence.

@@ -39,13 +39,18 @@ flowchart LR
     C1 --> C3["C03 Video Composition"]
     C2 --> C3
     C3 --> P1["P01 Publication Plan"]
+    P1 --> P3["P03 Publication Batch Plan"]
     P1 --> P2
+    P3 --> P4["P04 Publication Batch Execution"]
+    P4 --> P2
     G3 -. "commands only" .-> S4
     G3 -. "commands only" .-> T1
     G3 -. "commands only" .-> L1
     G3 -. "commands only" .-> V1
     G3 -. "commands only" .-> C3
     G3 -. "commands only" .-> P1
+    G3 -. "commands only" .-> P3
+    G3 -. "commands only" .-> P4
 ```
 
 ## Build order and evidence gate
@@ -65,6 +70,8 @@ flowchart LR
 | V01 | Voice segment loop | `DOMAIN_VERIFIED`; adapter-neutral receipt, real Edge RU+KK completion, failed-clip resume and ten-step browser composition | representative voice/service quality evidence |
 | C01-C03 | Subtitle, audio and composition | `PLATFORM_INTEGRATED`; serial recovery tests, real FFmpeg/FFprobe RU+KK derivatives and browser graph evidence | long-form quality and crash/power-loss evidence |
 | P01-P02 | Publication | `DOMAIN_VERIFIED`; immutable plan, exact-hash confirmation, serial checkpoint/resume, credential-reference composition and browser planning | authenticated private/draft evidence per real platform |
+| P03 | Publication Batch | `DOMAIN_VERIFIED`; ordered derivative plans, deterministic metadata, stable child IDs, failure continuation and exact aggregate coverage | live multi-derivative Release planning run |
+| P04 | Publication Batch Execution | `DOMAIN_VERIFIED`; exact batch confirmation, whole-batch private-YouTube preflight, stable serial children, verified resume, uncertain-outcome fencing and Studio composition | authenticated batch upload, provider reconciliation and power-loss evidence |
 
 ## Required substitutes
 
