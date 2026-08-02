@@ -108,9 +108,49 @@ async function checkHealth() {
     const health = await api("/api/v1/health");
     const pill = $("#health-pill");
     pill.classList.add("ready");
-    pill.lastChild.textContent = health.activeWorkers ? " 1 worker active" : " System ready";
+    const queued = health.queuedRuns ? ` / ${health.queuedRuns} queued` : "";
+    pill.lastChild.textContent = health.activeWorkers ? ` 1 worker active${queued}` : health.queuedRuns ? ` ${health.queuedRuns} queued` : " System ready";
+    await refreshRunList();
   } catch (error) {
     $("#health-pill").lastChild.textContent = " Offline";
+  }
+}
+
+function templateForRun(run) {
+  return run.graph.graphId === "prepared-folder-edge" ? "prepared-localization" : run.graph.graphId;
+}
+
+async function refreshRunList() {
+  const [runsResponse, queue] = await Promise.all([api("/api/v1/runs"), api("/api/v1/queue")]);
+  $("#queue-count").textContent = `${queue.queuedRuns} waiting`;
+  const list = $("#run-list");
+  list.replaceChildren();
+  runsResponse.runs.slice(0, 8).forEach((run) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `run-row${state.currentRun?.runId === run.runId ? " selected" : ""}`;
+    const title = document.createElement("strong");
+    title.textContent = run.graph.graphId;
+    const status = document.createElement("b");
+    status.className = run.status.toLowerCase();
+    status.textContent = run.status;
+    const identity = document.createElement("small");
+    identity.textContent = run.runId.slice(0, 13);
+    button.append(title, status, identity);
+    button.addEventListener("click", () => {
+      const templateId = templateForRun(run);
+      if (TEMPLATE_NODE_COPY[templateId]) selectTemplate(templateId);
+      state.currentRun = run;
+      renderRun(run);
+      if (!TERMINAL_STATES.has(run.status)) pollRun(run.runId);
+    });
+    list.append(button);
+  });
+  if (!runsResponse.runs.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No runs yet.";
+    list.append(empty);
   }
 }
 
@@ -240,8 +280,12 @@ async function submitRun(event) {
       method: "POST",
       body: JSON.stringify({ ...envelope("CMD-RUN-START", correlationId), contractId: "CMD-RUN-START" }),
     });
-    toast("Graph admitted. Serial worker started.");
-    await pollRun(runId);
+    toast("Graph admitted to the durable serial queue.");
+    button.disabled = false;
+    setRunControlsBusy(false);
+    button.innerHTML = "<span>+</span> Queue another graph";
+    await checkHealth();
+    pollRun(runId);
   } catch (error) {
     toast(error.message, true);
     button.disabled = false;
@@ -403,6 +447,7 @@ async function pollRun(runId) {
     const run = await api(`/api/v1/runs/${runId}`);
     state.currentRun = run;
     renderRun(run);
+    await refreshRunList();
     if (TERMINAL_STATES.has(run.status)) {
       $("#run-button").disabled = false;
       setRunControlsBusy(false);

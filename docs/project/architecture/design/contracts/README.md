@@ -5,7 +5,7 @@ Public files and HTTP envelopes are the reusable seams. Graph Studio may invoke 
 | Owner | Command input | Committed output | Current schema location |
 | --- | --- | --- | --- |
 | Graph Definition | node/edge graph revision | validated graph fingerprint | `apps/video-graph-studio/studio/contracts.py` |
-| Workflow Run | `CMD-RUN-CREATE`, `CMD-RUN-START`, `CMD-RUN-CANCEL` | run/step/log projection | `apps/video-graph-studio/studio/api.py` |
+| Workflow Run and Start Queue | `CMD-RUN-CREATE`, idempotent `CMD-RUN-START`, `CMD-RUN-CANCEL` | run/step/log projection + read-only FIFO queue | `apps/video-graph-studio/studio/api.py` |
 | Source Intake | folder or supported URL policy | source manifest + receipt | `apps/source-intake/source_intake/contracts.py` |
 | Creator Discovery | creator URL, page bound, optional auth reference | ordered canonical URL manifest + receipt | `apps/creator-discovery/creator_discovery/contracts.py` |
 | Transcription | source manifest + ASR policy | transcript manifest + JSON/SRT + receipt | `apps/transcription/transcription/contracts.py` |

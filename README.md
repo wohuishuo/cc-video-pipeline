@@ -4,7 +4,7 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-193%20passing-22c55e)](scripts/test-all.ps1)
+[![Tests](https://img.shields.io/badge/tests-197%20passing-22c55e)](scripts/test-all.ps1)
 [![MVPs](https://img.shields.io/badge/independent%20MVPs-15-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 

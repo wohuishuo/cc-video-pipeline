@@ -52,7 +52,7 @@ Default policy isolates an item failure and proceeds only when the loop contract
 
 ## Resource and concurrency policy
 
-Current execution budget is one workflow, one child process and one item at a time. Later parallelism requires explicit CPU/GPU/network budgets, per-adapter limits and deterministic join semantics. “Start many processes” is not a scaling design.
+Current execution budget is a durable FIFO of admitted workflows with one workflow, one child process and one item executing at a time. Later parallelism requires explicit CPU/GPU/network budgets, per-adapter limits and deterministic join semantics. Starting many processes is not a scaling design.
 
 ## Failure and recovery
 

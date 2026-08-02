@@ -25,7 +25,7 @@ Choose one of the workflow templates:
 - `Publish Plan` fingerprints one finished video and metadata file into private/draft jobs for selected platforms. It never uploads.
 - `Localize` runs the compatibility prepared-folder Edge workflow.
 
-Exactly one workflow and one child process execute at a time. The ten-step dubbing graph calls Source Intake, Transcription, Translation, Voice Rendering and Localization only through their public launchers.
+Submit several workflows without waiting for the previous one to finish. Start requests are stored in a durable FIFO queue while exactly one workflow and one child process execute at a time. The Inspector's Queue & Recent list lets you reopen and monitor recent runs. The ten-step dubbing graph calls Source Intake, Transcription, Translation, Voice Rendering and Localization only through their public launchers.
 
 ```mermaid
 flowchart LR
@@ -44,11 +44,11 @@ flowchart LR
 
 ## Stop
 
-Press `Ctrl+C` in the launcher terminal. The server requests cancellation for its active child, closes the HTTP listener and leaves completed checkpoints intact. Restarting fences an abandoned `RUNNING` step as `INTERRUPTED`; starting the run again resumes from the first missing checkpoint.
+Press `Ctrl+C` in the launcher terminal. The server requests cancellation for its active child, closes the HTTP listener and leaves completed checkpoints and queued start requests intact. After an unexpected process loss, restart fences an abandoned `RUNNING` step as `INTERRUPTED`, requeues the abandoned queue claim and resumes queued work from the first missing checkpoint.
 
 ## Data root
 
-The default data root is `%LOCALAPPDATA%\VideoGraphStudio`. Override it with `-DataRoot C:\path\to\studio-data`. `studio.db` owns graph run state and logs. Each capability keeps its artifacts below its own data-root directory; Localization owns `localized\<run-id>\localization-manifest.json` and its MP4 derivatives.
+The default data root is `%LOCALAPPDATA%\VideoGraphStudio`. Override it with `-DataRoot C:\path\to\studio-data`. `studio.db` owns graph run state, durable start order and logs. Each capability keeps its artifacts below its own data-root directory; Localization owns `localized\<run-id>\localization-manifest.json` and its MP4 derivatives.
 
 Creator discovery accepts an optional Netscape authentication file inside the current user's home directory. The local Graph Studio database stores that path reference as a run parameter; Creator Discovery fingerprints the contents for idempotency but never writes the path or contents to its manifest or receipt.
 

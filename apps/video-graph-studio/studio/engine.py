@@ -1,4 +1,4 @@
-"""Checkpointed, strictly serial workflow process manager."""
+"""Checkpointed workflow process manager with a durable, strictly serial queue."""
 
 from __future__ import annotations
 
@@ -17,8 +17,10 @@ class WorkflowEngine:
         self.adapters = adapters
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
+        self._draining = False
         self._active_run_id: str | None = None
         self._cancel_event = threading.Event()
+        self._shutdown_event = threading.Event()
 
     @property
     def active_run_id(self) -> str | None:
@@ -26,30 +28,22 @@ class WorkflowEngine:
             return self._active_run_id
 
     def start(self, run_id: str) -> CommandResult:
-        with self._lock:
-            if self._thread is not None and self._thread.is_alive():
-                return CommandResult("REJECTED_CONFLICT", {"activeRunId": self._active_run_id})
-            try:
-                run = self.store.get_run(run_id)
-            except KeyError:
-                return CommandResult("REJECTED_NOT_FOUND", {"runId": run_id})
-            if run["status"] in TERMINAL_STATES:
-                return CommandResult("DUPLICATE_COMPLETED", run)
-            transitioned = self.store.transition(
-                run_id, expected_version=run["version"], target="RUNNING"
-            )
-            if transitioned.result_class not in {"COMPLETED", "DUPLICATE_COMPLETED"}:
-                return transitioned
-            self._cancel_event = threading.Event()
-            self._active_run_id = run_id
-            self._thread = threading.Thread(
-                target=self._execute,
-                args=(run_id,),
-                name=f"video-graph-{run_id}",
-                daemon=True,
-            )
-            self._thread.start()
-            return CommandResult("COMPLETED", self.store.get_run(run_id))
+        """Idempotently enqueue a run and ensure one serial drain worker exists."""
+        if self._shutdown_event.is_set():
+            return CommandResult("REJECTED_CONFLICT", {"detail": "engine is stopping"})
+        queued = self.store.enqueue_run(run_id)
+        if queued.result_class not in {"COMPLETED", "DUPLICATE_COMPLETED"}:
+            return queued
+        run = self.store.get_run(run_id)
+        if run["status"] in TERMINAL_STATES:
+            return CommandResult("DUPLICATE_COMPLETED", run)
+        self._ensure_drain()
+        return queued
+
+    def resume_pending(self) -> None:
+        """Resume durable start requests recovered during server startup."""
+        if self.store.queue_snapshot()["queuedRuns"]:
+            self._ensure_drain()
 
     def cancel(self, run_id: str) -> CommandResult:
         with self._lock:
@@ -61,13 +55,19 @@ class WorkflowEngine:
                 return CommandResult("DUPLICATE_COMPLETED", run)
             if run["status"] in {"COMPLETED", "FAILED"}:
                 return CommandResult("REJECTED_CONFLICT", run)
-            if run["status"] == "QUEUED":
-                return self.store.transition(
+            if run["status"] in {"CREATED", "QUEUED", "INTERRUPTED"}:
+                result = self.store.transition(
                     run_id, expected_version=run["version"], target="CANCELLED"
                 )
+                if result.result_class == "COMPLETED":
+                    self.store.finish_queue_entry(run_id)
+                return result
             if run["status"] == "CANCEL_REQUESTED":
-                self._cancel_event.set()
+                if run_id == self._active_run_id:
+                    self._cancel_event.set()
                 return CommandResult("DUPLICATE_COMPLETED", run)
+            if run_id != self._active_run_id:
+                return CommandResult("REJECTED_CONFLICT", run)
             result = self.store.transition(
                 run_id, expected_version=run["version"], target="CANCEL_REQUESTED"
             )
@@ -78,6 +78,61 @@ class WorkflowEngine:
                     if callable(stop):
                         stop()
             return result
+
+    def shutdown(self) -> None:
+        self._shutdown_event.set()
+        active = self.active_run_id
+        if active:
+            self.cancel(active)
+
+    def _ensure_drain(self) -> None:
+        with self._lock:
+            if self._draining:
+                return
+            self._draining = True
+            self._thread = threading.Thread(
+                target=self._drain,
+                name="video-graph-serial-queue",
+                daemon=True,
+            )
+            self._thread.start()
+
+    def _drain(self) -> None:
+        while True:
+            if self._shutdown_event.is_set():
+                with self._lock:
+                    self._draining = False
+                    self._active_run_id = None
+                return
+            run_id = self.store.claim_next_run()
+            if run_id is None:
+                with self._lock:
+                    if self.store.queue_snapshot()["queuedRuns"]:
+                        continue
+                    self._draining = False
+                    self._active_run_id = None
+                    return
+            with self._lock:
+                self._active_run_id = run_id
+                self._cancel_event = threading.Event()
+            try:
+                self._execute_claimed(run_id)
+            finally:
+                self.store.finish_queue_entry(run_id)
+                with self._lock:
+                    self._active_run_id = None
+
+    def _execute_claimed(self, run_id: str) -> None:
+        run = self.store.get_run(run_id)
+        if run["status"] in TERMINAL_STATES:
+            return
+        transitioned = self.store.transition(
+            run_id, expected_version=run["version"], target="RUNNING"
+        )
+        if transitioned.result_class not in {"COMPLETED", "DUPLICATE_COMPLETED"}:
+            self.store.append_log(run_id, "queue claim could not enter RUNNING")
+            return
+        self._execute(run_id)
 
     def _execute(self, run_id: str) -> None:
         try:
@@ -128,9 +183,6 @@ class WorkflowEngine:
         except Exception as error:
             self.store.append_log(run_id, f"engine failure: {type(error).__name__}: {error}")
             self._transition_latest(run_id, "FAILED")
-        finally:
-            with self._lock:
-                self._active_run_id = None
 
     def _fail(self, run_id: str, node_id: str, error: str) -> None:
         self.store.fail_step(run_id, node_id, error)
