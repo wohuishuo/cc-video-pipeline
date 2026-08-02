@@ -14,6 +14,7 @@ EXPECTED_APPS = {
     "workspace-storage",
     "credential-vault",
     "client-contracts",
+    "resource-budget",
 }
 
 

@@ -4,8 +4,8 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-247%20passing-22c55e)](scripts/test-all.ps1)
-[![MVPs](https://img.shields.io/badge/independent%20MVPs-19-8b5cf6)](apps/README.md)
+[![Tests](https://img.shields.io/badge/tests-254%20passing-22c55e)](scripts/test-all.ps1)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-20-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
 [Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
@@ -14,7 +14,7 @@
 
 ---
 
-## One repository, nineteen focused programs
+## One repository, twenty focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
 
@@ -73,6 +73,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **Workspace Storage** | Workspace ID + storage root + quota | Confined state/artifact/temp namespaces + capacity decision | `DOMAIN_VERIFIED` | [Open](apps/workspace-storage/README.md) |
 | **Credential Vault** | Credential metadata + secret environment variable | Encrypted local custody + redacted lifecycle + child injection | `DOMAIN_VERIFIED` | [Open](apps/credential-vault/README.md) |
 | **Client Contracts** | Client version or command envelope | Canonical contract bundle + compatibility/validation decision | `DOMAIN_VERIFIED` | [Open](apps/client-contracts/README.md) |
+| **Resource Budget** | Workspace limits + reservation identity/TTL | Durable byte/slot lease + bounded capacity decision | `DOMAIN_VERIFIED` | [Open](apps/resource-budget/README.md) |
 
 ## Independent by design
 
@@ -96,6 +97,7 @@ flowchart TB
       N[apps/workspace-storage]
       O[apps/credential-vault]
       P[apps/client-contracts]
+      Q[apps/resource-budget]
     end
     contracts[(Versioned files and receipts)]
     projects[(Project-owned scripts and assets)]
@@ -108,7 +110,7 @@ flowchart TB
 
     classDef boundary fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
     classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P boundary;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q boundary;
     class contracts,projects,outputs data;
 ```
 
@@ -163,6 +165,7 @@ Every program has a `docs/mvp/<name>/` brief, capability DAG, evidence record, a
 - [Multi-workspace Studio tutorial](docs/training/04-multi-workspace-studio.md)
 - [Local credential custody tutorial](docs/training/05-local-credential-custody.md)
 - [Credential-aware publication tutorial](docs/training/06-credential-aware-publication.md)
+- [Resource budget lease tutorial](docs/training/07-resource-budget-leases.md)
 - [Creator workflows](docs/WORKFLOWS.md)
 - [Contributing a new MVP](docs/CONTRIBUTING.md)
 - [Repository map](docs/PROJECT_MAP.md)

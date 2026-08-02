@@ -9,6 +9,7 @@ Public files and HTTP envelopes are the reusable seams. Graph Studio may invoke 
 | Workspace Storage | `provision`, `describe`, `resolve`, `capacity` | atomic namespace registry + confined path/capacity decision | `apps/workspace-storage/run.ps1` |
 | Credential Vault | `put`, `describe`, `rotate`, `revoke`, `run --expected-provider` | encrypted registry + redacted lifecycle or provider-bound child exit code | `apps/credential-vault/run.ps1` |
 | Client Contracts | `export`, `validate-command`, `check-client` | canonical bundle + validation/compatibility decision | `apps/client-contracts/run.ps1` |
+| Resource Budget | `configure`, `reserve`, `renew`, `release`, `describe`, `snapshot` | generation-bound lease fact + capacity snapshot | `apps/resource-budget/run.ps1` |
 | Graph Definition | node/edge graph revision | validated graph fingerprint | `apps/video-graph-studio/studio/contracts.py` |
 | Workflow Run and Start Queue | `CMD-RUN-CREATE`, idempotent `CMD-RUN-START`, `CMD-RUN-CANCEL` | run/step/log projection + read-only FIFO queue | `apps/video-graph-studio/studio/api.py` |
 | Source Intake | folder or supported URL policy | source manifest + receipt | `apps/source-intake/source_intake/contracts.py` |

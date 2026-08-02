@@ -7,6 +7,8 @@ flowchart TB
     Client["Browser / future mobile client"] -->|"credential + versioned command"| Admission["Admission adapter"]
     Access["Workspace Access"] -->|"redacted scope decision"| Admission
     Storage["Workspace Storage"] -->|"state/artifact namespace"| Router["Workspace Runtime Router"]
+    Storage -. "capacity fact" .-> Budget["Resource Budget"]
+    Budget -. "future lease fact" .-> Router
     Vault["Credential Vault"] -->|"one child environment"| Publish["Platform I/O"]
     Admission -->|"multi workspace"| Router
     Router --> HTTP
@@ -38,6 +40,7 @@ flowchart TB
 | Workspace identity/credential lifecycle | Workspace Access | admission adapters, operators |
 | Workspace state/artifact/temp namespace and capacity projection | Workspace Storage | Workspace Runtime Router, operators |
 | Client command/endpoint compatibility bundle | Client Contracts | browser, future mobile and hosted clients |
+| Workspace byte/slot limits and reservation leases | Resource Budget | future Studio admission adapter, operators |
 | Run lifecycle/version | Workflow Run Owner | Process, dashboard |
 | Start-request order/claim | Durable Start Queue | Process, dashboard |
 | Step checkpoint/continuation | Workflow Process Manager | Run projection, recovery |
@@ -62,7 +65,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Guarded Publication now passes credential references through Credential Vault's provider-bound public child boundary into Platform I/O; real authenticated platform proof remains pending. Commercial hosting still needs a real identity provider, remote secret custody, hard resource reservations and production security evidence; it must not move workflow truth into the UI.
+Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Resource Budget now proves durable local byte/slot reservations independently; Studio lease admission remains the next composition edge. Guarded Publication passes credential references through Credential Vault's provider-bound public child boundary into Platform I/O; real authenticated platform proof remains pending. Commercial hosting still needs a real identity provider, remote secret custody, distributed resource enforcement and production security evidence; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 

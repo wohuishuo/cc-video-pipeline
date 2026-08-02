@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "resource-budget",
+  "summary": "Own durable per-workspace byte and execution-slot reservation leases without local cross-process oversubscription.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/resource_budget_mvp -q",
+  "inputs": ["workspace ID", "byte/slot limits", "reservation identity", "TTL and expected generation"],
+  "outputs": ["SQLite lease ledger", "reservation fact", "capacity snapshot", "bounded denial"],
+  "dependencies": ["python>=3.12", "sqlite3"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}

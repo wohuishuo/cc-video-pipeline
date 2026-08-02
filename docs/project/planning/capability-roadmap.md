@@ -21,6 +21,8 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 15 | Credential-aware guarded publication | credential reference, provider match, exact confirmation, redacted serial child receipt | Domain complete; real authenticated platform proof pending |
 | 16 | Authenticated real-platform adapters | accepted private/draft upload, external ID reconciliation, renewal and rate-limit evidence | Pending |
 | 17 | Transport-neutral client contracts | canonical bundle, strict command envelopes, scoped endpoints, semantic compatibility | Domain complete; Studio HTTP discovery pending |
-| 18 | Hosted/mobile admission | remote identity, HTTP contract discovery, remote secret custody, hard resource budgets, attack review and security evidence | Pending |
+| 18 | Durable local resource budget | byte/slot leases, cross-process no-oversubscription, generation/TTL lifecycle, Storage capacity composition | Domain complete; Studio admission pending |
+| 19 | Resource-aware Studio admission | reserve before start, renew during run, release on every terminal path, recovery reconciliation | Pending |
+| 20 | Hosted/mobile admission | remote identity, HTTP contract discovery, remote secret custody, distributed budgets, attack review and security evidence | Pending |
 
 No later slice may move upstream ownership into Graph Studio for convenience.
