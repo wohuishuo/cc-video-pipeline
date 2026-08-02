@@ -26,6 +26,7 @@ The structure follows the proven documentation chain in `roblox-city-scavenger`,
 - [Creator Automation Studio product definition](product/creator-automation-studio.md)
 - [Video automation capability map](capabilities/video-automation-capability-map.md)
 - [Workspace Access MVP](../../apps/workspace-access/README.md)
+- [Workspace Storage MVP](../../apps/workspace-storage/README.md)
 - [System component map](architecture/system-component-map.md)
 - [Component catalog](architecture/component-catalog.md)
 - [Video Graph Studio blueprint](architecture/design/blueprints/video-graph-studio.md)

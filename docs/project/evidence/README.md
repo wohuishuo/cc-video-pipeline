@@ -15,5 +15,6 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Video Graph Studio secure workspace admission drill](video-graph-studio/secure-admission-drill.md)
 - [Operations readiness](operations-readiness/delivery-ledger.md)
 - [Workspace Access](workspace-access/delivery-ledger.md)
+- [Workspace Storage](workspace-storage/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

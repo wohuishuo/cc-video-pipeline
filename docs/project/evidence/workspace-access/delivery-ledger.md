@@ -4,7 +4,7 @@
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
 | Evidence present | independent launcher and manifest; canonical workspace roots; public redacted description; initialization replay/conflict; 256-bit random credentials; digest-only persistence; explicit scopes; environment-only verification input; expiry; revocation; atomic registry replacement; real CLI lifecycle; secure loopback Studio composition |
-| Evidence missing | hosted identity provider; tenant-scoped run/artifact storage; OS ACL hardening; multi-process registry lock; remote vault; security/attack review; audit export |
+| Evidence missing | hosted identity provider; OS ACL hardening; multi-process registry lock; remote vault; security/attack review; audit export |
 | Safe substitutes | local JSON registry; short-lived bearer credential; one secure loopback Studio process per workspace |
 | Decisions unapproved | IdP, roles, refresh flow, device enrollment, vault, tenant model, recovery, retention and compliance policy |
 | Forbidden claims | no production authentication; no secure remote access; no tenant isolation; no OAuth/MFA; no compliance certification |

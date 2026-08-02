@@ -7,6 +7,7 @@
 - Translation is a separate owner because wording may be edited or regenerated while timing/source identity remains stable.
 - Voice rendering checkpoints each segment so a network failure does not repeat completed clips.
 - Graph Studio stores continuation and projections, not media-domain artifacts.
+- Workspace Storage owns deterministic state/artifact/temp namespaces and capacity projection; it does not authorize callers or interpret stored artifacts.
 - The supplied Douyin link is a creator profile; enumeration is a separate capability before download, not an exception hidden in Platform I/O.
 
 ## Risks requiring evidence
@@ -18,7 +19,7 @@
 | Edge service instability | bounded retry, per-segment checkpoint and failure receipt |
 | CPU/GPU overload | resource-budget owner before any parallel mode |
 | Duplicate publication | idempotent platform operation and post-upload reconciliation |
-| Mobile/hosted expansion | contract compatibility plus auth/tenancy ADRs |
+| Mobile/hosted expansion | compose authenticated workspace routing into disjoint storage namespaces, then verify cross-tenant denial |
 
 ## Rejected shortcut
 

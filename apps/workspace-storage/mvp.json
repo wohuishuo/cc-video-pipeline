@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "workspace-storage",
+  "summary": "Own deterministic, confined storage namespaces and capacity decisions per workspace.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/workspace_storage_mvp -q",
+  "inputs": ["workspace identity reference", "canonical storage root", "quota bytes", "relative namespace path"],
+  "outputs": ["atomic workspace storage registry", "confined namespace descriptor", "capacity decision"],
+  "dependencies": ["python>=3.12"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}

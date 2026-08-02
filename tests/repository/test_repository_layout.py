@@ -11,6 +11,7 @@ EXPECTED_APPS = {
     "creator-discovery",
     "publication",
     "workspace-access",
+    "workspace-storage",
 }
 
 

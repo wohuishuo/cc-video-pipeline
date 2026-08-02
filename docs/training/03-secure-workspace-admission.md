@@ -84,4 +84,4 @@ The next protected request is denied. Studio owns no credential lifecycle and th
 
 ## Evidence boundary
 
-This proves secure local composition, not hosted or production security. Read the [recorded admission drill](../project/evidence/video-graph-studio/secure-admission-drill.md) for exact probes and the remaining gaps: tenant-scoped storage, remote identity, vault custody, attack review and operational security.
+This proves secure local composition, not hosted or production security. Read the [recorded admission drill](../project/evidence/video-graph-studio/secure-admission-drill.md) for exact probes and the remaining gaps: multi-workspace storage routing, remote identity, vault custody, attack review and operational security.

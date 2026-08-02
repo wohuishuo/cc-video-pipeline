@@ -55,7 +55,7 @@ Several runs may be queued. Only one workflow and one child process execute at a
 
 The local server binds only to `127.0.0.1`; paths must remain under configured allowed roots. Default local mode stays anonymous. Optional secure mode binds one Studio process and data root to one Workspace Access identity, queries its roots through the public CLI, and checks a route-specific scope before calling the Run application. `runs:read` covers run queries, `artifacts:read` covers folder browsing and `runs:write` covers mutations.
 
-The browser stores its credential in session storage only and strips a bootstrap fragment immediately. The HTTP adapter sends the plaintext to Workspace Access only through a subprocess environment variable; it is absent from argv, decisions, logs, manifests and receipts. Static files and health are public so a disconnected client can load and learn that admission is required. This is single-workspace local admission, not tenant isolation. A hosted version still requires remote identity, tenant-scoped storage, secret custody, audit and abuse-control owners before accepting remote traffic.
+The browser stores its credential in session storage only and strips a bootstrap fragment immediately. The HTTP adapter sends the plaintext to Workspace Access only through a subprocess environment variable; it is absent from argv, decisions, logs, manifests and receipts. Static files and health are public so a disconnected client can load and learn that admission is required. This is single-workspace local admission, not tenant isolation. A hosted version still requires remote identity, verified routing into Workspace Storage namespaces, secret custody, audit and abuse-control owners before accepting remote traffic.
 
 ## 7. Observability
 
