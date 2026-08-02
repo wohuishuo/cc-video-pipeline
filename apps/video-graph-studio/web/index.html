@@ -41,6 +41,7 @@
       <label class="choice"><input type="radio" name="template" value="creator-profile"> Creator</label>
       <label class="choice"><input type="radio" name="template" value="publication-plan"> Publish Plan</label>
       <label class="choice"><input type="radio" name="template" value="publication-execute"> Publish Execute</label>
+      <label class="choice"><input type="radio" name="template" value="youtube-connect"> Connect YouTube</label>
     </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
@@ -147,6 +148,24 @@
       <div class="field source-field">
         <label for="credential-vault-path">Credential Vault path</label>
         <input id="credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
+      </div>
+    </div>
+    <div id="youtube-connect-controls" class="asr-controls" hidden>
+      <div class="field source-field">
+        <label for="youtube-client-config">Google desktop client JSON</label>
+        <input id="youtube-client-config" name="clientConfigPath" autocomplete="off" placeholder="%USERPROFILE%\Downloads\client_secret.json">
+      </div>
+      <div class="field source-field">
+        <label for="youtube-vault-path">Credential Vault path</label>
+        <input id="youtube-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
+      </div>
+      <div class="field asr-field device-field">
+        <label for="youtube-credential-id">Credential ID</label>
+        <input id="youtube-credential-id" name="credentialId" value="youtube-main" autocomplete="off">
+      </div>
+      <div class="field source-field">
+        <label for="youtube-credential-label">Account label</label>
+        <input id="youtube-credential-label" name="label" value="Main YouTube" autocomplete="off">
       </div>
     </div>
     <fieldset id="target-language-controls" class="choice-field" aria-label="Target languages">
@@ -273,6 +292,6 @@
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>
-    <script src="/app.js?v=3" defer></script>
+    <script src="/app.js?v=4" defer></script>
 </body>
 </html>

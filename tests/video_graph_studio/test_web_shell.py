@@ -30,10 +30,14 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'value="creator-profile"' in html
     assert 'value="publication-plan"' in html
     assert 'value="publication-execute"' in html
+    assert 'value="youtube-connect"' in html
     assert 'id="publication-credential-id"' in html
     assert 'id="publication-plan-run-id"' in html
     assert 'id="publication-confirmation"' in html
     assert 'id="credential-vault-path"' in html
+    assert 'id="youtube-client-config"' in html
+    assert 'id="youtube-vault-path"' in html
+    assert 'id="youtube-credential-id"' in html
     assert 'id="creator-max-items"' in html
     assert 'id="authentication-file"' in html
     assert 'id="publication-video"' in html
@@ -57,7 +61,7 @@ def test_shell_has_creator_controls_and_workflow_regions():
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     assert 'href="/styles.css?v=1"' in html
-    assert 'src="/app.js?v=3"' in html
+    assert 'src="/app.js?v=4"' in html
     assert "https://" not in html
     assert "http://" not in html
 
@@ -90,7 +94,9 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'authenticationFile' in script
     assert 'publication-plan' in script
     assert 'publication-execute' in script
+    assert 'youtube-connect' in script
     assert 'planRunId' in script and 'confirmation' in script and 'credentialVaultPath' in script
+    assert 'clientConfigPath' in script and 'credentialId' in script and 'label' in script
     assert 'credentialIds' in script
     assert 'function populateLatestPublicationPlan()' in script
     assert 'fact.manifestSha256' in script

@@ -16,6 +16,7 @@ EXPECTED_APPS = {
     "client-contracts",
     "resource-budget",
     "youtube-publisher",
+    "youtube-oauth-bootstrap",
 }
 
 
