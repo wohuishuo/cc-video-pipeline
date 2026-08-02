@@ -71,6 +71,7 @@ Choose one of the workflow templates:
 - `Folder+Dub` or `URL+Dub` runs all ten owner steps and produces verified subtitle-burned H.264/AAC derivatives.
 - `Creator` enumerates a YouTube/Bilibili/Douyin/TikTok profile into a verified Creator Manifest without downloading media.
 - `Publish Plan` fingerprints one finished video and metadata file into private/draft jobs for selected platforms. It never uploads.
+- `Publish Execute` resolves one completed private YouTube plan from the same workspace and requires its exact SHA-256 plus a Credential Vault path before invoking guarded execution. It is a separate explicit Graph.
 - `Localize` runs the compatibility prepared-folder Edge workflow.
 
 Submit several workflows without waiting for the previous one to finish. Start requests are stored in a durable FIFO queue while exactly one workflow and one child process execute at a time. The Inspector's Queue & Recent list lets you reopen and monitor recent runs. The ten-step dubbing graph calls Source Intake, Transcription, Translation, Voice Rendering and Localization only through their public launchers.
@@ -107,6 +108,7 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Localization is platform integrated through a browser-admitted ten-step RU+KK run with real FFmpeg/FFprobe outputs. Edge TTS remains a replaceable online adapter and may return retryable service failures.
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
+- Guarded private YouTube execution is now browser-operable as a separate confirmed Graph and is domain verified through real Publication/Vault composition with a fake platform boundary. No real authenticated upload is claimed.
 - Optional Workspace Access admission is domain verified through its public CLI boundary with real scope separation, wrong-workspace denial and secret-redaction evidence.
 - Multi-workspace routing is domain verified with two credentials, two SQLite state roots, isolated run projections, cross-workspace denial and one shared global execution gate.
 - Optional Resource Budget composition is domain verified with reserve-before-run, renewable generation fencing, durable wait/requeue, terminal release and a real CLI-to-Studio child-process drill.

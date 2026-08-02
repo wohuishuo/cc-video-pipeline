@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
+import re
 from typing import Any
 from urllib.parse import urlparse
 
@@ -182,6 +185,21 @@ PUBLICATION_GRAPHS = {
     )
 }
 
+PUBLICATION_EXECUTION_GRAPHS = {
+    "publication-execute": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "publication-execute",
+            "revision": 1,
+            "nodes": [
+                {"id": "execute-publication", "type": "execute-publication", "config": {}},
+                {"id": "verify-publication-execution", "type": "verify-publication-execution", "config": {}},
+            ],
+            "edges": [{"source": "execute-publication", "target": "verify-publication-execution", "relationship": "Fact"}],
+        }
+    )
+}
+
 SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **CREATOR_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
@@ -257,6 +275,8 @@ class StudioApplication:
             return self._create_intake_run(envelope, payload, template_id)
         if template_id in PUBLICATION_GRAPHS:
             return self._create_publication_plan_run(envelope, payload, template_id)
+        if template_id in PUBLICATION_EXECUTION_GRAPHS:
+            return self._create_publication_execution_run(envelope, payload, template_id)
         if template_id != "prepared-localization":
             raise ContractError("REJECTED_MALFORMED", f"unknown templateId: {template_id}")
         source = Path(str(payload.get("sourceRoot", ""))).resolve()
@@ -303,7 +323,44 @@ class StudioApplication:
             raise ContractError("REJECTED_MALFORMED", "publication account is required")
         if payload.get("public") is True:
             raise ContractError("REJECTED_MALFORMED", "browser publication planning is private/draft only")
-        result = self.store.create_run(CreateRun(operation_id=str(envelope["operationId"]),correlation_id=str(envelope["correlationId"]),graph=PUBLICATION_GRAPHS[template_id],parameters={"templateId":template_id,"videoPath":str(video),"metadataPath":str(metadata),"targetPlatforms":list(targets),"account":account,"public":False}))
+        credential_ids = payload.get("credentialIds", {})
+        if not isinstance(credential_ids, dict) or not set(credential_ids).issubset(targets) or not all(isinstance(value,str) and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}",value) for value in credential_ids.values()):
+            raise ContractError("REJECTED_MALFORMED", "credentialIds must map selected platforms to valid credential IDs")
+        result = self.store.create_run(CreateRun(operation_id=str(envelope["operationId"]),correlation_id=str(envelope["correlationId"]),graph=PUBLICATION_GRAPHS[template_id],parameters={"templateId":template_id,"videoPath":str(video),"metadataPath":str(metadata),"targetPlatforms":list(targets),"account":account,"credentialIds":dict(credential_ids),"public":False}))
+        status=201 if result.result_class=="COMPLETED" else 200
+        if result.result_class=="REJECTED_CONFLICT": status=409
+        return status,{"resultClass":result.result_class,"value":result.value}
+
+    def _create_publication_execution_run(self, envelope, payload, template_id):
+        plan_run_id = str(payload.get("planRunId", "")).strip()
+        confirmation = str(payload.get("confirmation", "")).strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", confirmation):
+            raise ContractError("REJECTED_MALFORMED", "confirmation must be a SHA-256")
+        try:
+            plan_run = self.store.get_run(plan_run_id)
+        except KeyError as error:
+            raise ContractError("REJECTED_NOT_FOUND", "publication plan run does not exist") from error
+        if plan_run["status"] != "COMPLETED" or plan_run["graph"].get("graphId") != "publication-plan":
+            raise ContractError("REJECTED_MALFORMED", "planRunId must name a completed publication-plan run")
+        if not any(step.get("nodeId") == "verify-publication-plan" and step.get("status") == "COMPLETED" for step in plan_run["steps"]):
+            raise ContractError("REJECTED_MALFORMED", "publication plan run lacks a verified plan fact")
+        committed = next((step.get("result") for step in plan_run["steps"] if step.get("nodeId") == "plan-publication" and step.get("status") == "COMPLETED"), None)
+        if not isinstance(committed, dict):
+            raise ContractError("REJECTED_MALFORMED", "publication plan fact is missing")
+        plan = Path(str(committed.get("manifest", ""))).resolve()
+        if not plan.is_file() or hashlib.sha256(plan.read_bytes()).hexdigest() != committed.get("manifestSha256") or confirmation != committed.get("manifestSha256"):
+            raise ContractError("REJECTED_CONFLICT", "publication plan confirmation does not match the committed fact")
+        try:
+            value = json.loads(plan.read_text(encoding="utf-8-sig")); jobs = value["jobs"]
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ContractError("REJECTED_MALFORMED", "publication plan is invalid") from error
+        if value.get("public") is not False or not jobs or not all(row.get("platform") == "youtube" and row.get("visibility") == "private-or-draft" and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", str(row.get("credentialId", ""))) for row in jobs):
+            raise ContractError("REJECTED_MALFORMED", "browser execution requires credential-backed private YouTube jobs")
+        vault = Path(str(payload.get("credentialVaultPath", ""))).resolve()
+        if not vault.is_file() or not vault.is_relative_to(Path.home().resolve()):
+            raise ContractError("REJECTED_MALFORMED", "credentialVaultPath must be an existing file inside the user home directory")
+        parameters = {"templateId":template_id,"planRunId":plan_run_id,"planPath":str(plan),"confirmation":confirmation,"credentialVaultPath":str(vault)}
+        result = self.store.create_run(CreateRun(operation_id=str(envelope["operationId"]),correlation_id=str(envelope["correlationId"]),graph=PUBLICATION_EXECUTION_GRAPHS[template_id],parameters=parameters))
         status=201 if result.result_class=="COMPLETED" else 200
         if result.result_class=="REJECTED_CONFLICT": status=409
         return status,{"resultClass":result.result_class,"value":result.value}

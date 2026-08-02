@@ -4,7 +4,7 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-270%20passing-22c55e)](scripts/test-all.ps1)
+[![Tests](https://img.shields.io/badge/tests-276%20passing-22c55e)](scripts/test-all.ps1)
 [![MVPs](https://img.shields.io/badge/independent%20MVPs-20-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
@@ -168,6 +168,7 @@ Every program has a `docs/mvp/<name>/` brief, capability DAG, evidence record, a
 - [Resource budget lease tutorial](docs/training/07-resource-budget-leases.md)
 - [Resource-aware Studio tutorial](docs/training/08-resource-aware-studio.md)
 - [Studio client-contract discovery tutorial](docs/training/09-studio-client-contract-discovery.md)
+- [Studio guarded-publication tutorial](docs/training/10-studio-guarded-publication.md)
 - [Creator workflows](docs/WORKFLOWS.md)
 - [Contributing a new MVP](docs/CONTRIBUTING.md)
 - [Repository map](docs/PROJECT_MAP.md)

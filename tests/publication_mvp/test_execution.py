@@ -54,6 +54,20 @@ def test_failed_target_resumes_without_repeating_completed_target(tmp_path):
     assert failed_adapter.calls==["youtube","douyin"] and resumed_adapter.calls==["douyin"]
 
 
+def test_adapter_success_without_external_id_cannot_commit_publication(tmp_path):
+    class MissingIdentity(FakePlatform):
+        def execute(self,job,on_log): return ExecutionOutcome(True,None,{"executed":True})
+
+    path,digest=plan(tmp_path,{"youtube":"a"})
+    result=PublicationExecution().execute(
+        path,tmp_path/"run","run-op",confirmation=digest,adapter=MissingIdentity()
+    )
+
+    assert result.result_class=="FAILED"
+    receipt=json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert receipt["items"][0]["status"]=="FAILED"
+
+
 def test_credential_reference_requires_a_configured_vault(tmp_path):
     adapter=PlatformIOExecutionAdapter(tmp_path/"platform.ps1")
     outcome=adapter.execute(

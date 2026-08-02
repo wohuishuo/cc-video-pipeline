@@ -20,6 +20,8 @@ flowchart LR
     Queue --> Process["Graph Process Manager"]
     Process -->|"reserve / renew / release"| Budget["Resource Budget owner"]
     Process -->|"argv command + operation identity"| MVP["Independent MVP adapter"]
+    MVP -->|"credential reference only"| Vault["Credential Vault"]
+    Vault -->|"one child environment"| Platform["Platform I/O"]
     MVP -->|"artifact + receipt + fingerprint"| Process
     Run -->|"read-only run projection"| Client
 ```
@@ -50,6 +52,7 @@ Several runs may be queued. Every workspace has its own durable FIFO. Queued run
 - Resume keeps completed checkpoints and starts at the first incomplete node.
 - Missing output is failure even when a child exits with code zero.
 - Unknown external publication outcome is quarantined for reconciliation; it is never inferred as success.
+- Browser publication execution resolves a completed plan from the same RunStore, requires its committed SHA-256, permits only credential-backed private YouTube jobs and rejects adapter success without an external ID.
 - Process loss does not make the browser the recovery authority.
 - Startup releases any active reservation belonging to an already terminal run. Interrupted work reacquires the same stable reservation identity; an expired same-fingerprint reservation advances generation instead of changing run identity.
 

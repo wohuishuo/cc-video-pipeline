@@ -27,3 +27,5 @@ Execution requires the exact SHA-256 of `publication-plan.json`:
 Plans are private/draft by default. At present, only YouTube's pinned adapter can force private visibility; guarded execution rejects private/draft Bilibili, Douyin and TikTok jobs. Creating a public plan requires `--public`, and execution still requires the exact plan hash. Credential-aware process composition has local domain evidence; no authenticated upload has real-platform evidence yet.
 
 Each platform executes serially and checkpoints independently. A retry never repeats a completed job whose fingerprints still match.
+
+Video Graph Studio exposes this as two separate templates: **Publish Plan** may store non-secret credential IDs, and **Publish Execute** requires the completed plan run ID, its exact committed SHA-256 and a Credential Vault path. The browser execution policy currently accepts credential-backed private YouTube plans only. Adapter success without a non-empty external platform ID is failure.
