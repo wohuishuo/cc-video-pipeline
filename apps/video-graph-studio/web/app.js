@@ -67,14 +67,21 @@ const TEMPLATE_NODE_COPY = {
   },
 };
 
-const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
+const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization", accessRequired: false, workspaceId: sessionStorage.getItem("videoGraph.workspaceId") || "" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 async function api(path, options = {}) {
+  const token = sessionStorage.getItem("videoGraph.accessToken");
+  const workspaceId = sessionStorage.getItem("videoGraph.workspaceId");
   const response = await fetch(path, {
     ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(workspaceId ? { "X-Workspace-Id": workspaceId } : {}),
+      ...(options.headers || {}),
+    },
   });
   const body = await response.json();
   if (!response.ok) {
@@ -107,13 +114,63 @@ async function checkHealth() {
   try {
     const health = await api("/api/v1/health");
     const pill = $("#health-pill");
+    state.accessRequired = health.accessRequired === true;
+    state.workspaceId = health.workspaceId || sessionStorage.getItem("videoGraph.workspaceId") || "";
+    const accessButton = $("#access-button");
+    accessButton.hidden = !state.accessRequired;
+    $("#access-workspace").value = state.workspaceId;
+    const hasAccess = !state.accessRequired || Boolean(sessionStorage.getItem("videoGraph.accessToken")) && sessionStorage.getItem("videoGraph.workspaceId") === state.workspaceId;
+    accessButton.classList.toggle("required", !hasAccess);
+    accessButton.textContent = hasAccess ? state.workspaceId : "Access required";
+    if (!hasAccess) {
+      pill.classList.remove("ready");
+      pill.lastChild.textContent = " Access required";
+      return;
+    }
     pill.classList.add("ready");
     const queued = health.queuedRuns ? ` / ${health.queuedRuns} queued` : "";
     pill.lastChild.textContent = health.activeWorkers ? ` 1 worker active${queued}` : health.queuedRuns ? ` ${health.queuedRuns} queued` : " System ready";
     await refreshRunList();
   } catch (error) {
-    $("#health-pill").lastChild.textContent = " Offline";
+    const denied = error.body?.resultClass === "REJECTED_UNAUTHORIZED" || error.body?.resultClass === "REJECTED_WORKSPACE";
+    $("#health-pill").classList.remove("ready");
+    $("#health-pill").lastChild.textContent = denied ? " Access denied" : " Offline";
+    if (denied) {
+      $("#access-button").classList.add("required");
+      $("#access-button").textContent = "Access denied";
+    }
   }
+}
+
+function bootstrapAccess() {
+  const fragment = new URLSearchParams(location.hash.slice(1));
+  const token = fragment.get("access_token");
+  const workspaceId = fragment.get("workspace");
+  if (token && workspaceId) {
+    sessionStorage.setItem("videoGraph.accessToken", token);
+    sessionStorage.setItem("videoGraph.workspaceId", workspaceId);
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  }
+}
+
+function saveAccess(event) {
+  event.preventDefault();
+  const workspaceId = $("#access-workspace").value.trim();
+  const token = $("#access-token").value.trim();
+  if (!workspaceId || !token) return;
+  sessionStorage.setItem("videoGraph.workspaceId", workspaceId);
+  sessionStorage.setItem("videoGraph.accessToken", token);
+  $("#access-token").value = "";
+  $("#access-dialog").close();
+  checkHealth();
+}
+
+function clearAccess() {
+  sessionStorage.removeItem("videoGraph.workspaceId");
+  sessionStorage.removeItem("videoGraph.accessToken");
+  $("#access-token").value = "";
+  $("#access-dialog").close();
+  checkHealth();
 }
 
 function templateForRun(run) {
@@ -506,6 +563,9 @@ function bindEvents() {
   $("#choose-folder").addEventListener("click", selectFolder);
   $("#toggle-activity").addEventListener("click", () => $("#activity-log").classList.toggle("collapsed"));
   $("#clear-view").addEventListener("click", () => { $("#log-output").textContent = "View cleared. Durable logs remain stored."; });
+  $("#access-button").addEventListener("click", () => $("#access-dialog").showModal());
+  $("#access-form").addEventListener("submit", saveAccess);
+  $("#clear-access").addEventListener("click", clearAccess);
   $$(".graph-node").forEach((node) => node.addEventListener("click", () => focusNode(node.dataset.nodeId)));
   $$('[data-focus-node]').forEach((button) => button.addEventListener("click", () => focusNode(button.dataset.focusNode)));
   $("#source-root").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
@@ -514,6 +574,7 @@ function bindEvents() {
   $$('input[name="template"]').forEach((input) => input.addEventListener("change", () => selectTemplate(input.value)));
 }
 
+bootstrapAccess();
 bindEvents();
 checkHealth();
 focusNode("localize");

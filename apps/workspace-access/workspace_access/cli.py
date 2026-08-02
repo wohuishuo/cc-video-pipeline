@@ -31,6 +31,11 @@ def _parser() -> argparse.ArgumentParser:
     issue.add_argument("--ttl-hours", required=True, type=float)
     issue.add_argument("--json", action="store_true")
 
+    describe = commands.add_parser("describe")
+    _registry_argument(describe)
+    describe.add_argument("--workspace-id", required=True)
+    describe.add_argument("--json", action="store_true")
+
     authorize = commands.add_parser("authorize")
     _registry_argument(authorize)
     authorize.add_argument("--workspace-id", required=True)
@@ -103,6 +108,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.scope,
                 ttl=timedelta(hours=args.ttl_hours),
             )
+        elif args.command == "describe":
+            result = registry.describe_workspace(args.workspace_id)
         elif args.command == "authorize":
             result = registry.authorize(
                 os.environ[args.token_env], args.workspace_id, args.required_scope

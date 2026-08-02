@@ -54,7 +54,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop currently uses loopback admission. Workspace Access now provides an independent local policy owner but is not yet composed into Studio HTTP. Commercial hosting adds a real identity provider, tenancy and remote storage as adapters/owners; it must not move workflow truth into the UI.
+Desktop defaults to anonymous loopback admission. Optional secure mode composes Workspace Access through its public CLI, binds one Studio process to one workspace, applies route-specific scopes and limits browsing to the workspace roots. Commercial hosting still needs a real identity provider, tenant-scoped storage and remote secret custody as separate adapters/owners; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 

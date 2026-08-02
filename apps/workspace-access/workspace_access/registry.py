@@ -132,6 +132,21 @@ class AccessRegistry:
             },
         )
 
+    def describe_workspace(self, workspace_id: str) -> AccessResult:
+        self._validate_identifier(workspace_id, "workspace ID")
+        registry = self._load(require_exists=True)
+        workspace = self._workspace(registry, workspace_id)
+        if workspace is None:
+            return AccessResult("REJECTED_NOT_FOUND", {"workspaceId": workspace_id})
+        return AccessResult(
+            "COMPLETED",
+            {
+                "workspaceId": workspace["workspaceId"],
+                "displayName": workspace["displayName"],
+                "allowedRoots": list(workspace["allowedRoots"]),
+            },
+        )
+
     def authorize(self, token: str, workspace_id: str, required_scope: str) -> AccessResult:
         denied = AccessResult("REJECTED_UNAUTHORIZED", {"workspaceId": workspace_id})
         if required_scope not in KNOWN_SCOPES or not isinstance(token, str):

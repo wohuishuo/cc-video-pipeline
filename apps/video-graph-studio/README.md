@@ -14,6 +14,20 @@ The launcher opens `http://127.0.0.1:8765`. It never binds to the LAN. To run wi
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 -NoBrowser -Port 8765
 ```
 
+The ordinary loopback launch stays credential-free. To admit one configured workspace, first initialize Workspace Access and issue a short-lived browser credential with `runs:read`, `runs:write` and `artifacts:read`, then start Studio with the registry and workspace ID:
+
+```powershell
+$registry = "$env:LOCALAPPDATA\VideoGraphStudio\workspace-access.json"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 `
+  -AccessRegistry $registry `
+  -WorkspaceId local
+```
+
+Use the **Access** button to enter the workspace ID and bearer credential. The browser keeps them in `sessionStorage`, attaches them to versioned API requests, and removes bootstrap credentials from the URL fragment immediately. Static assets and health remain public; run queries require `runs:read`, folder browsing requires `artifacts:read`, and mutations require `runs:write`. The server also limits browsing to that workspace's configured roots.
+
+This protects the local HTTP boundary but is not multi-tenant hosting: each secure Studio process serves exactly one workspace and one data root. Tenant-scoped storage, remote identity, vault custody and audit export remain later owners.
+
 Choose one of the workflow templates:
 
 - `Folder` or `URL` creates and verifies a Source Manifest.
@@ -59,5 +73,6 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Localization is platform integrated through a browser-admitted ten-step RU+KK run with real FFmpeg/FFprobe outputs. Edge TTS remains a replaceable online adapter and may return retryable service failures.
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
-- Creator-profile discovery and authenticated uploads remain later independent slices.
+- Optional Workspace Access admission is domain verified through its public CLI boundary with real scope separation, wrong-workspace denial and secret-redaction evidence.
+- Authenticated upload execution remains a later independent slice.
 - No cloud account, billing, remote access or production platform claim is made.

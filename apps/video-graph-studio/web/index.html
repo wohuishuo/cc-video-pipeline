@@ -18,6 +18,7 @@
       <span id="save-state" class="save-state">Graph v1 · saved</span>
     </div>
     <div class="topbar-actions">
+      <button id="access-button" class="access-button" type="button" hidden>Access</button>
       <span id="health-pill" class="health-pill"><i></i> Connecting</span>
       <button id="toggle-activity" class="icon-button" type="button" aria-label="Toggle activity log">⌁</button>
     </div>
@@ -237,6 +238,18 @@
       <div class="folder-path"><button id="folder-up" type="button" aria-label="Parent folder">↑</button><code id="current-folder">Loading…</code></div>
       <div id="folder-list" class="folder-list"></div>
       <footer><span id="folder-media-count">0 videos in this folder</span><button id="choose-folder" value="default" class="primary">Use this folder</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="access-dialog">
+    <form id="access-form" method="dialog" class="dialog-card access-card">
+      <header><div><p class="eyebrow">WORKSPACE ADMISSION</p><h2>Connect this browser session</h2></div><button value="cancel" aria-label="Close">&times;</button></header>
+      <div class="access-fields">
+        <label><span>Workspace</span><input id="access-workspace" autocomplete="username" required></label>
+        <label><span>Bearer credential</span><input id="access-token" type="password" autocomplete="off" required></label>
+        <p class="muted">Stored in sessionStorage only. Closing this browser session removes it.</p>
+      </div>
+      <footer><button id="clear-access" type="button">Clear session</button><button value="default" class="primary">Connect</button></footer>
     </form>
   </dialog>
 
