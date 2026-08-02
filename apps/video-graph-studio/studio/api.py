@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .contracts import ContractError, GraphDefinition
+from .creator_catalog import project_creator_catalog
 from .engine import WorkflowEngine
 from .store import CreateRun, RunStore
 from .workflow_catalog import build_workflow_catalog
@@ -327,6 +328,11 @@ class StudioApplication:
             prefix = "/api/v1/runs/"
             if path.startswith(prefix):
                 suffix = path[len(prefix) :]
+                if suffix.endswith("/creator-catalog") and method == "GET":
+                    run_id = suffix[: -len("/creator-catalog")]
+                    if not run_id or "/" in run_id:
+                        raise ContractError("REJECTED_MALFORMED", "invalid creator catalog run ID")
+                    return 200, project_creator_catalog(self.store.get_run(run_id))
                 if "/" not in suffix and method == "GET":
                     return 200, self.store.get_run(suffix)
                 if suffix.endswith("/start") and method == "POST":
@@ -341,7 +347,11 @@ class StudioApplication:
         except KeyError as error:
             return 404, {"resultClass": "REJECTED_NOT_FOUND", "detail": str(error)}
         except ContractError as error:
-            status = 403 if error.code == "REJECTED_UNAUTHORIZED" else 400
+            status = {
+                "REJECTED_UNAUTHORIZED": 403,
+                "REJECTED_NOT_FOUND": 404,
+                "REJECTED_CONFLICT": 409,
+            }.get(error.code, 400)
             return status, {"resultClass": error.code, "detail": str(error)}
         except (TypeError, ValueError) as error:
             return 400, {"resultClass": "REJECTED_MALFORMED", "detail": str(error)}
