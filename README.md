@@ -4,8 +4,8 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-207%20passing-22c55e)](scripts/test-all.ps1)
-[![MVPs](https://img.shields.io/badge/independent%20MVPs-16-8b5cf6)](apps/README.md)
+[![Tests](https://img.shields.io/badge/tests-215%20passing-22c55e)](scripts/test-all.ps1)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-17-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
 [Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
@@ -14,7 +14,7 @@
 
 ---
 
-## One repository, sixteen focused programs
+## One repository, seventeen focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
 
@@ -69,6 +69,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **Publication** | Finished video + metadata + targets | Confirmable publication plan and serial receipts | `DOMAIN_VERIFIED` | [Open](apps/publication/README.md) |
 | **Video Graph Studio** | Prepared folder + language + voice + target | Durable browser-managed workflow | `DOMAIN_VERIFIED` | [Open](apps/video-graph-studio/README.md) |
 | **Workspace Access** | Workspace roots + short-lived scopes | Hashed credential registry + redacted authorization decision | `DOMAIN_VERIFIED` | [Open](apps/workspace-access/README.md) |
+| **Workspace Storage** | Workspace ID + storage root + quota | Confined state/artifact/temp namespaces + capacity decision | `DOMAIN_VERIFIED` | [Open](apps/workspace-storage/README.md) |
 
 ## Independent by design
 
@@ -89,6 +90,7 @@ flowchart TB
       K[apps/translation]
       L[apps/voice-rendering]
       M[apps/workspace-access]
+      N[apps/workspace-storage]
     end
     contracts[(Versioned files and receipts)]
     projects[(Project-owned scripts and assets)]
@@ -101,7 +103,7 @@ flowchart TB
 
     classDef boundary fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
     classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M boundary;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N boundary;
     class contracts,projects,outputs data;
 ```
 

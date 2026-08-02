@@ -25,8 +25,8 @@ The product is not a magic monolith. It is a visual control plane over independe
 
 ## Current accepted slice
 
-Folder and single-video URL intake, source transcription, multilingual translation, Edge voice rendering, localized-video composition, creator-profile discovery and guarded publication planning are browser-operable. Multiple Graphs can wait in a durable serial queue. Anonymous YouTube intake and authenticated Douyin creator enumeration have named real-platform evidence. A killed local Studio process can fence and resume the same durable run after restart. Optional secure mode now composes Workspace Access through its public launcher, admits a single configured workspace with short-lived scopes, and constrains folder browsing to that workspace's roots.
+Folder and single-video URL intake, source transcription, multilingual translation, Edge voice rendering, localized-video composition, creator-profile discovery and guarded publication planning are browser-operable. Multiple Graphs can wait in a durable serial queue. Anonymous YouTube intake and authenticated Douyin creator enumeration have named real-platform evidence. A killed local Studio process can fence and resume the same durable run after restart. Optional secure mode composes Workspace Access through its public launcher, admits a single configured workspace with short-lived scopes, and constrains folder browsing to that workspace's roots. Workspace Storage independently provides deterministic, confined runtime namespaces and capacity decisions for multiple workspace IDs; HTTP routing does not consume it yet.
 
 ## Explicit non-goals for the current slice
 
-Automatic public posting, commercial tenancy, tenant-scoped storage, remote identity or credential custody, billing, power-loss or hosted recovery, translation-quality certification and every-platform live proof are not yet claimed.
+Automatic public posting, commercial tenancy, production tenant isolation, Studio-to-storage routing, remote identity or credential custody, billing, power-loss or hosted recovery, translation-quality certification and every-platform live proof are not yet claimed.
