@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Creator Workflow Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=11">
+  <link rel="stylesheet" href="/styles.css?v=12">
 </head>
 <body>
   <header class="topbar">
@@ -54,7 +54,13 @@
         <header class="stage-header"><div><p class="eyebrow">02 · VIDEOS</p><h1 id="videos-title">确认真正要处理的视频。</h1><p id="videos-copy">账号模式可精确选择；本地文件夹模式会处理当前文件夹中的全部视频。</p></div><div class="selection-total"><strong id="selected-video-count">0</strong><span>视频</span></div></header>
         <div class="toolbar" id="creator-video-tools"><label class="search"><span>⌕</span><input id="video-search" placeholder="搜索标题或视频 ID"></label><button id="select-all-videos" type="button">选择当前全部</button><button id="clear-videos" type="button">清空</button><span id="catalog-count">0 videos</span></div>
         <div id="subtitle-status" class="status-legend"><span><i class="source"></i>已有字幕</span><span><i class="asr"></i>需要 ASR</span><span><i class="unknown"></i>下载后检查</span></div>
-        <div id="catalog-warning"></div>
+        <div id="catalog-warning" class="notice danger catalog-warning" hidden>
+          <div><strong>账号目录还不完整</strong><span>先尝试使用已保存的 Cookie 引用加载全部；平台仍有限制时，也可以明确只处理当前列表。</span></div>
+          <div class="catalog-recovery-actions">
+            <button id="load-all-videos-catalog" type="button">重新加载全部</button>
+            <label class="partial-consent"><input id="allow-partial-catalog" type="checkbox"><span><b>只处理当前已加载的视频</b><small>不会把当前列表标记成账号全部作品</small></span></label>
+          </div>
+        </div>
         <div id="video-catalog" class="catalog-grid"><div class="empty-card"><span class="empty-icon">V</span><div><strong>先选择来源</strong><p>视频清单会显示在这里。</p></div></div></div>
       </section>
 
@@ -96,6 +102,6 @@
 
   <dialog id="access-dialog"><form id="access-form" method="dialog" class="dialog-card"><header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>连接工作区</h2></div><button value="cancel" aria-label="Close">×</button></header><label><span>Workspace</span><input id="access-workspace" required></label><label><span>Bearer credential</span><input id="access-token" type="password" required></label><p>只保存在当前浏览器 sessionStorage。</p><footer><button id="clear-access" type="button">清除</button><button value="default" class="primary">连接</button></footer></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=11"></script>
+  <script type="module" src="/app.js?v=12"></script>
 </body>
 </html>
