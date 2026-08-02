@@ -4,6 +4,8 @@ An independent capability may consume another capability's published contract. I
 
 ```mermaid
 flowchart LR
+    A1["A01 Workspace Registry"] --> A2["A02 Scope Authorization"]
+    A2 -. "future admission" .-> G2["G02 Workflow Run Owner"]
     G1["G01 Graph Definition"] --> G3["G03 Workflow Process"]
     G2["G02 Workflow Run Owner"] --> G3
     S1["S01 Source Classification"] --> S2["S02 Folder Discovery"]
@@ -37,7 +39,8 @@ flowchart LR
 
 | ID | Capability | Current evidence | Next gate |
 | --- | --- | --- | --- |
-| G01-G03 | Graph definition, run and process ownership | `DOMAIN_VERIFIED` | crash/restart drill and production operations |
+| A01-A02 | Workspace Access | `DOMAIN_VERIFIED`; digest-only credentials, scope, expiry, revocation and redacted CLI evidence | compose with loopback HTTP admission, then tenant isolation and hosted identity provider |
+| G01-G03 | Graph definition, run, queue and process ownership | `DOMAIN_VERIFIED`; durable FIFO plus real process-loss recovery | power-loss, load, security and hosted operations |
 | S01-S04 | Source Intake | `DOMAIN_VERIFIED`; live YouTube evidence | Creator Manifest batch composition and three remaining download platforms |
 | D01-D02 | Creator Discovery | `PLATFORM_INTEGRATED`; durable page loop and real bounded Douyin profile manifest | full-profile scale and live YouTube/Bilibili/TikTok evidence |
 | T01-T03 | Transcription | `DOMAIN_VERIFIED`; real Tiny/CPU and browser graph evidence | representative quality, GPU and recovery evidence |

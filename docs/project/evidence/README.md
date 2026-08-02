@@ -13,5 +13,6 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Video Graph Studio process-loss recovery drill](video-graph-studio/recovery-drill.md)
 - [Video Graph Studio durable FIFO queue drill](video-graph-studio/durable-queue-drill.md)
 - [Operations readiness](operations-readiness/delivery-ledger.md)
+- [Workspace Access](workspace-access/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

@@ -11,6 +11,7 @@ reference/**/cookies.txt
 .env
 .env.local
 secrets/
+**/workspace-access.json
 
 # 下载的视频/音频产物（很大且包含平台元数据）
 reference/**/video.mp4
