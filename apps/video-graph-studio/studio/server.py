@@ -8,11 +8,17 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
 from pathlib import Path
+import threading
 import webbrowser
 from urllib.parse import parse_qs, urlsplit
 
 from .admission import AdmissionDecision, WorkspaceAccessCommandAdapter
 from .api import StudioApplication
+from .workspace_routing import (
+    WorkspaceRoutingError,
+    WorkspaceRuntimeRouter,
+    WorkspaceStorageCommandAdapter,
+)
 
 
 MAX_BODY_BYTES = 1024 * 1024
@@ -21,13 +27,16 @@ MAX_BODY_BYTES = 1024 * 1024
 def create_server(
     host: str,
     port: int,
-    application: StudioApplication,
+    application: StudioApplication | None,
     *,
     web_root: Path,
     admission=None,
+    workspace_router=None,
 ) -> ThreadingHTTPServer:
     if host != "127.0.0.1":
         raise ValueError("Video Graph Studio may bind only to 127.0.0.1")
+    if (application is None) == (workspace_router is None):
+        raise ValueError("provide exactly one application or workspace router")
     root = Path(web_root).resolve()
 
     class Handler(BaseHTTPRequestHandler):
@@ -56,10 +65,37 @@ def create_server(
                             },
                         )
                         return
-                status, payload = application.handle(
-                    self.command, parsed.path, parse_qs(parsed.query), body
-                )
-                if admission is not None and parsed.path == "/api/v1/health":
+                if workspace_router is not None and parsed.path == "/api/v1/health":
+                    status = 200
+                    payload = {
+                        "contractVersion": "1.0",
+                        **workspace_router.health(),
+                        "accessRequired": True,
+                        "multiWorkspace": True,
+                    }
+                else:
+                    target_application = application
+                    if workspace_router is not None:
+                        workspace_id = self.headers.get("X-Workspace-Id", "").strip()
+                        try:
+                            target_application = workspace_router.application_for(
+                                workspace_id,
+                                required_bytes=1 if self.command == "POST" else 0,
+                            )
+                        except WorkspaceRoutingError as error:
+                            status = 409 if error.result_class == "REJECTED_QUOTA" else 503
+                            self._send_json(
+                                status,
+                                {
+                                    "resultClass": error.result_class,
+                                    "detail": error.detail,
+                                },
+                            )
+                            return
+                    status, payload = target_application.handle(
+                        self.command, parsed.path, parse_qs(parsed.query), body
+                    )
+                if admission is not None and parsed.path == "/api/v1/health" and workspace_router is None:
                     payload = {
                         **payload,
                         "accessRequired": True,
@@ -136,6 +172,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--access-registry", type=Path)
+    parser.add_argument("--storage-registry", type=Path)
     parser.add_argument("--workspace-id")
     return parser
 
@@ -157,6 +194,8 @@ def build_runtime(
     data_root: Path,
     *,
     allowed_roots: tuple[Path, ...] | None = None,
+    artifact_root: Path | None = None,
+    execution_gate=None,
 ):
     from .adapters import (
         PreparedFolderAdapter,
@@ -183,6 +222,8 @@ def build_runtime(
     repository = Path(repository).resolve()
     data_root = Path(data_root).resolve()
     data_root.mkdir(parents=True, exist_ok=True)
+    artifact_root = Path(artifact_root).resolve() if artifact_root is not None else data_root
+    artifact_root.mkdir(parents=True, exist_ok=True)
     store = RunStore(data_root / "studio.db")
     store.interrupt_active()
     store.recover_queue()
@@ -200,31 +241,32 @@ def build_runtime(
             "prepared-folder": PreparedFolderAdapter(),
             "edge-localize": PreparedFolderEdgeAdapter(edge_launcher),
             "verify-output": VerifyOutputAdapter(),
-            "source-intake": SourceIntakeAdapter(intake_launcher, data_root / "intakes"),
+            "source-intake": SourceIntakeAdapter(intake_launcher, artifact_root / "intakes"),
             "verify-source": VerifySourceAdapter(),
             "transcribe-source": TranscriptSourceAdapter(
-                transcription_launcher, data_root / "transcripts"
+                transcription_launcher, artifact_root / "transcripts"
             ),
             "verify-transcript": VerifyTranscriptAdapter(),
             "translate-transcript": TranslateTranscriptAdapter(
-                translation_launcher, data_root / "translations"
+                translation_launcher, artifact_root / "translations"
             ),
             "verify-translation": VerifyTranslationAdapter(),
-            "render-voice": VoiceRenderingAdapter(voice_launcher, data_root / "voices"),
+            "render-voice": VoiceRenderingAdapter(voice_launcher, artifact_root / "voices"),
             "verify-voice": VerifyVoiceAdapter(),
             "localize-video": LocalizedVideoAdapter(
-                localization_launcher, data_root / "localized"
+                localization_launcher, artifact_root / "localized"
             ),
             "verify-localization": VerifyLocalizationAdapter(),
             "discover-creator": CreatorDiscoveryAdapter(
-                creator_discovery_launcher, data_root / "creators"
+                creator_discovery_launcher, artifact_root / "creators"
             ),
             "verify-creator": VerifyCreatorManifestAdapter(),
             "plan-publication": PublicationPlanAdapter(
-                publication_launcher, data_root / "publication-plans"
+                publication_launcher, artifact_root / "publication-plans"
             ),
             "verify-publication-plan": VerifyPublicationPlanAdapter(),
         },
+        execution_gate=execution_gate,
     )
     engine.resume_pending()
     application = StudioApplication(
@@ -238,11 +280,40 @@ def build_runtime(
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repository = Path(__file__).resolve().parents[3]
-    if bool(args.access_registry) != bool(args.workspace_id):
-        raise SystemExit("--access-registry and --workspace-id must be provided together")
+    if args.storage_registry and (not args.access_registry or args.workspace_id):
+        raise SystemExit("multi-workspace mode requires --access-registry and --storage-registry without --workspace-id")
+    if not args.storage_registry and bool(args.access_registry) != bool(args.workspace_id):
+        raise SystemExit("single-workspace mode requires --access-registry and --workspace-id together")
     admission = None
+    workspace_router = None
     allowed_roots = None
-    if args.access_registry:
+    if args.storage_registry:
+        admission = WorkspaceAccessCommandAdapter(
+            repository / "apps" / "workspace-access" / "run.ps1",
+            args.access_registry,
+        )
+        storage = WorkspaceStorageCommandAdapter(
+            repository / "apps" / "workspace-storage" / "run.ps1",
+            args.storage_registry,
+        )
+
+        execution_gate = threading.Lock()
+
+        def runtime_factory(workspace_id, state_root, artifact_root, roots):
+            return build_runtime(
+                repository,
+                state_root,
+                allowed_roots=roots,
+                artifact_root=artifact_root,
+                execution_gate=execution_gate,
+            )
+
+        workspace_router = WorkspaceRuntimeRouter(
+            admission, storage, runtime_factory
+        )
+        application = None
+        engine = None
+    elif args.access_registry:
         admission = WorkspaceAccessCommandAdapter(
             repository / "apps" / "workspace-access" / "run.ps1",
             args.access_registry,
@@ -250,19 +321,27 @@ def main(argv: list[str] | None = None) -> int:
         )
         workspace = admission.describe_workspace()
         allowed_roots = tuple(Path(value).resolve() for value in workspace["allowedRoots"])
-    application, engine = build_runtime(
-        repository, args.data_root, allowed_roots=allowed_roots
-    )
+        application, engine = build_runtime(
+            repository, args.data_root, allowed_roots=allowed_roots
+        )
+    else:
+        application, engine = build_runtime(
+            repository, args.data_root, allowed_roots=allowed_roots
+        )
     server = create_server(
         "127.0.0.1",
         args.port,
         application,
         web_root=repository / "apps" / "video-graph-studio" / "web",
         admission=admission,
+        workspace_router=workspace_router,
     )
     url = f"http://127.0.0.1:{server.server_port}/"
     print(f"Video Graph Studio: {url}", flush=True)
-    print(f"Data root: {args.data_root.resolve()}", flush=True)
+    if workspace_router is not None:
+        print(f"Storage registry: {args.storage_registry.resolve()}", flush=True)
+    else:
+        print(f"Data root: {args.data_root.resolve()}", flush=True)
     if not args.no_browser:
         webbrowser.open(url)
     try:
@@ -270,7 +349,10 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        engine.shutdown()
+        if workspace_router is not None:
+            workspace_router.shutdown()
+        else:
+            engine.shutdown()
         server.server_close()
     return 0
 

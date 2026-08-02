@@ -19,7 +19,7 @@
 | Edge service instability | bounded retry, per-segment checkpoint and failure receipt |
 | CPU/GPU overload | resource-budget owner before any parallel mode |
 | Duplicate publication | idempotent platform operation and post-upload reconciliation |
-| Mobile/hosted expansion | compose authenticated workspace routing into disjoint storage namespaces, then verify cross-tenant denial |
+| Mobile/hosted expansion | replace local identity/registry adapters, prove client contract compatibility, then run production cross-tenant attack tests |
 
 ## Rejected shortcut
 

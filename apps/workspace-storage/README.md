@@ -47,4 +47,4 @@ The query returns `ALLOWED` or `REJECTED_QUOTA` with current usage and available
 
 ## Boundary
 
-Workspace Access owns who may act. Workspace Storage owns where one workspace may keep runtime state. Video Graph Studio currently uses one explicit data root and does not yet route through this MVP. The next composition slice may use the public `describe`, `resolve` and `capacity` commands; it must not import this package or edit its registry directly.
+Workspace Access owns who may act. Workspace Storage owns where one workspace may keep runtime state. Video Graph Studio's optional multi-workspace mode now consumes the public `describe` and `capacity` commands, creates separate state/artifact runtimes and never imports this package or edits its registry directly. Hard reservations, remote storage and production tenant isolation remain later capabilities.

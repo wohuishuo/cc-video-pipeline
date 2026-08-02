@@ -12,7 +12,13 @@ from .store import CommandResult, RunStore, TERMINAL_STATES
 
 
 class WorkflowEngine:
-    def __init__(self, store: RunStore, adapters: dict[str, Any]):
+    def __init__(
+        self,
+        store: RunStore,
+        adapters: dict[str, Any],
+        *,
+        execution_gate: Any | None = None,
+    ):
         self.store = store
         self.adapters = adapters
         self._lock = threading.RLock()
@@ -21,6 +27,7 @@ class WorkflowEngine:
         self._active_run_id: str | None = None
         self._cancel_event = threading.Event()
         self._shutdown_event = threading.Event()
+        self._execution_gate = execution_gate or threading.Lock()
 
     @property
     def active_run_id(self) -> str | None:
@@ -99,28 +106,29 @@ class WorkflowEngine:
 
     def _drain(self) -> None:
         while True:
-            if self._shutdown_event.is_set():
-                with self._lock:
-                    self._draining = False
-                    self._active_run_id = None
-                return
-            run_id = self.store.claim_next_run()
-            if run_id is None:
-                with self._lock:
-                    if self.store.queue_snapshot()["queuedRuns"]:
-                        continue
-                    self._draining = False
-                    self._active_run_id = None
+            with self._execution_gate:
+                if self._shutdown_event.is_set():
+                    with self._lock:
+                        self._draining = False
+                        self._active_run_id = None
                     return
-            with self._lock:
-                self._active_run_id = run_id
-                self._cancel_event = threading.Event()
-            try:
-                self._execute_claimed(run_id)
-            finally:
-                self.store.finish_queue_entry(run_id)
+                run_id = self.store.claim_next_run()
+                if run_id is None:
+                    with self._lock:
+                        if self.store.queue_snapshot()["queuedRuns"]:
+                            continue
+                        self._draining = False
+                        self._active_run_id = None
+                        return
                 with self._lock:
-                    self._active_run_id = None
+                    self._active_run_id = run_id
+                    self._cancel_event = threading.Event()
+                try:
+                    self._execute_claimed(run_id)
+                finally:
+                    self.store.finish_queue_entry(run_id)
+                    with self._lock:
+                        self._active_run_id = None
 
     def _execute_claimed(self, run_id: str) -> None:
         run = self.store.get_run(run_id)

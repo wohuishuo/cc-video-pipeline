@@ -39,3 +39,4 @@ The structure follows the proven documentation chain in `roblox-city-scavenger`,
 - [Training: independent MVPs to browser workflow](../training/01-independent-video-mvps-to-browser-workflow.md)
 - [Training: lifecycle and operations verification](../training/02-lifecycle-and-operations-verification.md)
 - [Training: secure local workspace admission](../training/03-secure-workspace-admission.md)
+- [Training: route multiple local workspaces](../training/04-multi-workspace-studio.md)

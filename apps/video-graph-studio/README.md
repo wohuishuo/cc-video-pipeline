@@ -28,6 +28,20 @@ Use the **Access** button to enter the workspace ID and bearer credential. The b
 
 This protects the local HTTP boundary but is not multi-tenant hosting: each secure Studio process serves exactly one workspace and one data root. Tenant-scoped storage, remote identity, vault custody and audit export remain later owners.
 
+## Route multiple local workspaces
+
+After provisioning the same workspace IDs in both Workspace Access and Workspace Storage, one loopback Studio process can route each authenticated request into separate state and artifact namespaces:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 `
+  -AccessRegistry "$env:LOCALAPPDATA\VideoGraphStudio\workspace-access.json" `
+  -StorageRegistry "$env:LOCALAPPDATA\VideoGraphStudio\workspace-storage.json"
+```
+
+Do not pass `-WorkspaceId` in this mode. The browser's workspace field selects the requested workspace, Workspace Access authorizes that exact ID, and Workspace Storage supplies its state/artifact roots. Each workspace gets a lazily created SQLite database and durable FIFO queue. All workspace engines share one execution gate, so the entire local process still runs at most one workflow and one child process at a time; FIFO order is preserved inside each workspace, while order between workspace queues is intentionally unspecified.
+
+This is evidence-backed local separation, not production multi-tenancy. The registries are local JSON files without cross-process locking, the capacity check is a serial preflight rather than a hard reservation, and the server remains loopback-only.
+
 Choose one of the workflow templates:
 
 - `Folder` or `URL` creates and verifies a Source Manifest.
@@ -74,5 +88,6 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
 - Optional Workspace Access admission is domain verified through its public CLI boundary with real scope separation, wrong-workspace denial and secret-redaction evidence.
+- Multi-workspace routing is domain verified with two credentials, two SQLite state roots, isolated run projections, cross-workspace denial and one shared global execution gate.
 - Authenticated upload execution remains a later independent slice.
 - No cloud account, billing, remote access or production platform claim is made.
