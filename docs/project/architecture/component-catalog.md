@@ -84,3 +84,9 @@
 - **Owns:** append-only verification records, promotion level and known gaps.
 - **Consumes:** committed receipts and external probes.
 - **Forbidden:** turning missing evidence into a success claim.
+
+## 15. Resource Budget
+
+- **Owns:** per-workspace byte/slot limits, durable reservation identity, generation and expiry lifecycle.
+- **Consumes:** an optional Workspace Storage capacity fact as configuration policy input.
+- **Forbidden:** reading files, owning workflow completion, authenticating callers, billing or claiming distributed enforcement.
