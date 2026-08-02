@@ -66,6 +66,15 @@ def test_health_is_served_over_real_loopback_http(tmp_path):
             "contractVersion": "1.0",
             "database": "ready",
             "activeWorkers": 0,
+            "queuedRuns": 0,
+        }
+        queue_status, queue = request_json(base, "/api/v1/queue")
+        assert queue_status == 200
+        assert queue == {
+            "contractVersion": "1.0",
+            "activeRunId": None,
+            "queuedRuns": 0,
+            "entries": [],
         }
     finally:
         server.shutdown()
@@ -143,4 +152,3 @@ def test_create_replay_conflict_and_start_use_versioned_commands(tmp_path):
     finally:
         server.shutdown()
         thread.join()
-

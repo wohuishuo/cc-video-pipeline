@@ -6,7 +6,8 @@ Every mutable artifact family has one authoritative writer. Coordinators own con
 flowchart TB
     Client["Browser / future mobile client"] -->|versioned commands| HTTP["HTTP transport adapter"]
     HTTP --> Run["Workflow Run Owner"]
-    Run --> Process["Graph Process Manager"]
+    Run --> Queue["Durable Start Queue"]
+    Queue --> Process["Graph Process Manager"]
     Process -->|public command| Intake["Source Intake"]
     Process -->|public command| Transcript["Transcription"]
     Process -->|public command| Translation["Translation"]
@@ -29,6 +30,7 @@ flowchart TB
 | --- | --- | --- |
 | Graph revision/fingerprint | Graph Definition | Run admission, browser projection |
 | Run lifecycle/version | Workflow Run Owner | Process, dashboard |
+| Start-request order/claim | Durable Start Queue | Process, dashboard |
 | Step checkpoint/continuation | Workflow Process Manager | Run projection, recovery |
 | Source manifest/receipt | Source Intake | downstream adapters, verification |
 | Transcript artifact/receipt | Transcription | translation, editor, dashboard |

@@ -3,7 +3,7 @@
 | Field | Record |
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
-| Evidence present | graph/run/process contracts; SQLite idempotency; real child-process ordering and cleanup; real loopback HTTP; browser-to-API health and allowed-folder projection; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
+| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; real loopback HTTP; browser-to-API health and allowed-folder projection; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
 | Evidence missing | power-loss/filesystem durability; authenticated publication adapters; hosted multi-tenant recovery; load/security operations |
 | Substitutes | fixed graph templates; local filesystem roots; deterministic fake adapters for domain verification |
 | Decisions unapproved | commercial tenancy, billing, remote authentication, paid fallback and automatic publication policy |
@@ -28,3 +28,7 @@ Browser run `7141072c-396a-43de-ba31-460e5c130223` completed both Publication ow
 ## Lifecycle recovery evidence
 
 Run `1f1e77ff-b557-4d20-89d0-e3dedb8af34d` was killed while the first creator-discovery node was durably `RUNNING`. Restarting the server against the same SQLite data root fenced the run and node to `INTERRUPTED`; resubmitting start for the same run ID recovered to `COMPLETED`, verified 75 canonical Douyin URLs and committed manifest SHA-256 `7056625a4b0229738c0687764edca0afd26f72954fda1dec3df260fe5bb3dac7`. See [the complete drill](recovery-drill.md).
+
+## Durable queue evidence
+
+Loopback HTTP runs `cfa0115e-2da3-44a3-9425-a4ea26efa256` and `c859bf34-65ee-46cb-833e-650fdb8a2542` were both accepted with HTTP `202`. The second remained durably queued while the first was blocked, then all six adapter calls completed in run order with maximum concurrency one. See [the complete drill](durable-queue-drill.md).

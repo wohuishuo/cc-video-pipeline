@@ -6,7 +6,7 @@ Video Graph Studio lets a creator select local or social-video sources, language
 
 ## 2. State owner
 
-The Workflow Run owns run identity, immutable graph/input fingerprints, lifecycle version and terminal workflow result. The Process Manager owns continuation and the active child handle. It does not own media, transcript, translation, voice, render, creator-discovery or publication truth.
+The Workflow Run owns run identity, immutable graph/input fingerprints, lifecycle version and terminal workflow result. The Durable Start Queue owns requested FIFO order and queue-claim lifecycle. The Process Manager owns continuation and the active child handle. None owns media, transcript, translation, voice, render, creator-discovery or publication truth.
 
 SQLite is the current local durable adapter. Browser state is a disposable projection and cannot authorize or complete work.
 
@@ -16,7 +16,8 @@ SQLite is the current local durable adapter. Browser state is a disposable proje
 flowchart LR
     Client["Browser or future mobile client"] -->|"CMD-RUN-CREATE / START / CANCEL"| HTTP["Versioned HTTP adapter"]
     HTTP --> Run["Workflow Run owner"]
-    Run --> Process["Graph Process Manager"]
+    Run --> Queue["Durable FIFO start queue"]
+    Queue --> Process["Graph Process Manager"]
     Process -->|"argv command + operation identity"| MVP["Independent MVP adapter"]
     MVP -->|"artifact + receipt + fingerprint"| Process
     Run -->|"read-only run projection"| Client
@@ -28,8 +29,8 @@ Commands carry `contractId`, `contractVersion`, `operationId` and `correlationId
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING
-    PENDING --> RUNNING: start accepted
+    [*] --> CREATED: run admitted
+    CREATED --> RUNNING: durable queue claims start request
     RUNNING --> COMPLETED: all required facts committed
     RUNNING --> FAILED: bounded failure
     RUNNING --> CANCELLED: operator cancellation
@@ -38,11 +39,12 @@ stateDiagram-v2
     COMPLETED --> COMPLETED: idempotent replay
 ```
 
-Only one workflow and one child process execute at a time. A successor starts only after its predecessor commits and verifies its declared result.
+Several runs may be queued. Only one workflow and one child process execute at a time. A successor starts only after its predecessor commits and verifies its declared result.
 
 ## 5. Failure and recovery
 
 - Startup atomically changes abandoned `RUNNING` runs and steps to `INTERRUPTED`.
+- Startup returns an abandoned queue claim from `RUNNING` to `QUEUED` without changing its FIFO sequence.
 - Repeating the startup fence is a no-op.
 - Resume keeps completed checkpoints and starts at the first incomplete node.
 - Missing output is failure even when a child exits with code zero.
@@ -55,7 +57,7 @@ The local server binds only to `127.0.0.1`; paths must remain under configured a
 
 ## 7. Observability
 
-Every run exposes immutable correlation identity, versioned state, per-node status and append-only ordered logs. Receipts identify committed artifacts and fingerprints. Health currently reports database readiness and active-worker count. Logs are diagnostic telemetry; only validated receipts are completion facts.
+Every run exposes immutable correlation identity, versioned state, per-node status and append-only ordered logs. The queue projection exposes active run, waiting count and ordered pending entries. Receipts identify committed artifacts and fingerprints. Health reports database readiness, active-worker count and queued-run count. Logs are diagnostic telemetry; only validated receipts are completion facts.
 
 ## 8. Verification boundary
 

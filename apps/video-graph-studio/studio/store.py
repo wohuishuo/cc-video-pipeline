@@ -18,6 +18,9 @@ from .graph import validate_graph
 
 TERMINAL_STATES = frozenset({"COMPLETED", "FAILED", "CANCELLED"})
 ALLOWED_TRANSITIONS = {
+    "CREATED": frozenset({"RUNNING", "CANCELLED"}),
+    # QUEUED is retained as a legacy run state for databases created before
+    # the durable Start Queue became its own state owner.
     "QUEUED": frozenset({"RUNNING", "CANCELLED"}),
     "RUNNING": frozenset({"COMPLETED", "FAILED", "CANCEL_REQUESTED", "INTERRUPTED"}),
     "CANCEL_REQUESTED": frozenset({"CANCELLED", "FAILED"}),
@@ -108,6 +111,13 @@ class RunStore:
                     created_at TEXT NOT NULL,
                     PRIMARY KEY (run_id, sequence)
                 );
+                CREATE TABLE IF NOT EXISTS start_queue (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL UNIQUE REFERENCES runs(run_id),
+                    status TEXT NOT NULL,
+                    requested_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
 
@@ -133,7 +143,7 @@ class RunStore:
                 """INSERT INTO runs
                 (run_id, correlation_id, graph_json, graph_fingerprint, parameters_json,
                  input_fingerprint, status, version, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'QUEUED', 0, ?, ?)""",
+                VALUES (?, ?, ?, ?, ?, ?, 'CREATED', 0, ?, ?)""",
                 (
                     run_id,
                     command.correlation_id,
@@ -231,6 +241,128 @@ class RunStore:
             )
             connection.commit()
             return int(steps)
+
+    def enqueue_run(self, run_id: str) -> CommandResult:
+        """Durably request execution without claiming a worker."""
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            run = connection.execute(
+                "SELECT status FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if run is None:
+                connection.rollback()
+                return CommandResult("REJECTED_NOT_FOUND", {"runId": run_id})
+            if run["status"] in TERMINAL_STATES:
+                result = self._run_row(connection, run_id)
+                connection.commit()
+                return CommandResult("DUPLICATE_COMPLETED", result)
+            if run["status"] not in {"CREATED", "QUEUED", "INTERRUPTED", "RUNNING"}:
+                connection.rollback()
+                return CommandResult(
+                    "REJECTED_CONFLICT", {"runId": run_id, "status": run["status"]}
+                )
+            existing = connection.execute(
+                "SELECT sequence, status FROM start_queue WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if existing is not None:
+                connection.commit()
+                return CommandResult(
+                    "DUPLICATE_COMPLETED",
+                    {
+                        "runId": run_id,
+                        "queueSequence": existing["sequence"],
+                        "queueStatus": existing["status"],
+                    },
+                )
+            requested_at = _now()
+            cursor = connection.execute(
+                """INSERT INTO start_queue (run_id, status, requested_at, updated_at)
+                VALUES (?, 'QUEUED', ?, ?)""",
+                (run_id, requested_at, requested_at),
+            )
+            connection.commit()
+            return CommandResult(
+                "COMPLETED",
+                {
+                    "runId": run_id,
+                    "queueSequence": int(cursor.lastrowid),
+                    "queueStatus": "QUEUED",
+                },
+            )
+
+    def claim_next_run(self) -> str | None:
+        """Claim the oldest runnable start request for the single worker."""
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            while True:
+                row = connection.execute(
+                    """SELECT q.sequence, q.run_id, r.status AS run_status
+                    FROM start_queue q JOIN runs r ON r.run_id = q.run_id
+                    WHERE q.status = 'QUEUED'
+                    ORDER BY q.sequence LIMIT 1"""
+                ).fetchone()
+                if row is None:
+                    connection.commit()
+                    return None
+                if row["run_status"] in TERMINAL_STATES:
+                    connection.execute(
+                        "UPDATE start_queue SET status = 'COMPLETED', updated_at = ? WHERE sequence = ?",
+                        (_now(), row["sequence"]),
+                    )
+                    continue
+                if row["run_status"] not in {"CREATED", "QUEUED", "INTERRUPTED"}:
+                    connection.commit()
+                    return None
+                connection.execute(
+                    "UPDATE start_queue SET status = 'RUNNING', updated_at = ? WHERE sequence = ?",
+                    (_now(), row["sequence"]),
+                )
+                connection.commit()
+                return str(row["run_id"])
+
+    def finish_queue_entry(self, run_id: str) -> None:
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """UPDATE start_queue SET status = 'COMPLETED', updated_at = ?
+                WHERE run_id = ? AND status IN ('QUEUED', 'RUNNING')""",
+                (_now(), run_id),
+            )
+
+    def recover_queue(self) -> int:
+        """Return claims abandoned by a previous server generation to FIFO order."""
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE start_queue SET status = 'QUEUED', updated_at = ?
+                WHERE status = 'RUNNING'""",
+                (_now(),),
+            )
+            return int(cursor.rowcount)
+
+    def queue_snapshot(self) -> dict[str, Any]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT sequence, run_id, status, requested_at, updated_at
+                FROM start_queue WHERE status IN ('QUEUED', 'RUNNING')
+                ORDER BY sequence"""
+            ).fetchall()
+            entries = [
+                {
+                    "sequence": row["sequence"],
+                    "runId": row["run_id"],
+                    "status": row["status"],
+                    "requestedAt": row["requested_at"],
+                    "updatedAt": row["updated_at"],
+                }
+                for row in rows
+            ]
+            return {
+                "activeRunId": next(
+                    (entry["runId"] for entry in entries if entry["status"] == "RUNNING"),
+                    None,
+                ),
+                "queuedRuns": sum(entry["status"] == "QUEUED" for entry in entries),
+                "entries": entries,
+            }
 
     def _change_step(
         self,

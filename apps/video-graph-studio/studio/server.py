@@ -142,6 +142,7 @@ def build_runtime(repository: Path, data_root: Path):
     data_root.mkdir(parents=True, exist_ok=True)
     store = RunStore(data_root / "studio.db")
     store.interrupt_active()
+    store.recover_queue()
     edge_launcher = repository / "apps" / "localization" / "edge-russian.ps1"
     intake_launcher = repository / "apps" / "source-intake" / "run.ps1"
     transcription_launcher = repository / "apps" / "transcription" / "run.ps1"
@@ -182,6 +183,7 @@ def build_runtime(repository: Path, data_root: Path):
             "verify-publication-plan": VerifyPublicationPlanAdapter(),
         },
     )
+    engine.resume_pending()
     application = StudioApplication(store, engine, allowed_roots=_allowed_roots(repository))
     return application, engine
 
@@ -206,9 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        active = engine.active_run_id
-        if active:
-            engine.cancel(active)
+        engine.shutdown()
         server.server_close()
     return 0
 

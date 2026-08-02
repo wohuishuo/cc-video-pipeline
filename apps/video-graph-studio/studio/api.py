@@ -208,11 +208,15 @@ class StudioApplication:
     ) -> tuple[int, dict[str, Any]]:
         try:
             if method == "GET" and path == "/api/v1/health":
+                queue = self.store.queue_snapshot()
                 return 200, {
                     "contractVersion": "1.0",
                     "database": "ready",
                     "activeWorkers": 1 if self.engine.active_run_id else 0,
+                    "queuedRuns": queue["queuedRuns"],
                 }
+            if method == "GET" and path == "/api/v1/queue":
+                return 200, {"contractVersion": "1.0", **self.store.queue_snapshot()}
             if method == "GET" and path == "/api/v1/capabilities":
                 return 200, {"contractVersion": "1.0", "capabilities": self._capabilities()}
             if method == "GET" and path == "/api/v1/folders":

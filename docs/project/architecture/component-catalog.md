@@ -15,6 +15,7 @@
 ## 3. Workflow Run and Process
 
 - **Run owns:** operation identity, lifecycle, optimistic version and terminal result.
+- **Queue owns:** durable FIFO start-request order and active claim state.
 - **Process owns:** current checkpoint, continuation and the one active child handle.
 - **Forbidden:** owning source, transcript, translation, voice, render or publication artifacts.
 
