@@ -1,6 +1,6 @@
 # Video Graph Studio
 
-Video Graph Studio is a local browser control plane for reusable video MVPs. It provides a ComfyUI-style workflow canvas while keeping workflow continuation, localization media and platform receipts under separate owners.
+Video Graph Studio is a local browser control plane for reusable video MVPs. Its guided Graph builder assembles one approved Graph from independently owned Loops while keeping workflow continuation, media artifacts and platform receipts under their existing owners. It is intentionally not an arbitrary ComfyUI node editor: the canvas shows the exact executable Graph and never offers fake insertion or connection controls.
 
 ## Start
 
@@ -13,6 +13,19 @@ The launcher opens `http://127.0.0.1:8765`. It never binds to the LAN. The brows
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 -NoBrowser -Port 8765
 ```
+
+The launcher changes into its own application directory before importing `studio.server`, so running it from another folder cannot load a stale same-named Python package. If port `8765` is already occupied, the launcher reports the bind failure; stop the old Studio process instead of starting another copy on the same port.
+
+## Build and run a Graph
+
+1. Choose the outcome you want, such as **Dub complete videos**.
+2. Where offered, choose **Folder** or **Video URL**. This selects a verified Graph variant; it does not create a loose node.
+3. Fill the visible configuration fields. **Preflight** lists contracts, service, access, catalog and input requirements independently.
+4. Review the exact execution map. Every card is a real backend node, every arrow is a committed fact edge, and each badge names the owning Loop.
+5. Select a card to inspect its owner, retry policy and output fact. **+** and **−** change the real canvas scale; **Fit** fits the whole Graph.
+6. Select **Create & run Graph** only after every preflight item is green. Graphs enter one durable serial queue and their Loops checkpoint independently.
+
+The effect message states whether the selected Graph stays local, downloads a source, creates plans, opens consent, or contacts YouTube. Publishing remains a separate confirmed Graph.
 
 The ordinary loopback launch stays credential-free. To admit one configured workspace, first initialize Workspace Access and issue a short-lived browser credential with `runs:read`, `runs:write` and `artifacts:read`, then start Studio with the registry and workspace ID:
 
@@ -127,5 +140,6 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Multi-workspace routing is domain verified with two credentials, two SQLite state roots, isolated run projections, cross-workspace denial and one shared global execution gate.
 - Optional Resource Budget composition is domain verified with reserve-before-run, renewable generation fencing, durable wait/requeue, terminal release and a real CLI-to-Studio child-process drill.
 - Client Contracts discovery is domain verified through its public CLI and an unauthenticated loopback HTTP endpoint; the browser fails closed before mutation when discovery is unavailable.
+- The guided Graph UI is live-verified against one current launcher process: all 19 workflows loaded from the backend catalog, URL Dub rendered its exact 10 nodes across 5 Loops, zoom changed `100% -> 110%`, Fit changed it to `60%`, reconnect preserved the draft, and a safe two-node Folder Intake run completed `2 / 2`.
 - The internal authenticated upload adapter and OAuth bootstrap are domain verified; a deliberate real-account private upload remains pending.
 - No cloud account, billing, remote access or production platform claim is made.

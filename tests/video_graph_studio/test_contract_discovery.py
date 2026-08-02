@@ -1,9 +1,12 @@
 import json
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import threading
+import time
 from urllib.error import HTTPError
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 
@@ -46,6 +49,61 @@ def request(base, path, *, headers=None):
             return response.status, json.loads(response.read())
     except HTTPError as error:
         return error.code, json.loads(error.read())
+
+
+def free_loopback_port():
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        return listener.getsockname()[1]
+
+
+def test_public_launcher_resolves_current_studio_from_an_untrusted_cwd(tmp_path):
+    fake_package = tmp_path / "studio"
+    fake_package.mkdir()
+    (fake_package / "__init__.py").write_text("", encoding="utf-8")
+    (fake_package / "server.py").write_text(
+        'raise RuntimeError("wrong studio package loaded")\n', encoding="utf-8"
+    )
+    port = free_loopback_port()
+    launcher = APP / "run.ps1"
+    process = subprocess.Popen(
+        [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-File", str(launcher), "-Port", str(port),
+            "-DataRoot", str(tmp_path / "data"), "-NoBrowser",
+        ],
+        cwd=tmp_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    base = f"http://127.0.0.1:{port}"
+    try:
+        deadline = time.monotonic() + 12
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                stdout, stderr = process.communicate(timeout=2)
+                raise AssertionError(f"launcher exited early: {stdout} {stderr}")
+            try:
+                contract_status, contracts = request(base, "/api/v1/contracts")
+                catalog_status, catalog = request(base, "/api/v1/capabilities")
+                break
+            except (URLError, TimeoutError, ConnectionError):
+                time.sleep(0.15)
+        else:
+            raise AssertionError("launcher did not expose Studio within 12 seconds")
+
+        assert contract_status == 200
+        assert contracts["value"]["bundle"]["commands"]["CMD-RUN-CREATE"] is not None
+        assert catalog_status == 200
+        assert len(catalog["capabilities"]) == 19
+        assert all(row["templateId"] and row["nodes"] for row in catalog["capabilities"])
+    finally:
+        subprocess.run(
+            ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
+            capture_output=True,
+            check=False,
+        )
 
 
 def test_http_contract_discovery_is_public_before_workspace_admission(tmp_path):

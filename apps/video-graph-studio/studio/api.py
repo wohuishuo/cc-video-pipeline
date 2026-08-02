@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from .contracts import ContractError, GraphDefinition
 from .engine import WorkflowEngine
 from .store import CreateRun, RunStore
+from .workflow_catalog import build_workflow_catalog
 
 
 PREPARED_FOLDER_GRAPH = GraphDefinition.from_dict(
@@ -272,6 +273,15 @@ YOUTUBE_CONNECT_GRAPHS = {
 }
 
 SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **RELEASE_GRAPHS, **CREATOR_GRAPHS, **CREATOR_BATCH_GRAPHS}
+
+ALL_WORKFLOW_GRAPHS = {
+    "prepared-localization": PREPARED_FOLDER_GRAPH,
+    **SOURCE_GRAPHS,
+    **PUBLICATION_GRAPHS,
+    **PUBLICATION_EXECUTION_GRAPHS,
+    **PUBLICATION_BATCH_EXECUTION_GRAPHS,
+    **YOUTUBE_CONNECT_GRAPHS,
+}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
@@ -756,23 +766,4 @@ class StudioApplication:
 
     @staticmethod
     def _capabilities() -> list[dict[str, Any]]:
-        return [
-            {
-                "type": "prepared-folder",
-                "title": "Prepared folder",
-                "kind": "Query",
-                "deliveryLevel": "DOMAIN_VERIFIED",
-            },
-            {
-                "type": "edge-localize",
-                "title": "Edge localization",
-                "kind": "Adapter",
-                "deliveryLevel": "IMPLEMENTED",
-            },
-            {
-                "type": "verify-output",
-                "title": "Verify outputs",
-                "kind": "Policy",
-                "deliveryLevel": "DOMAIN_VERIFIED",
-            },
-        ]
+        return build_workflow_catalog(ALL_WORKFLOW_GRAPHS)
