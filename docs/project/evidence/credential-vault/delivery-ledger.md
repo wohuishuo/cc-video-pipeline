@@ -3,8 +3,8 @@
 | Field | Record |
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
-| Evidence present | independent public CLI; CurrentUser DPAPI protect/unprotect; secret input by environment; ciphertext-only persistence; redacted lifecycle; context isolation; explicit rotation/revocation; atomic replacement; child injection and exit propagation |
-| Evidence missing | hosted KMS; multi-process lock; ACL provisioning; backup/recovery; OAuth renewal; platform-auth composition; production attack and operations evidence |
+| Evidence present | independent public CLI; CurrentUser DPAPI protect/unprotect; secret input by environment; ciphertext-only persistence; redacted lifecycle; context and provider isolation; explicit rotation/revocation; atomic replacement; child injection and exit propagation; guarded-publication composition |
+| Evidence missing | hosted KMS; multi-process lock; ACL provisioning; backup/recovery; OAuth renewal; authenticated real-platform proof; production attack and operations evidence |
 | Safe substitutes | local Windows account boundary; DPAPI optional entropy; one child process; credential references outside the vault |
 | Decisions unapproved | remote secret store, identity binding, renewal policy, recovery policy, retention and audit sink |
 | Forbidden claims | no hosted or production tenant custody; no automatic login; no immunity from same-user code; no multi-machine portability |

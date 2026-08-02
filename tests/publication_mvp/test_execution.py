@@ -7,7 +7,7 @@ APP=Path(__file__).resolve().parents[2]/"apps"/"publication"
 sys.path.insert(0,str(APP))
 
 from publication.contracts import PlanSpec
-from publication.execution import ExecutionOutcome, PublicationExecution
+from publication.execution import ExecutionOutcome, PlatformIOExecutionAdapter, PublicationExecution
 from publication.planning import PublicationPlanner
 
 
@@ -52,3 +52,97 @@ def test_failed_target_resumes_without_repeating_completed_target(tmp_path):
     resumed_adapter=FakePlatform(); resumed=operation.execute(path,output,"run-op",confirmation=digest,adapter=resumed_adapter)
     assert failed.result_class=="FAILED" and resumed.result_class=="COMPLETED"
     assert failed_adapter.calls==["youtube","douyin"] and resumed_adapter.calls==["douyin"]
+
+
+def test_credential_reference_requires_a_configured_vault(tmp_path):
+    adapter=PlatformIOExecutionAdapter(tmp_path/"platform.ps1")
+    outcome=adapter.execute(
+        {
+            "platform":"youtube","videoPath":str(tmp_path/"v.mp4"),
+            "metadataPath":str(tmp_path/"m.json"),"account":"main",
+            "visibility":"private-or-draft","credentialId":"youtube-main",
+        },
+        lambda _:None,
+    )
+
+    assert not outcome.completed
+    assert outcome.error=="credential vault is required for referenced credential"
+
+
+def test_real_vault_injects_secret_into_one_fake_platform_child(tmp_path):
+    import os
+    import subprocess
+
+    root=Path(__file__).resolve().parents[2]
+    vault_app=root/"apps"/"credential-vault"
+    vault_path=tmp_path/"vault.json"
+    secret="publication-child-only-secret"
+    environment={**os.environ,"PYTHONPATH":str(vault_app),"PUBLICATION_SECRET":secret}
+    stored=subprocess.run(
+        [sys.executable,"-m","credential_vault.cli","put","--vault",str(vault_path),
+         "--credential-id","youtube-main","--provider","youtube","--label","Main",
+         "--secret-env","PUBLICATION_SECRET","--json"],
+        capture_output=True,text=True,encoding="utf-8",env=environment,
+    )
+    assert stored.returncode==0
+
+    fake_platform=tmp_path/"fake-platform.ps1"
+    fake_platform.write_text(
+        "param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)\n"
+        "$ok = $env:VIDEO_PLATFORM_CREDENTIAL -eq 'publication-child-only-secret'\n"
+        "if ($ok) { '{\"status\":\"ok\",\"external_id\":\"fake-123\"}'; exit 0 }\n"
+        "'{\"status\":\"failed\",\"error\":\"missing credential\"}'; exit 9\n",
+        encoding="utf-8",
+    )
+    adapter=PlatformIOExecutionAdapter(
+        fake_platform,
+        vault_launcher=vault_app/"run.ps1",
+        vault_path=vault_path,
+    )
+    job={
+        "platform":"youtube","videoPath":str(tmp_path/"v.mp4"),
+        "metadataPath":str(tmp_path/"m.json"),"account":"main",
+        "visibility":"private-or-draft","credentialId":"youtube-main",
+    }
+
+    outcome=adapter.execute(job,lambda _:None)
+
+    assert outcome.completed and outcome.external_id=="fake-123"
+    assert secret not in vault_path.read_text(encoding="utf-8")
+    assert secret not in json.dumps(outcome.facts)
+
+    wrong_provider=adapter.execute({**job,"platform":"douyin"},lambda _:None)
+    assert not wrong_provider.completed
+
+
+def test_credential_backed_failure_does_not_persist_untrusted_child_output(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    import publication.execution as execution
+
+    adapter=PlatformIOExecutionAdapter(
+        tmp_path/"platform.ps1",
+        vault_launcher=tmp_path/"vault.ps1",
+        vault_path=tmp_path/"vault.json",
+    )
+    secret="untrusted-child-echoed-secret"
+    monkeypatch.setattr(
+        execution.subprocess,
+        "run",
+        lambda *args,**kwargs:SimpleNamespace(
+            returncode=9,
+            stdout=json.dumps({"status":"failed","error":secret}),
+            stderr=secret,
+        ),
+    )
+
+    outcome=adapter.execute(
+        {
+            "platform":"youtube","videoPath":"v.mp4","metadataPath":"m.json",
+            "account":"main","visibility":"private-or-draft","credentialId":"youtube-main",
+        },
+        lambda _:None,
+    )
+
+    assert not outcome.completed
+    assert outcome.error=="credential-backed platform upload failed"
+    assert secret not in json.dumps(outcome.facts)+str(outcome.error)

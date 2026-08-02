@@ -28,16 +28,25 @@ class ExecutionResult:
 
 
 class PlatformIOExecutionAdapter:
-    identity="platform-io-upload@1"
-    def __init__(self,launcher:Path): self.launcher=Path(launcher).resolve(); self.maximum_active=0
+    identity="platform-io-upload@2"
+    def __init__(self,launcher:Path,*,vault_launcher:Path|None=None,vault_path:Path|None=None):
+        self.launcher=Path(launcher).resolve(); self.vault_launcher=Path(vault_launcher).resolve() if vault_launcher else None; self.vault_path=Path(vault_path).resolve() if vault_path else None; self.maximum_active=0
     def execute(self,job,on_log):
         argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),"upload",job["platform"],job["videoPath"],"--metadata",job["metadataPath"],"--account",job["account"],"--execute","--json"]
         if job["visibility"]=="public": argv.append("--public")
+        credential_id=job.get("credentialId")
+        if credential_id:
+            if self.vault_launcher is None or self.vault_path is None: return ExecutionOutcome(False,None,{"credentialReferenceUsed":False},"credential vault is required for referenced credential")
+            argv.extend(["--credential-env","VIDEO_PLATFORM_CREDENTIAL"])
+            child=argv; argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.vault_launcher),"run","--vault",str(self.vault_path),"--credential-id",credential_id,"--expected-provider",job["platform"],"--target-env","VIDEO_PLATFORM_CREDENTIAL","--executable",child[0]]
+            argv.extend(f"--argument={argument}" for argument in child[1:])
         self.maximum_active=1; result=subprocess.run(argv,text=True,capture_output=True,encoding="utf-8",errors="replace")
         try: payload=json.loads(result.stdout)
         except json.JSONDecodeError: payload={}
-        if result.returncode!=0 or payload.get("status")!="ok": return ExecutionOutcome(False,None,{"exitCode":result.returncode},str(payload.get("error") or result.stderr[-4000:] or "platform upload failed"))
-        return ExecutionOutcome(True,str(payload.get("external_id") or "") or None,{"exitCode":result.returncode,"executed":True,"visibility":job["visibility"]})
+        if result.returncode!=0 or payload.get("status")!="ok":
+            error="credential-backed platform upload failed" if credential_id else str(payload.get("error") or result.stderr[-4000:] or "platform upload failed")
+            return ExecutionOutcome(False,None,{"exitCode":result.returncode,"credentialReferenceUsed":bool(credential_id)},error)
+        return ExecutionOutcome(True,str(payload.get("external_id") or "") or None,{"exitCode":result.returncode,"executed":True,"visibility":job["visibility"],"credentialReferenceUsed":bool(credential_id)})
 
 
 class PublicationExecution:

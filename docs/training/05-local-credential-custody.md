@@ -39,4 +39,4 @@ Use `rotate` for changed secret material. Use `revoke` when the reference must n
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\drills\credential-vault.ps1
 ```
 
-Success proves a real DPAPI round-trip and child injection on the current machine. It does not prove a social platform accepts the credential; that requires a separate platform-auth composition drill.
+Success proves a real DPAPI round-trip and child injection on the current machine. Continue with [credential-aware publication](06-credential-aware-publication.md) to prove the provider-bound process composition. Neither drill proves a social platform accepts the credential.

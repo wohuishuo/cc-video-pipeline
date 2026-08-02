@@ -37,6 +37,41 @@ def test_upload_defaults_to_preparation_without_execution(capsys, tmp_path):
     assert "--visibility" in payload["command"]
 
 
+def test_upload_rejects_missing_named_credential_environment(capsys, tmp_path, monkeypatch):
+    monkeypatch.delenv("VIDEO_PLATFORM_CREDENTIAL", raising=False)
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"sample")
+    metadata = tmp_path / "metadata.json"
+    metadata.write_text('{"title":"Draft"}', encoding="utf-8")
+
+    code = main([
+        "upload", "youtube", str(video), "--metadata", str(metadata),
+        "--account", "me", "--credential-env", "VIDEO_PLATFORM_CREDENTIAL", "--json",
+    ])
+
+    assert code == 2
+    assert "missing or empty" in json.loads(capsys.readouterr().out)["error"]
+
+
+def test_prepared_upload_never_echoes_environment_credential(capsys, tmp_path, monkeypatch):
+    secret = "platform-io-child-secret"
+    monkeypatch.setenv("VIDEO_PLATFORM_CREDENTIAL", secret)
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"sample")
+    metadata = tmp_path / "metadata.json"
+    metadata.write_text('{"title":"Draft"}', encoding="utf-8")
+
+    code = main([
+        "upload", "youtube", str(video), "--metadata", str(metadata),
+        "--account", "me", "--credential-env", "VIDEO_PLATFORM_CREDENTIAL", "--json",
+    ])
+    output = capsys.readouterr().out
+
+    assert code == 0
+    assert json.loads(output)["status"] == "prepared"
+    assert secret not in output
+
+
 def test_json_console_output_is_ascii_safe_and_round_trips_unicode():
     text = _json_text({"title": "中文标题"})
     text.encode("ascii")

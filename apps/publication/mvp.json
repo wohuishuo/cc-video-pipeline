@@ -5,8 +5,8 @@
   "entrypoint": "run.ps1",
   "install": "install.ps1",
   "test": "python -m pytest --import-mode=importlib tests/publication_mvp -q",
-  "inputs": ["verified video", "metadata JSON", "platform/account targets", "explicit visibility policy", "plan hash confirmation"],
+  "inputs": ["verified video", "metadata JSON", "platform/account targets", "optional credential references", "explicit visibility policy", "plan hash confirmation"],
   "outputs": ["publication-plan.json", "planning-receipt.json", "publication-manifest.json", "publication-receipt.json"],
-  "dependencies": ["python>=3.12", "Platform I/O public launcher"],
+  "dependencies": ["python>=3.12", "Platform I/O public launcher", "optional Credential Vault public launcher"],
   "delivery_level": "DOMAIN_VERIFIED"
 }

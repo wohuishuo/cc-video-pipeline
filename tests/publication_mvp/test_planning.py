@@ -38,3 +38,40 @@ def test_invalid_metadata_or_duplicate_targets_are_rejected(tmp_path):
     try: PlanSpec.create(video,metadata,{"youtube":"a"})
     except PublicationError: pass
     else: raise AssertionError("missing title accepted")
+
+
+def test_plan_persists_only_bounded_credential_references(tmp_path):
+    video,metadata=assets(tmp_path)
+    result=PublicationPlanner().execute(
+        PlanSpec.create(
+            video,
+            metadata,
+            {"youtube":"primary","douyin":"cn"},
+            credentials={"youtube":"youtube-main"},
+        ),
+        tmp_path/"out",
+        "credential-plan",
+    )
+    value=json.loads(result.plan_path.read_text(encoding="utf-8"))
+
+    assert value["jobs"][0]["credentialId"]=="youtube-main"
+    assert "credentialId" not in value["jobs"][1]
+    assert "credentialValue" not in result.plan_path.read_text(encoding="utf-8")
+
+
+def test_credentials_must_reference_a_target_and_use_bounded_ids(tmp_path):
+    video,metadata=assets(tmp_path)
+    for credentials in ({"tiktok":"missing-target"},{"youtube":"../secret"}):
+        try:
+            PlanSpec.create(video,metadata,{"youtube":"primary"},credentials=credentials)
+        except PublicationError:
+            pass
+        else:
+            raise AssertionError(f"unsafe credential mapping accepted: {credentials}")
+
+
+def test_anonymous_target_fingerprint_shape_remains_backward_compatible(tmp_path):
+    video,metadata=assets(tmp_path)
+    value=PlanSpec.create(video,metadata,{"youtube":"primary"}).fingerprint_value()
+
+    assert value["targets"]==[{"platform":"youtube","account":"primary"}]

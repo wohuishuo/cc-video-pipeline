@@ -17,8 +17,9 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 11 | Workspace access owner | workspace identity, roots, hashed short-lived scopes, expiry and revocation | Domain complete; secure local Studio composition complete |
 | 12 | Workspace storage owner | deterministic tenant namespaces, path confinement, capacity decision, atomic registry | Domain complete; multi-workspace Studio composition complete |
 | 13 | Local multi-workspace routing | authorize before route, isolated SQLite/artifacts, shared global execution gate, cross-workspace denial | Domain complete; production tenant isolation not claimed |
-| 14 | Local credential custody | env-only input, CurrentUser protection, redaction, rotation/revocation, child injection | Domain complete; platform-auth composition pending |
-| 15 | Authenticated publication composition | credential reference to guarded private/draft adapter, redacted receipt, replay/recovery | Pending |
-| 16 | Hosted/mobile admission | remote identity, client compatibility, remote secret custody, hard resource budgets, attack review and security evidence | Pending |
+| 14 | Local credential custody | env-only input, CurrentUser protection, redaction, rotation/revocation, child injection | Domain complete; guarded-publication composition complete |
+| 15 | Credential-aware guarded publication | credential reference, provider match, exact confirmation, redacted serial child receipt | Domain complete; real authenticated platform proof pending |
+| 16 | Authenticated real-platform adapters | accepted private/draft upload, external ID reconciliation, renewal and rate-limit evidence | Pending |
+| 17 | Hosted/mobile admission | remote identity, client compatibility, remote secret custody, hard resource budgets, attack review and security evidence | Pending |
 
 No later slice may move upstream ownership into Graph Studio for convenience.

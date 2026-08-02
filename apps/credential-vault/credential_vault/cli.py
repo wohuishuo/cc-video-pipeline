@@ -51,6 +51,7 @@ def _parser() -> argparse.ArgumentParser:
     run = commands.add_parser("run")
     _vault_credential(run)
     run.add_argument("--target-env", required=True)
+    run.add_argument("--expected-provider")
     run.add_argument("--executable", required=True)
     run.add_argument("--argument", action="append", default=[])
     run.add_argument("--json", action="store_true")
@@ -117,7 +118,9 @@ def main(argv: list[str] | None = None) -> int:
             if not ENVIRONMENT_NAME.fullmatch(args.target_env):
                 raise VaultError("REJECTED_MALFORMED", "invalid target environment name")
             child_argv = [args.executable, *args.argument]
-            secret = vault.resolve_secret(args.credential_id)
+            secret = vault.resolve_secret(
+                args.credential_id, expected_provider=args.expected_provider
+            )
             child_environment = {**os.environ, args.target_env: secret}
             try:
                 try:
