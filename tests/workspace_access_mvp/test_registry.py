@@ -97,3 +97,21 @@ def test_registry_rejects_unknown_scope_and_unsafe_identifiers(tmp_path):
         assert error.code == "REJECTED_MALFORMED"
     else:
         raise AssertionError("unsafe workspace ID accepted")
+
+
+def test_describe_workspace_returns_roots_without_credential_metadata(tmp_path):
+    registry = AccessRegistry(tmp_path / "access.json", clock=lambda: NOW)
+    root = tmp_path / "media"
+    root.mkdir()
+    registry.initialize_workspace("local", "Local", [root])
+    registry.issue_token("local", "browser", ["runs:read"], ttl=timedelta(hours=1))
+
+    described = registry.describe_workspace("local")
+
+    assert described.result_class == "COMPLETED"
+    assert described.value == {
+        "workspaceId": "local",
+        "displayName": "Local",
+        "allowedRoots": [str(root.resolve())],
+    }
+    assert "credential" not in json.dumps(described.value).lower()

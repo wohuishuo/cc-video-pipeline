@@ -11,6 +11,7 @@ from pathlib import Path
 import webbrowser
 from urllib.parse import parse_qs, urlsplit
 
+from .admission import AdmissionDecision, WorkspaceAccessCommandAdapter
 from .api import StudioApplication
 
 
@@ -23,6 +24,7 @@ def create_server(
     application: StudioApplication,
     *,
     web_root: Path,
+    admission=None,
 ) -> ThreadingHTTPServer:
     if host != "127.0.0.1":
         raise ValueError("Video Graph Studio may bind only to 127.0.0.1")
@@ -42,12 +44,46 @@ def create_server(
                 if body is _INVALID:
                     self._send_json(400, {"resultClass": "REJECTED_MALFORMED"})
                     return
+                if admission is not None and parsed.path != "/api/v1/health":
+                    decision = self._authorize(parsed.path)
+                    if not decision.authorized:
+                        status = 401 if decision.result_class == "REJECTED_UNAUTHORIZED" and not self.headers.get("Authorization") else 403
+                        self._send_json(
+                            status,
+                            {
+                                "resultClass": decision.result_class,
+                                "detail": decision.detail,
+                            },
+                        )
+                        return
                 status, payload = application.handle(
                     self.command, parsed.path, parse_qs(parsed.query), body
                 )
+                if admission is not None and parsed.path == "/api/v1/health":
+                    payload = {
+                        **payload,
+                        "accessRequired": True,
+                        "workspaceId": admission.workspace_id,
+                    }
                 self._send_json(status, payload)
                 return
             self._serve_static(parsed.path)
+
+        def _authorize(self, path: str) -> AdmissionDecision:
+            authorization = self.headers.get("Authorization", "")
+            if not authorization.startswith("Bearer ") or not authorization[7:].strip():
+                return AdmissionDecision(False, "REJECTED_UNAUTHORIZED", "Bearer credential required")
+            workspace_id = self.headers.get("X-Workspace-Id", "").strip()
+            if not workspace_id:
+                return AdmissionDecision(False, "REJECTED_WORKSPACE", "workspace header required")
+            scope = (
+                "artifacts:read"
+                if self.command == "GET" and path == "/api/v1/folders"
+                else "runs:read"
+                if self.command == "GET"
+                else "runs:write"
+            )
+            return admission.authorize(workspace_id, authorization[7:].strip(), scope)
 
         def _read_json(self):
             try:
@@ -99,6 +135,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--access-registry", type=Path)
+    parser.add_argument("--workspace-id")
     return parser
 
 
@@ -114,7 +152,12 @@ def _allowed_roots(repository: Path) -> tuple[Path, ...]:
     return tuple(result)
 
 
-def build_runtime(repository: Path, data_root: Path):
+def build_runtime(
+    repository: Path,
+    data_root: Path,
+    *,
+    allowed_roots: tuple[Path, ...] | None = None,
+):
     from .adapters import (
         PreparedFolderAdapter,
         PreparedFolderEdgeAdapter,
@@ -184,19 +227,38 @@ def build_runtime(repository: Path, data_root: Path):
         },
     )
     engine.resume_pending()
-    application = StudioApplication(store, engine, allowed_roots=_allowed_roots(repository))
+    application = StudioApplication(
+        store,
+        engine,
+        allowed_roots=allowed_roots if allowed_roots is not None else _allowed_roots(repository),
+    )
     return application, engine
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repository = Path(__file__).resolve().parents[3]
-    application, engine = build_runtime(repository, args.data_root)
+    if bool(args.access_registry) != bool(args.workspace_id):
+        raise SystemExit("--access-registry and --workspace-id must be provided together")
+    admission = None
+    allowed_roots = None
+    if args.access_registry:
+        admission = WorkspaceAccessCommandAdapter(
+            repository / "apps" / "workspace-access" / "run.ps1",
+            args.access_registry,
+            args.workspace_id,
+        )
+        workspace = admission.describe_workspace()
+        allowed_roots = tuple(Path(value).resolve() for value in workspace["allowedRoots"])
+    application, engine = build_runtime(
+        repository, args.data_root, allowed_roots=allowed_roots
+    )
     server = create_server(
         "127.0.0.1",
         args.port,
         application,
         web_root=repository / "apps" / "video-graph-studio" / "web",
+        admission=admission,
     )
     url = f"http://127.0.0.1:{server.server_port}/"
     print(f"Video Graph Studio: {url}", flush=True)

@@ -53,7 +53,9 @@ Several runs may be queued. Only one workflow and one child process execute at a
 
 ## 6. Security boundary
 
-The local server binds only to `127.0.0.1`; paths must remain under configured allowed roots. Child processes receive argv arrays. Cookie and token contents must not enter logs, manifests or receipts. A hosted version requires authenticated admission, tenant-scoped storage, secret custody, authorization and audit adapters before accepting remote traffic.
+The local server binds only to `127.0.0.1`; paths must remain under configured allowed roots. Default local mode stays anonymous. Optional secure mode binds one Studio process and data root to one Workspace Access identity, queries its roots through the public CLI, and checks a route-specific scope before calling the Run application. `runs:read` covers run queries, `artifacts:read` covers folder browsing and `runs:write` covers mutations.
+
+The browser stores its credential in session storage only and strips a bootstrap fragment immediately. The HTTP adapter sends the plaintext to Workspace Access only through a subprocess environment variable; it is absent from argv, decisions, logs, manifests and receipts. Static files and health are public so a disconnected client can load and learn that admission is required. This is single-workspace local admission, not tenant isolation. A hosted version still requires remote identity, tenant-scoped storage, secret custody, audit and abuse-control owners before accepting remote traffic.
 
 ## 7. Observability
 
@@ -61,4 +63,4 @@ Every run exposes immutable correlation identity, versioned state, per-node stat
 
 ## 8. Verification boundary
 
-Unit and adapter tests support `DOMAIN_VERIFIED`. A named real external runtime may support `PLATFORM_INTEGRATED` for that adapter only. `PRODUCTION_VERIFIED` additionally requires representative recovery, security, load, authenticated-platform and operational evidence. The live local restart drill is recorded in [the recovery evidence](../../../evidence/video-graph-studio/recovery-drill.md).
+Unit and adapter tests support `DOMAIN_VERIFIED`. A named real external runtime may support `PLATFORM_INTEGRATED` for that adapter only. `PRODUCTION_VERIFIED` additionally requires representative recovery, security, load, authenticated-platform and operational evidence. The live local restart drill is recorded in [the recovery evidence](../../../evidence/video-graph-studio/recovery-drill.md), and the secure HTTP composition is recorded in [the admission drill](../../../evidence/video-graph-studio/secure-admission-drill.md).

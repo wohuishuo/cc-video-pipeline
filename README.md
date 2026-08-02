@@ -4,7 +4,7 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-203%20passing-22c55e)](scripts/test-all.ps1)
+[![Tests](https://img.shields.io/badge/tests-207%20passing-22c55e)](scripts/test-all.ps1)
 [![MVPs](https://img.shields.io/badge/independent%20MVPs-16-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
@@ -152,6 +152,7 @@ Every program has a `docs/mvp/<name>/` brief, capability DAG, evidence record, a
 - [Project system and Graph Engineering](docs/project/README.md)
 - [System blueprints and public contracts](docs/project/architecture/design/README.md)
 - [Lifecycle and operations tutorial](docs/training/02-lifecycle-and-operations-verification.md)
+- [Secure workspace admission tutorial](docs/training/03-secure-workspace-admission.md)
 - [Creator workflows](docs/WORKFLOWS.md)
 - [Contributing a new MVP](docs/CONTRIBUTING.md)
 - [Repository map](docs/PROJECT_MAP.md)

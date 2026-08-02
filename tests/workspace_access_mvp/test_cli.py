@@ -32,12 +32,17 @@ def test_cli_round_trip_uses_environment_token_and_redacted_decisions(tmp_path):
         "--required-scope", "runs:read", "--token-env", "TEST_ACCESS_TOKEN", "--json",
         env={"TEST_ACCESS_TOKEN": token},
     )
+    described = run_cli(
+        "describe", "--registry", str(registry), "--workspace-id", "local", "--json"
+    )
 
-    assert initialized.returncode == issued.returncode == authorized.returncode == 0
+    assert initialized.returncode == issued.returncode == authorized.returncode == described.returncode == 0
     decision = json.loads(authorized.stdout)
     assert decision["resultClass"] == "AUTHORIZED"
     assert token not in authorized.stdout
     assert token not in authorized.stderr
+    assert json.loads(described.stdout)["value"]["allowedRoots"] == [str(media.resolve())]
+    assert "credential" not in described.stdout.lower()
 
 
 def test_cli_missing_token_is_a_bounded_denial(tmp_path):

@@ -53,6 +53,15 @@ The plaintext credential is returned once. The registry stores only its SHA-256 
 
 Known scopes are `runs:read`, `runs:write`, `artifacts:read`, `publication:execute` and `admin`. `admin` satisfies any current scope and should be issued sparingly.
 
+The public `describe` query exposes only workspace identity and canonical allowed roots, never credential records:
+
+```powershell
+.\apps\workspace-access\run.ps1 describe `
+  --registry "$env:LOCALAPPDATA\VideoGraphStudio\workspace-access.json" `
+  --workspace-id local `
+  --json
+```
+
 ## Boundary
 
-This MVP can be composed with an HTTP admission adapter later. The current Graph Studio remains loopback-only and does not yet require these credentials. File ACL hardening, tenant isolation, remote authentication, audit export and credential-vault integration remain separate capabilities.
+Video Graph Studio can compose this owner through its public launcher. In secure mode, Studio queries the workspace roots with `describe` and asks `authorize` for every protected request; it does not import this package or read the registry directly. The default Studio launch remains zero-configuration and loopback-only. File ACL hardening, tenant isolation, remote authentication, audit export and credential-vault integration remain separate capabilities.

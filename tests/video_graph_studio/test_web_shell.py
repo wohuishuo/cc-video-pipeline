@@ -42,6 +42,10 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'id="translation-batch-size"' in html
     assert 'id="output-format"' in html
     assert 'id="output-evidence"' in html
+    assert 'id="access-button"' in html
+    assert 'id="access-dialog"' in html
+    assert 'id="access-workspace"' in html
+    assert 'id="access-token"' in html
     assert "onclick=" not in html.lower()
 
 
@@ -99,3 +103,8 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'input.disabled = busy' in script
     assert 'function resetRunProjection()' in script
     assert 'state.currentRun = null' in script
+    assert 'sessionStorage.getItem("videoGraph.accessToken")' in script
+    assert 'sessionStorage.setItem("videoGraph.accessToken", token)' in script
+    assert 'history.replaceState(null, "", `${location.pathname}${location.search}`)' in script
+    assert 'Authorization: `Bearer ${token}`' in script
+    assert '"X-Workspace-Id": workspaceId' in script
