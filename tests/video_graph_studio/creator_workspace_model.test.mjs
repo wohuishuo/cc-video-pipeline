@@ -1,13 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
+import * as workspaceModel from "../../apps/video-graph-studio/web/creator-workspace-model.mjs";
+
+const {
   buildCampaignPayload,
   campaignCounts,
   campaignReadiness,
   filterCreatorItems,
   selectVisibleIds,
-} from "../../apps/video-graph-studio/web/creator-workspace-model.mjs";
+} = workspaceModel;
 
 
 const items = [
@@ -50,6 +52,10 @@ test("readiness explains missing facts and accepts a complete campaign", () => {
   assert.ok(campaignReadiness({...state, selectedVideoIds: []}).missing.includes("Select at least one video"));
   assert.ok(campaignReadiness({...state, translationProvider: {id: "deepseek", ready: false}}).missing.includes("Configure the selected translation provider"));
   assert.ok(campaignReadiness({...state, catalog: {...state.catalog, complete: false, truncated: true}}).missing.includes("Load the complete creator catalog"));
+  assert.deepEqual(
+    campaignReadiness({...state, catalog: {...state.catalog, complete: false, truncated: true}, allowPartialCatalog: true}),
+    {ready: true, missing: []},
+  );
   assert.ok(campaignReadiness({...state, voiceProvider: {id: "qwen3", ready: false}}).missing.includes("Configure the selected voice provider"));
   assert.ok(campaignReadiness({...state, voiceProvider: {id: "qwen3", ready: true, supportedLocales: ["en-US"]}}).missing.includes("Selected voice provider does not support ru-RU"));
 });
@@ -71,6 +77,7 @@ test("campaign payload omits unselected videos and preserves language routing", 
     sourceLanguage: "zh",
     asrModel: "small",
     sourceVolume: 0.08,
+    allowPartialCatalog: true,
   });
   assert.equal(payload.templateId, "creator-campaign");
   assert.deepEqual(payload.selectedVideoIds, ["v3", "v1"]);
@@ -78,6 +85,7 @@ test("campaign payload omits unselected videos and preserves language routing", 
   assert.equal(payload.translationProvider, "deepseek");
   assert.equal(payload.voiceProvider, "edge");
   assert.equal(payload.localOutputRoot, "C:/Videos/Localized");
+  assert.equal(payload.allowPartialCatalog, true);
   assert.deepEqual(payload.destinationPlans[0], {
     locale: "ru-RU",
     targets: [{platform: "youtube", account: "ru-main"}, {platform: "tiktok", account: "ru-short"}],
@@ -115,4 +123,14 @@ test("local folder payload completes locally with zero publication routes", () =
     sourceVolume: 1,
     localOutputRoot: "C:/Videos/Output",
   });
+});
+
+test("restores only the committed authentication file reference for discovery retry", () => {
+  assert.equal(typeof workspaceModel.authenticationFileFromRun, "function");
+  assert.equal(
+    workspaceModel.authenticationFileFromRun({parameters: {authenticationFile: " C:/Users/me/cookies.txt "}}),
+    "C:/Users/me/cookies.txt",
+  );
+  assert.equal(workspaceModel.authenticationFileFromRun({parameters: {authenticationFile: null}}), "");
+  assert.equal(workspaceModel.authenticationFileFromRun(null), "");
 });

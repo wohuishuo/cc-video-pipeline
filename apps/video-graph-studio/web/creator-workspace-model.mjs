@@ -12,6 +12,11 @@ export function selectVisibleIds(selectedIds, visibleItems) {
   return [...selected];
 }
 
+export function authenticationFileFromRun(run) {
+  const value = run?.parameters?.authenticationFile;
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function campaignCounts(selectedVideoIds, selectedLanguages, destinations) {
   const videos = new Set(selectedVideoIds || []).size;
   const languages = new Set(selectedLanguages || []).size;
@@ -33,7 +38,7 @@ export function campaignReadiness(state) {
     }
   } else {
     if (!state.creatorRunId || !state.catalog?.items?.length) missing.push("Discover a creator account");
-    if (state.catalog && (!state.catalog.complete || state.catalog.truncated)) {
+    if (state.catalog && (!state.catalog.complete || state.catalog.truncated) && !state.allowPartialCatalog) {
       missing.push("Load the complete creator catalog");
     }
     if (!state.selectedVideoIds?.length) missing.push("Select at least one video");
@@ -83,6 +88,7 @@ export function buildCampaignPayload(state) {
     templateId: "creator-campaign",
     creatorRunId: state.creatorRunId,
     selectedVideoIds: [...new Set(state.selectedVideoIds || [])],
+    allowPartialCatalog: state.allowPartialCatalog === true,
     ...common,
     destinationPlans: locales.map((locale) => ({
       locale,

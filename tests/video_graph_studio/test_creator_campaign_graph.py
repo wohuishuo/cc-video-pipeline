@@ -156,6 +156,24 @@ def test_creator_campaign_rejects_an_incomplete_restored_catalog(tmp_path):
     assert len(store.list_runs()) == 1
 
 
+def test_creator_campaign_accepts_an_explicit_partial_catalog_selection(tmp_path):
+    manifest = _creator_manifest(tmp_path, complete=False, truncated=True)
+    store = RunStore(tmp_path / "studio.db")
+    creator_run_id = _completed_creator_run(store, manifest)
+    app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))
+    payload = _payload(creator_run_id)
+    payload["allowPartialCatalog"] = True
+
+    status, response = app.handle(
+        "POST", "/api/v1/runs", {}, _envelope(payload)
+    )
+
+    assert status == 201
+    run = store.get_run(response["value"]["runId"])
+    assert run["parameters"]["allowPartialCatalog"] is True
+    assert run["parameters"]["selectedVideoIds"] == ["v3", "v1"]
+
+
 def test_creator_campaign_accepts_local_delivery_without_publication_routes(tmp_path):
     manifest = _creator_manifest(tmp_path)
     store = RunStore(tmp_path / "studio.db")

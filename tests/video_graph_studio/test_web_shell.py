@@ -16,6 +16,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
     assert 'id="local-folder"' in html
     assert 'id="browse-folder"' in html
     assert 'id="video-catalog"' in html
+    assert 'id="allow-partial-catalog"' in html
+    assert 'id="load-all-videos-catalog"' in html
     assert 'id="video-search"' in html
     assert 'id="select-all-videos"' in html
     assert 'id="subtitle-status"' in html
@@ -39,8 +41,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=11"' in html
-    assert 'type="module" src="/app.js?v=11"' in html
+    assert 'href="/styles.css?v=12"' in html
+    assert 'type="module" src="/app.js?v=12"' in html
     assert 'src="https://' not in html and 'href="https://' not in html
 
 
