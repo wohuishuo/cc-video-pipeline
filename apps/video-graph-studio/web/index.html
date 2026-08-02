@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Video Graph Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=4">
+  <link rel="stylesheet" href="/styles.css?v=5">
 </head>
 <body>
   <header class="topbar">
@@ -14,287 +14,241 @@
       <span><strong>Video Graph</strong><small>STUDIO</small></span>
     </a>
     <div class="topbar-center">
-      <span class="workspace-label">Prepared Folder Localization</span>
-      <span id="save-state" class="save-state">Graph v1 · saved</span>
+      <strong class="workspace-label">Build one durable Graph</strong>
+      <span id="save-state" class="save-state">Draft · not started</span>
     </div>
     <div class="topbar-actions">
       <button id="access-button" class="access-button" type="button" hidden>Access</button>
-      <span id="health-pill" class="health-pill"><i></i> Connecting</span>
-      <button id="toggle-activity" class="icon-button" type="button" aria-label="Toggle activity log">⌁</button>
+      <span id="health-pill" class="health-pill"><i></i><span>Connecting</span></span>
+      <button id="toggle-activity" class="text-button" type="button" aria-expanded="true">Hide log</button>
     </div>
   </header>
 
-  <form id="run-form" class="runbar">
-    <fieldset class="choice-field template-field" aria-label="Workflow template">
-      <legend>Workflow</legend>
-      <label class="choice active"><input type="radio" name="template" value="prepared-localization" checked> Localize</label>
-      <label class="choice"><input type="radio" name="template" value="folder-intake"> Folder</label>
-      <label class="choice"><input type="radio" name="template" value="url-intake"> URL</label>
-      <label class="choice"><input type="radio" name="template" value="folder-transcription"> Folder+ASR</label>
-      <label class="choice"><input type="radio" name="template" value="url-transcription"> URL+ASR</label>
-      <label class="choice"><input type="radio" name="template" value="folder-translation"> Folder+Translate</label>
-      <label class="choice"><input type="radio" name="template" value="url-translation"> URL+Translate</label>
-      <label class="choice"><input type="radio" name="template" value="folder-voice"> Folder+Voice</label>
-      <label class="choice"><input type="radio" name="template" value="url-voice"> URL+Voice</label>
-      <label class="choice"><input type="radio" name="template" value="folder-dub"> Folder+Dub</label>
-      <label class="choice"><input type="radio" name="template" value="url-dub"> URL+Dub</label>
-      <label class="choice"><input type="radio" name="template" value="folder-release"> Folder+Release</label>
-      <label class="choice"><input type="radio" name="template" value="url-release"> URL+Release</label>
-      <label class="choice"><input type="radio" name="template" value="publication-batch-execute"> Release Execute</label>
-      <label class="choice"><input type="radio" name="template" value="creator-profile"> Creator</label>
-      <label class="choice"><input type="radio" name="template" value="creator-batch-dub"> Creator+Dub</label>
-      <label class="choice"><input type="radio" name="template" value="publication-plan"> Publish Plan</label>
-      <label class="choice"><input type="radio" name="template" value="publication-execute"> Publish Execute</label>
-      <label class="choice"><input type="radio" name="template" value="youtube-connect"> Connect YouTube</label>
-    </fieldset>
-    <div class="field source-field">
-      <label for="source-root">Source folder</label>
-      <div class="input-action">
-        <input id="source-root" name="sourceRoot" autocomplete="off" placeholder="Choose a prepared video folder" required>
-        <button id="browse-folder" type="button">Browse</button>
-      </div>
-    </div>
-    <div id="url-source-field" class="field source-field" hidden>
-      <label for="source-url">Social video URL</label>
-      <div class="input-action">
-        <input id="source-url" name="sourceUrl" type="url" autocomplete="off" placeholder="Paste a YouTube, Bilibili, Douyin or TikTok URL">
-      </div>
-    </div>
-    <div id="asr-controls" class="asr-controls" hidden>
-      <div class="field asr-field">
-        <label for="source-language">Source language</label>
-        <select id="source-language" name="sourceLanguage">
-          <option value="auto">Auto detect</option>
-          <option value="zh">Chinese</option>
-          <option value="en">English</option>
-          <option value="ru">Russian</option>
-        </select>
-      </div>
-      <div class="field asr-field">
-        <label for="asr-model">ASR model</label>
-        <select id="asr-model" name="asrModel">
-          <option value="tiny">Tiny · fast</option>
-          <option value="small" selected>Small · balanced</option>
-          <option value="large-v3">Large v3 · quality</option>
-        </select>
-      </div>
-      <div class="field asr-field device-field">
-        <label for="asr-device">Device</label>
-        <select id="asr-device" name="asrDevice">
-          <option value="auto">Auto</option>
-          <option value="cpu">CPU</option>
-          <option value="cuda">CUDA</option>
-        </select>
-      </div>
-    </div>
-    <div id="translation-controls" class="asr-controls" hidden>
-      <div class="field asr-field device-field">
-        <label for="translation-device">Translation</label>
-        <select id="translation-device" name="translationDevice">
-          <option value="auto">Auto</option>
-          <option value="cpu">CPU</option>
-          <option value="cuda">CUDA</option>
-        </select>
-      </div>
-      <div class="field asr-field device-field">
-        <label for="translation-batch-size">Batch</label>
-        <select id="translation-batch-size" name="translationBatchSize">
-          <option value="4">4</option>
-          <option value="8" selected>8</option>
-          <option value="16">16</option>
-        </select>
-      </div>
-    </div>
-    <div id="creator-controls" class="asr-controls" hidden>
-      <div class="field asr-field device-field">
-        <label for="creator-max-items">Max videos</label>
-        <input id="creator-max-items" name="maxItems" type="number" min="0" max="10000" value="20">
-      </div>
-      <div class="field source-field">
-        <label for="authentication-file">Authentication file</label>
-        <input id="authentication-file" name="authenticationFile" autocomplete="off" placeholder="Optional Netscape cookies.txt">
-      </div>
-    </div>
-    <div id="publication-controls" class="asr-controls" hidden>
-      <div class="field source-field">
-        <label for="publication-video">Finished video</label>
-        <input id="publication-video" name="videoPath" autocomplete="off" placeholder="Absolute path to finished video">
-      </div>
-      <div class="field source-field">
-        <label for="publication-metadata">Metadata JSON</label>
-        <input id="publication-metadata" name="metadataPath" autocomplete="off" placeholder="Absolute path to metadata.json">
-      </div>
-      <div class="field asr-field device-field">
-        <label for="publication-account">Account</label>
-        <input id="publication-account" name="account" value="primary" autocomplete="off">
-      </div>
-      <div class="field source-field">
-        <label for="publication-credential-id">YouTube credential ID</label>
-        <input id="publication-credential-id" name="credentialId" value="youtube-main" autocomplete="off">
-      </div>
-      <fieldset class="choice-field" aria-label="Publication targets">
-        <legend>Targets</legend>
-        <label class="choice active"><input type="checkbox" name="publication-target" value="youtube" checked> YouTube</label>
-        <label class="choice"><input type="checkbox" name="publication-target" value="bilibili"> Bilibili</label>
-        <label class="choice"><input type="checkbox" name="publication-target" value="douyin"> Douyin</label>
-        <label class="choice"><input type="checkbox" name="publication-target" value="tiktok"> TikTok</label>
-      </fieldset>
-    </div>
-    <div id="release-controls" class="asr-controls" hidden>
-      <div class="field source-field">
-        <label for="release-metadata-template">Metadata template JSON</label>
-        <input id="release-metadata-template" name="metadataTemplatePath" autocomplete="off" placeholder="Absolute path to metadata.json">
-      </div>
-      <div class="field asr-field device-field">
-        <label for="release-account">Account label</label>
-        <input id="release-account" name="releaseAccount" value="primary" autocomplete="off">
-      </div>
-      <div class="field source-field">
-        <label for="release-credential-id">YouTube credential ID</label>
-        <input id="release-credential-id" name="releaseCredentialId" value="youtube-main" autocomplete="off">
-      </div>
-      <fieldset class="choice-field" aria-label="Release targets">
-        <legend>Release targets</legend>
-        <label class="choice active"><input type="checkbox" name="release-target" value="youtube" checked> YouTube</label>
-        <label class="choice"><input type="checkbox" name="release-target" value="bilibili"> Bilibili</label>
-        <label class="choice"><input type="checkbox" name="release-target" value="douyin"> Douyin</label>
-        <label class="choice"><input type="checkbox" name="release-target" value="tiktok"> TikTok</label>
-      </fieldset>
-    </div>
-    <div id="publication-execution-controls" class="asr-controls" hidden>
-      <div class="field source-field">
-        <label for="publication-plan-run-id">Completed plan run ID</label>
-        <input id="publication-plan-run-id" name="planRunId" autocomplete="off" placeholder="Run ID from Publish Plan">
-      </div>
-      <div class="field source-field">
-        <label for="publication-confirmation">Exact plan SHA-256</label>
-        <input id="publication-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64">
-      </div>
-      <div class="field source-field">
-        <label for="credential-vault-path">Credential Vault path</label>
-        <input id="credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
-      </div>
-    </div>
-    <div id="publication-batch-execution-controls" class="asr-controls" hidden>
-      <div class="field source-field">
-        <label for="release-plan-run-id">Completed Release plan run ID</label>
-        <input id="release-plan-run-id" name="releasePlanRunId" autocomplete="off" placeholder="Run ID from Folder+Release or URL+Release">
-      </div>
-      <div class="field source-field">
-        <label for="release-execution-confirmation">Exact batch plan SHA-256</label>
-        <input id="release-execution-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64">
-      </div>
-      <div class="field source-field">
-        <label for="release-credential-vault-path">Credential Vault path</label>
-        <input id="release-credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
-      </div>
-    </div>
-    <div id="youtube-connect-controls" class="asr-controls" hidden>
-      <div class="field source-field">
-        <label for="youtube-client-config">Google desktop client JSON</label>
-        <input id="youtube-client-config" name="clientConfigPath" autocomplete="off" placeholder="%USERPROFILE%\Downloads\client_secret.json">
-      </div>
-      <div class="field source-field">
-        <label for="youtube-vault-path">Credential Vault path</label>
-        <input id="youtube-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
-      </div>
-      <div class="field asr-field device-field">
-        <label for="youtube-credential-id">Credential ID</label>
-        <input id="youtube-credential-id" name="credentialId" value="youtube-main" autocomplete="off">
-      </div>
-      <div class="field source-field">
-        <label for="youtube-credential-label">Account label</label>
-        <input id="youtube-credential-label" name="label" value="Main YouTube" autocomplete="off">
-      </div>
-    </div>
-    <fieldset id="target-language-controls" class="choice-field" aria-label="Target languages">
-      <legend>Languages</legend>
-      <label class="choice active"><input type="checkbox" name="language" value="ru-RU" checked> RU</label>
-      <label class="choice unavailable"><input type="checkbox" name="language" value="en-US" disabled> EN</label>
-      <label class="choice unavailable"><input type="checkbox" name="language" value="kk-KZ" disabled> KK</label>
-    </fieldset>
-    <div class="field voice-field prepared-only">
-      <label for="voice">Voice</label>
-      <select id="voice" name="voice">
-        <option value="ru-RU-DmitryNeural">Dmitry · Neural</option>
-        <option value="ru-RU-SvetlanaNeural">Svetlana · Neural</option>
-      </select>
-    </div>
-    <fieldset class="choice-field platforms prepared-only" aria-label="Target platforms">
-      <legend>Targets</legend>
-      <label class="choice active"><input type="checkbox" name="platform" value="local" checked> Local</label>
-      <label class="choice unavailable"><input type="checkbox" name="platform" value="youtube" disabled> YouTube</label>
-      <label class="choice unavailable"><input type="checkbox" name="platform" value="tiktok" disabled> TikTok</label>
-    </fieldset>
-    <button id="run-button" class="run-button" type="submit"><span>▶</span> Run graph</button>
-  </form>
+  <main class="studio-shell">
+    <aside id="graph-builder" class="builder-panel">
+    <form id="run-form" aria-label="Build a Graph">
+      <header class="builder-heading">
+        <p class="eyebrow">NEW GRAPH</p>
+        <h1>What should this Graph produce?</h1>
+        <p>Choose an outcome. Studio will assemble the approved sequential Loops and show every real step before it starts.</p>
+      </header>
 
-  <main class="studio-layout">
-    <aside id="capability-palette" class="panel palette" aria-label="Capability palette">
-      <div class="panel-heading"><span>Capabilities</span><kbd>3</kbd></div>
-      <div class="search"><span>⌕</span><input aria-label="Filter capabilities" placeholder="Filter nodes"></div>
-      <section>
-        <h2>INPUT</h2>
-        <button class="palette-item" type="button" data-focus-node="source"><i class="node-icon source">⌑</i><span><span id="palette-source-title">Prepared folder</span><small id="palette-source-detail">Local query</small></span><b>+</b></button>
+      <section class="builder-section">
+        <label for="workflow-goal">Outcome</label>
+        <select id="workflow-goal" name="workflowGoal" aria-describedby="workflow-summary">
+          <option value="">Loading workflows…</option>
+        </select>
+        <div id="workflow-summary" class="workflow-summary">
+          <strong>Loading the Workflow Catalog</strong>
+          <span>The canvas will show the exact admitted Graph.</span>
+        </div>
       </section>
-      <section>
-        <h2>PROCESS</h2>
-        <button class="palette-item" type="button" data-focus-node="localize"><i class="node-icon process">◈</i><span><span id="palette-process-title">Edge localization</span><small id="palette-process-detail">Serial adapter</small></span><b>+</b></button>
+
+      <fieldset id="source-kind-controls" class="builder-section source-kinds" aria-label="Source kind" hidden>
+        <legend>Source</legend>
+        <label><input type="radio" name="source-kind" value="folder"> <span>Folder</span></label>
+        <label><input type="radio" name="source-kind" value="url"> <span>Video URL</span></label>
+      </fieldset>
+
+      <section id="configuration-panel" class="builder-section configuration-panel" aria-label="Graph configuration">
+        <div id="folder-source-field" class="field source-field">
+          <label for="source-root">Source folder</label>
+          <div class="input-action">
+            <input id="source-root" name="sourceRoot" autocomplete="off" placeholder="Choose a folder containing videos">
+            <button id="browse-folder" type="button">Browse</button>
+          </div>
+        </div>
+
+        <div id="url-source-field" class="field source-field" hidden>
+          <label for="source-url">Social video or creator URL</label>
+          <input id="source-url" name="sourceUrl" type="url" autocomplete="off" placeholder="https://youtube.com/… or https://v.douyin.com/…">
+        </div>
+
+        <div id="asr-controls" class="control-grid" hidden>
+          <div class="field">
+            <label for="source-language">Spoken language</label>
+            <select id="source-language" name="sourceLanguage">
+              <option value="auto">Auto detect</option>
+              <option value="zh">Chinese</option>
+              <option value="en">English</option>
+              <option value="ru">Russian</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="asr-model">Speech model</label>
+            <select id="asr-model" name="asrModel">
+              <option value="tiny">Tiny · fast</option>
+              <option value="small" selected>Small · balanced</option>
+              <option value="large-v3">Large v3 · quality</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="asr-device">Speech device</label>
+            <select id="asr-device" name="asrDevice">
+              <option value="auto">Auto</option>
+              <option value="cpu">CPU</option>
+              <option value="cuda">CUDA</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="translation-controls" class="control-grid" hidden>
+          <div class="field">
+            <label for="translation-device">Translation device</label>
+            <select id="translation-device" name="translationDevice">
+              <option value="auto">Auto</option>
+              <option value="cpu">CPU</option>
+              <option value="cuda">CUDA</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="translation-batch-size">Translation batch</label>
+            <select id="translation-batch-size" name="translationBatchSize">
+              <option value="4">4</option>
+              <option value="8" selected>8 · balanced</option>
+              <option value="16">16</option>
+            </select>
+          </div>
+        </div>
+
+        <fieldset id="target-language-controls" class="check-group" aria-label="Target languages" hidden>
+          <legend>Target languages</legend>
+          <label><input type="checkbox" name="language" value="ru-RU" checked> Russian</label>
+          <label><input type="checkbox" name="language" value="en-US"> English</label>
+          <label><input type="checkbox" name="language" value="kk-KZ"> Kazakh</label>
+        </fieldset>
+
+        <div id="prepared-controls" hidden>
+          <div class="field voice-field prepared-only">
+            <label for="voice">Russian voice</label>
+            <select id="voice" name="voice">
+              <option value="ru-RU-DmitryNeural">Dmitry · Neural</option>
+              <option value="ru-RU-SvetlanaNeural">Svetlana · Neural</option>
+            </select>
+          </div>
+          <fieldset class="check-group platforms prepared-only" aria-label="Target platforms">
+            <legend>Output targets</legend>
+            <label><input type="checkbox" name="platform" value="local" checked> Local files</label>
+          </fieldset>
+        </div>
+
+        <div id="creator-controls" class="control-grid" hidden>
+          <div class="field">
+            <label for="creator-max-items">Maximum videos</label>
+            <input id="creator-max-items" name="maxItems" type="number" min="0" max="10000" value="20">
+          </div>
+          <div class="field span-two">
+            <label for="authentication-file">Optional authentication file</label>
+            <input id="authentication-file" name="authenticationFile" autocomplete="off" placeholder="Netscape cookies.txt inside your user folder">
+          </div>
+        </div>
+
+        <div id="publication-controls" class="control-stack" hidden>
+          <div class="field"><label for="publication-video">Finished video</label><input id="publication-video" name="videoPath" autocomplete="off" placeholder="Absolute path to the finished MP4"></div>
+          <div class="field"><label for="publication-metadata">Metadata JSON</label><input id="publication-metadata" name="metadataPath" autocomplete="off" placeholder="Absolute path to metadata.json"></div>
+          <div class="field"><label for="publication-account">Account label</label><input id="publication-account" name="account" value="primary" autocomplete="off"></div>
+          <div class="field"><label for="publication-credential-id">YouTube credential ID</label><input id="publication-credential-id" name="credentialId" value="youtube-main" autocomplete="off"></div>
+          <fieldset class="check-group" aria-label="Publication targets">
+            <legend>Publication targets</legend>
+            <label><input type="checkbox" name="publication-target" value="youtube" checked> YouTube</label>
+            <label><input type="checkbox" name="publication-target" value="bilibili"> Bilibili</label>
+            <label><input type="checkbox" name="publication-target" value="douyin"> Douyin</label>
+            <label><input type="checkbox" name="publication-target" value="tiktok"> TikTok</label>
+          </fieldset>
+        </div>
+
+        <div id="release-controls" class="control-stack" hidden>
+          <div class="field"><label for="release-metadata-template">Metadata template JSON</label><input id="release-metadata-template" name="metadataTemplatePath" autocomplete="off" placeholder="Absolute path to metadata-template.json"></div>
+          <div class="field"><label for="release-account">Account label</label><input id="release-account" name="releaseAccount" value="primary" autocomplete="off"></div>
+          <div class="field"><label for="release-credential-id">YouTube credential ID</label><input id="release-credential-id" name="releaseCredentialId" value="youtube-main" autocomplete="off"></div>
+          <fieldset class="check-group" aria-label="Release targets">
+            <legend>Release targets</legend>
+            <label><input type="checkbox" name="release-target" value="youtube" checked> YouTube</label>
+            <label><input type="checkbox" name="release-target" value="bilibili"> Bilibili</label>
+            <label><input type="checkbox" name="release-target" value="douyin"> Douyin</label>
+            <label><input type="checkbox" name="release-target" value="tiktok"> TikTok</label>
+          </fieldset>
+        </div>
+
+        <div id="publication-execution-controls" class="control-stack" hidden>
+          <div class="field"><label for="publication-plan-run-id">Completed Publish Plan run</label><input id="publication-plan-run-id" name="planRunId" autocomplete="off" placeholder="Automatically selects the latest eligible run"></div>
+          <div class="field"><label for="publication-confirmation">Exact plan SHA-256</label><input id="publication-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64"></div>
+          <div class="field"><label for="credential-vault-path">Credential Vault path</label><input id="credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json"></div>
+        </div>
+
+        <div id="publication-batch-execution-controls" class="control-stack" hidden>
+          <div class="field"><label for="release-plan-run-id">Completed Release Plan run</label><input id="release-plan-run-id" name="releasePlanRunId" autocomplete="off" placeholder="Automatically selects the latest eligible run"></div>
+          <div class="field"><label for="release-execution-confirmation">Exact batch-plan SHA-256</label><input id="release-execution-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64"></div>
+          <div class="field"><label for="release-credential-vault-path">Credential Vault path</label><input id="release-credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json"></div>
+        </div>
+
+        <div id="youtube-connect-controls" class="control-stack" hidden>
+          <div class="field"><label for="youtube-client-config">Google desktop client JSON</label><input id="youtube-client-config" name="clientConfigPath" autocomplete="off" placeholder="%USERPROFILE%\Downloads\client_secret.json"></div>
+          <div class="field"><label for="youtube-vault-path">Credential Vault path</label><input id="youtube-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json"></div>
+          <div class="field"><label for="youtube-credential-id">Credential ID</label><input id="youtube-credential-id" name="credentialId" value="youtube-main" autocomplete="off"></div>
+          <div class="field"><label for="youtube-credential-label">Account label</label><input id="youtube-credential-label" name="label" value="Main YouTube" autocomplete="off"></div>
+        </div>
       </section>
-      <section>
-        <h2>OUTPUT</h2>
-        <button class="palette-item" type="button" data-focus-node="verify"><i class="node-icon output">✓</i><span><span id="palette-output-title">Verify outputs</span><small id="palette-output-detail">Receipt policy</small></span><b>+</b></button>
+
+      <section class="readiness-panel" aria-labelledby="readiness-heading">
+        <div class="readiness-heading">
+          <div><p class="eyebrow">PREFLIGHT</p><h2 id="readiness-heading">Ready to run?</h2></div>
+          <button id="reconnect-button" class="secondary-button" type="button">Reconnect</button>
+        </div>
+        <ul id="readiness-list" aria-live="polite"><li class="checking">Checking Studio services…</li></ul>
+        <p id="connection-error" class="connection-error" hidden></p>
+        <div id="effect-summary" class="effect-summary">No platform action selected.</div>
       </section>
-      <div class="palette-foot"><span class="pulse-dot"></span><span>One worker<br><small>No parallel execution</small></span></div>
+
+      <button id="run-button" class="run-button" type="submit" disabled>Create &amp; run Graph</button>
+      <p class="serial-note"><span></span>One Graph runs at a time. Every Loop checkpoints its own progress.</p>
+    </form>
     </aside>
 
     <section id="workflow-canvas" class="workflow-canvas" aria-label="Workflow graph">
-      <div class="canvas-toolbar">
-        <button type="button" aria-label="Select tool" class="selected">↖</button>
-        <button type="button" aria-label="Fit graph" id="fit-graph">⌗</button>
-        <span></span>
-        <button type="button" aria-label="Zoom out">−</button><strong>100%</strong><button type="button" aria-label="Zoom in">＋</button>
+      <header class="canvas-heading">
+        <div>
+          <p class="eyebrow">EXECUTION MAP</p>
+          <h2 id="canvas-title">Choose an outcome</h2>
+          <p id="canvas-description">The exact Graph and its sequential Loops will appear here.</p>
+        </div>
+        <div class="canvas-stats"><span id="node-count">0 steps</span><span id="loop-count">0 loops</span></div>
+      </header>
+      <div class="canvas-toolbar" aria-label="Graph view controls">
+        <button type="button" id="fit-graph" aria-label="Fit graph">Fit</button>
+        <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+        <strong id="zoom-level">100%</strong>
+        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
       </div>
-      <div class="canvas-grid" id="graph-grid">
-        <svg class="connections" viewBox="0 0 980 430" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M275 205 C350 205 345 205 420 205"></path>
-          <path d="M660 205 C725 205 720 205 785 205"></path>
-        </svg>
-        <article class="graph-node input-node" data-node-id="source" data-step-id="source" tabindex="0">
-          <header><span><i>⌑</i> INPUT</span><b class="node-status">READY</b></header>
-          <div class="node-body"><h3 id="source-node-title">Prepared folder</h3><p id="source-node-description">Validate batch manifest</p><dl><div><dt>Source</dt><dd class="source-preview">Not selected</dd></div><div><dt>Contract</dt><dd>Query · v1.0</dd></div></dl></div>
-          <span class="port output-port"></span>
-        </article>
-        <article class="graph-node process-node" data-node-id="localize" data-step-id="localize" tabindex="0">
-          <header><span><i>◈</i> PROCESS</span><b class="node-status">WAITING</b></header>
-          <div class="node-body"><h3 id="process-node-title">Edge localization</h3><p id="process-node-description">Voice · mix · hard subtitles</p><dl><div><dt>Mode</dt><dd>Strictly serial</dd></div><div><dt>Retry</dt><dd>Checkpointed</dd></div></dl></div>
-          <span class="port input-port"></span><span class="port output-port"></span>
-        </article>
-        <article class="graph-node output-node" data-node-id="verify" data-step-id="verify" tabindex="0">
-          <header><span><i>✓</i> OUTPUT</span><b class="node-status">WAITING</b></header>
-          <div class="node-body"><h3 id="output-node-title">Verify output</h3><p id="output-node-description">Inspect files and receipts</p><dl><div><dt>Format</dt><dd id="output-format">MP4 · H.264</dd></div><div><dt>Evidence</dt><dd id="output-evidence">Local receipt</dd></div></dl></div>
-          <span class="port input-port"></span>
-        </article>
-        <div class="canvas-note"><span>i</span><p><strong>Graph Engineering</strong> owns continuation only. Every node remains an independent, replaceable MVP.</p></div>
+      <div id="graph-grid" class="graph-viewport">
+        <div id="graph-track" class="graph-track"></div>
+        <div id="graph-empty-state" class="graph-empty-state">
+          <span>01</span>
+          <h3>Select a result on the left</h3>
+          <p>This is a fixed, verified Graph builder. It will never show insert or connection controls unless editable Graph execution is actually implemented.</p>
+        </div>
       </div>
+      <footer class="canvas-note"><strong>Graph Engineering</strong><span>coordinates committed facts. Each Loop remains an independent, replaceable MVP.</span></footer>
     </section>
 
-    <aside id="node-inspector" class="panel inspector" aria-label="Node inspector">
-      <div class="panel-heading"><span>Inspector</span><button type="button" id="close-inspector" aria-label="Close inspector">×</button></div>
+    <aside id="node-inspector" class="inspector" aria-label="Node inspector">
+      <header class="panel-heading"><span>Step details</span></header>
       <div class="inspector-content">
-        <div class="inspector-icon process">◈</div>
-        <p class="eyebrow">SELECTED NODE</p>
-        <h2 id="inspector-title">Edge localization</h2>
-        <p id="inspector-description" class="muted">Generate Russian voice, mix original ambience and burn translated subtitles.</p>
+        <div class="inspector-step" id="inspector-step">—</div>
+        <p class="eyebrow">SELECTED STEP</p>
+        <h2 id="inspector-title">Nothing selected</h2>
+        <p id="inspector-description" class="muted">Choose a workflow, then select any real execution step.</p>
         <hr>
-        <h3>Execution</h3>
-        <div class="property"><span>State</span><b id="inspector-state" class="state waiting">WAITING</b></div>
-        <div class="property"><span>Owner</span><code>localization</code></div>
-        <div class="property"><span>Relationship</span><code>Adapter</code></div>
-        <div class="property"><span>Delivery</span><code>IMPLEMENTED</code></div>
+        <h3>Responsibility</h3>
+        <div class="property"><span>Status</span><b id="inspector-state" class="state waiting">DRAFT</b></div>
+        <div class="property"><span>Loop</span><code id="inspector-loop">—</code></div>
+        <div class="property"><span>Owner</span><code id="inspector-owner">—</code></div>
+        <div class="property"><span>Relationship</span><code id="inspector-relationship">—</code></div>
+        <div class="property"><span>Retry</span><code id="inspector-retry">—</code></div>
+        <div class="property"><span>Output fact</span><code id="inspector-output">—</code></div>
         <hr>
-        <h3>Run details</h3>
-        <div class="metric"><span>Progress</span><strong id="run-progress">0 / 3</strong></div>
+        <h3>Current run</h3>
+        <div class="metric"><span>Progress</span><strong id="run-progress">0 / 0</strong></div>
         <div class="progress-track"><i id="progress-bar"></i></div>
         <p id="run-id" class="run-id">No active run</p>
         <hr>
@@ -305,8 +259,8 @@
   </main>
 
   <section id="activity-log" class="activity" aria-label="Activity log">
-    <header><div><span class="live-dot"></span><strong>Activity</strong><small id="activity-summary">Waiting for a run</small></div><button id="clear-view" type="button">Clear view</button></header>
-    <pre id="log-output"><span class="log-muted">Select a folder and run the graph. Durable logs will appear here.</span></pre>
+    <header><div><span class="live-dot"></span><strong>Activity</strong><small id="activity-summary">Waiting for a Graph</small></div><button id="clear-view" type="button">Clear view</button></header>
+    <pre id="log-output"><span class="log-muted">Configure a Graph. Durable Loop logs will appear here after it starts.</span></pre>
   </section>
 
   <dialog id="folder-dialog">
@@ -320,7 +274,7 @@
 
   <dialog id="access-dialog">
     <form id="access-form" method="dialog" class="dialog-card access-card">
-      <header><div><p class="eyebrow">WORKSPACE ADMISSION</p><h2>Connect this browser session</h2></div><button value="cancel" aria-label="Close">&times;</button></header>
+      <header><div><p class="eyebrow">WORKSPACE ADMISSION</p><h2>Connect this browser session</h2></div><button value="cancel" aria-label="Close">×</button></header>
       <div class="access-fields">
         <label><span>Workspace</span><input id="access-workspace" autocomplete="username" required></label>
         <label><span>Bearer credential</span><input id="access-token" type="password" autocomplete="off" required></label>
@@ -331,6 +285,6 @@
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>
-    <script src="/app.js?v=8" defer></script>
+  <script type="module" src="/app.js?v=9"></script>
 </body>
 </html>

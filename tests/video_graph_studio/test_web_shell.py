@@ -4,6 +4,29 @@ from pathlib import Path
 WEB = Path(__file__).resolve().parents[2] / "apps" / "video-graph-studio" / "web"
 
 
+def test_shell_is_a_truthful_guided_graph_builder():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="graph-builder"' in html
+    assert 'for="workflow-goal"' in html
+    assert 'id="workflow-goal"' in html
+    assert 'aria-label="Source kind"' in html
+    assert 'id="workflow-summary"' in html
+    assert 'id="readiness-list"' in html
+    assert 'id="reconnect-button"' in html
+    assert 'id="graph-track"' in html
+    assert 'id="graph-empty-state"' in html
+    assert 'id="zoom-level"' in html
+    assert 'id="zoom-out"' in html
+    assert 'id="zoom-in"' in html
+    assert 'id="fit-graph"' in html
+    assert 'Create &amp; run Graph' in html
+    assert 'id="capability-palette"' not in html
+    assert 'name="template"' not in html
+    assert 'aria-label="Select tool"' not in html
+    assert 'class="port ' not in html
+
+
 def test_shell_has_creator_controls_and_workflow_regions():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     assert 'name="viewport"' in html
@@ -11,30 +34,11 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'for="voice"' in html
     assert 'aria-label="Target languages"' in html
     assert 'aria-label="Target platforms"' in html
-    assert 'id="capability-palette"' in html
+    assert 'id="graph-builder"' in html
     assert 'id="workflow-canvas"' in html
     assert 'id="node-inspector"' in html
     assert 'id="activity-log"' in html
-    assert 'aria-label="Workflow template"' in html
-    assert 'value="prepared-localization"' in html
-    assert 'value="folder-intake"' in html
-    assert 'value="url-intake"' in html
-    assert 'value="folder-transcription"' in html
-    assert 'value="url-transcription"' in html
-    assert 'value="folder-translation"' in html
-    assert 'value="url-translation"' in html
-    assert 'value="folder-voice"' in html
-    assert 'value="url-voice"' in html
-    assert 'value="folder-dub"' in html
-    assert 'value="url-dub"' in html
-    assert 'value="folder-release"' in html
-    assert 'value="url-release"' in html
-    assert 'value="creator-profile"' in html
-    assert 'value="creator-batch-dub"' in html
-    assert 'value="publication-plan"' in html
-    assert 'value="publication-execute"' in html
-    assert 'value="publication-batch-execute"' in html
-    assert 'value="youtube-connect"' in html
+    assert 'aria-label="Build a Graph"' in html
     assert 'id="publication-credential-id"' in html
     assert 'id="publication-plan-run-id"' in html
     assert 'id="publication-confirmation"' in html
@@ -62,8 +66,11 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'id="asr-device"' in html
     assert 'id="translation-device"' in html
     assert 'id="translation-batch-size"' in html
-    assert 'id="output-format"' in html
-    assert 'id="output-evidence"' in html
+    assert 'id="inspector-loop"' in html
+    assert 'id="inspector-owner"' in html
+    assert 'id="inspector-relationship"' in html
+    assert 'id="inspector-retry"' in html
+    assert 'id="inspector-output"' in html
     assert 'id="access-button"' in html
     assert 'id="access-dialog"' in html
     assert 'id="access-workspace"' in html
@@ -73,10 +80,12 @@ def test_shell_has_creator_controls_and_workflow_regions():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=4"' in html
-    assert 'src="/app.js?v=8"' in html
-    assert "https://" not in html
-    assert "http://" not in html
+    assert 'href="/styles.css?v=5"' in html
+    assert 'type="module" src="/app.js?v=9"' in html
+    assert 'src="https://' not in html
+    assert 'href="https://' not in html
+    assert 'src="http://' not in html
+    assert 'href="http://' not in html
 
 
 def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
@@ -136,10 +145,10 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert '"JSON · SRT"' in script
     assert '"Source Manifest"' in script
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    assert ".template-field{flex:1 0 100%;min-width:0;overflow-x:auto" in styles
-    assert ".runbar { height: 126px;" in styles
-    assert ".runbar.creator-batch-mode { height: 180px;" in styles
-    assert ".runbar.release-mode { height: 220px;" in styles
+    assert ".studio-shell {" in styles
+    assert "grid-template-columns: 340px minmax(0,1fr) 300px" in styles
+    assert ".graph-track { --graph-zoom:1" in styles
+    assert ".graph-node {" in styles
     assert '$("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode)' in script
     assert '$("#run-form").classList.toggle("release-mode", releaseMode)' in script
     assert '$("#release-controls").hidden = !releaseMode' in script
