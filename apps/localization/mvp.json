@@ -1,1 +1,12 @@
-{"schema_version":1,"name":"localization","summary":"Compose translation, dubbing, timing, and subtitles.","entrypoint":"run.ps1","install":"install.ps1","test":"python -m pytest tests/repository -q","inputs":["transcript","translation","voice audio","timing manifest"],"outputs":["localized video and manifest"],"dependencies":["python>=3.12","ffmpeg","TTS adapter"],"delivery_level":"DESIGNED"}
+{
+  "schema_version": 1,
+  "name": "localization",
+  "summary": "Compose verified subtitle-burned and dubbed MP4 derivatives from committed manifests.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/localization_mvp -q",
+  "inputs": ["Source Manifest", "Translation Manifest", "Voice Manifest", "explicit audio/subtitle policy"],
+  "outputs": ["localization-manifest.json", "localization-receipt.json", "probe-verified H.264/AAC MP4 derivatives"],
+  "dependencies": ["python>=3.12", "ffmpeg", "ffprobe"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
