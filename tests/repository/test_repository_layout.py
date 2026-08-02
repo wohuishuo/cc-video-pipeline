@@ -9,6 +9,7 @@ EXPECTED_APPS = {
     "video-editing", "localization", "voice-cloning", "channel-research",
     "remotion-studio", "source-intake", "translation", "video-graph-studio", "voice-rendering",
     "creator-discovery",
+    "creator-selection",
     "publication",
     "workspace-access",
     "workspace-storage",

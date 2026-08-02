@@ -25,6 +25,7 @@ try {
     "tests\voice_rendering_mvp",
     "tests\localization_mvp",
     "tests\creator_discovery_mvp",
+    "tests\creator_selection_mvp",
     "tests\publication_mvp",
     "tests\workspace_access_mvp",
     "tests\workspace_storage_mvp",

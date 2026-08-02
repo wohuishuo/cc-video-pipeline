@@ -66,6 +66,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **YouTube OAuth Bootstrap** | Google desktop client JSON + explicit consent | Active provider-bound Vault credential + redacted receipt | `DOMAIN_VERIFIED` | [Open](apps/youtube-oauth-bootstrap/README.md) |
 | **Source Intake** | Local folder or supported social URL | Deterministic source manifest + receipt | `DOMAIN_VERIFIED` | [Open](apps/source-intake/README.md) |
 | **Creator Discovery** | YouTube/Bilibili/Douyin/TikTok creator URL | Ordered canonical video manifest | `PLATFORM_INTEGRATED` | [Open](apps/creator-discovery/README.md) |
+| **Creator Selection** | Creator Manifest + selected video IDs | Verified exact ordered creator subset | `DOMAIN_VERIFIED` | [Open](apps/creator-selection/README.md) |
 | **Creator Batch** | Creator Manifest + languages and voices | Durable serial localization receipt + complete derivative manifest | `DOMAIN_VERIFIED` | [Open](apps/creator-batch/README.md) |
 | **Publication Batch** | Localization Manifest + metadata template + targets | Durable serial private/draft plans for every derivative | `DOMAIN_VERIFIED` | [Open](apps/publication-batch/README.md) |
 | **Publication Batch Execution** | Confirmed Publication Batch Plan + Credential Vault | Resumable serial private YouTube results + verified aggregate | `DOMAIN_VERIFIED` | [Open](apps/publication-batch-execution/README.md) |
@@ -113,6 +114,7 @@ flowchart TB
       R[apps/youtube-publisher]
       S[apps/youtube-oauth-bootstrap]
       T[apps/creator-batch]
+      W[apps/creator-selection]
       U[apps/publication-batch]
       V[apps/publication-batch-execution]
     end
@@ -127,7 +129,7 @@ flowchart TB
 
     classDef boundary fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
     classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V boundary;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W boundary;
     class contracts,projects,outputs data;
 ```
 

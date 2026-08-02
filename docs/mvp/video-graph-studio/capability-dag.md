@@ -1,23 +1,22 @@
-# Video Graph Studio Capability DAG
+# Video Graph Studio capability DAG
 
 ```mermaid
 flowchart LR
-    Catalog[Workflow Catalog] -->|Projection| Builder[Guided Graph Builder]
-    Contracts[Client Contracts] -->|Preflight| Builder
-    Health[Studio Health] -->|Preflight| Builder
-    Builder -->|Versioned command| Graph
-    Graph -->|Policy| Run
-    Run -->|Fact| Process
-    Process -->|Adapter| Worker
-    Process -->|Lease lifecycle| Budget[Resource Budget]
-    Worker -->|Fact| Process
-    Run -->|Projection| Dashboard
-    Log -->|Projection| Dashboard
-    Graph -->|Contains| SourceLoop[Source Loop]
-    Graph -->|Contains| AsrLoop[Transcription Loop]
-    Graph -->|Contains| TranslationLoop[Translation Loop]
-    Graph -->|Contains| VoiceLoop[Voice Loop]
-    Graph -->|Contains| LocalizationLoop[Localization Loop]
+    URL["Creator account URL"] --> D["Creator Discovery"]
+    D --> C["Verified Creator Catalog"]
+    C --> S["Creator Selection"]
+    S --> B["Creator Batch continuation"]
+    LP["Languages + provider + voices"] --> B
+    B --> I["Source Intake per video"]
+    I --> A["Transcription"]
+    A --> T["NLLB or DeepSeek Translation"]
+    T --> V["Voice Rendering"]
+    V --> L["Localization"]
+    L --> O["Verified localized derivatives"]
+    R["Per-language destination routes"] --> P["Publication intent"]
+    O --> P
+    P --> Y["YouTube private-ready"]
+    P --> Q["Bilibili / Douyin / TikTok plan-only"]
 ```
 
-Workflow Catalog, guided Draft Graph projection, independent readiness checks, exact node/Loop rendering, Graph, Run, Queue, Process, Worker, Log, Folder Browser, Dashboard and optional Resource Budget composition are verified. The builder only selects admitted fixed Graphs; arbitrary node insertion and edge editing are deliberately absent. Real authenticated private/draft upload remains the lowest unproven platform node. See the [full DAG](../../project/evidence/video-graph-studio/capability-dag.md).
+Studio owns admission, continuation and browser projection only. Discovery owns the account catalog, Selection owns the exact subset, Creator Batch owns serial cross-item continuation, and media capabilities own their manifests. Destination intent does not claim publication execution. See the [full DAG](../../project/evidence/video-graph-studio/capability-dag.md).
