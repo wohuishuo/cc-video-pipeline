@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "creator-selection",
+  "summary": "Commit an exact ordered subset from a verified creator video manifest.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest tests/creator_selection_mvp -q",
+  "inputs": ["creator-manifest.json", "one or more exact video IDs"],
+  "outputs": ["creator-selection-manifest.json", "creator-selection-receipt.json"],
+  "dependencies": ["python>=3.12"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
