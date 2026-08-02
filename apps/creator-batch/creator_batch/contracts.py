@@ -135,6 +135,7 @@ class BatchPolicy:
     asr_device: str
     asr_compute_type: str
     translation_model: str
+    translation_provider: str
     translation_device: str
     translation_batch_size: int
     source_volume: float
@@ -151,6 +152,7 @@ class BatchPolicy:
         asr_device: str = "auto",
         asr_compute_type: str = "default",
         translation_model: str = "facebook/nllb-200-distilled-600M",
+        translation_provider: str = "nllb",
         translation_device: str = "auto",
         translation_batch_size: int = 8,
         source_volume: float = 0.12,
@@ -170,6 +172,8 @@ class BatchPolicy:
             raise BatchContractError("creator batch downloads are fixed at 1080p maximum")
         if asr_device not in {"auto", "cpu", "cuda"} or translation_device not in {"auto", "cpu", "cuda"}:
             raise BatchContractError("device policy is invalid")
+        if translation_provider not in {"nllb", "deepseek"}:
+            raise BatchContractError("translation provider is invalid")
         text_values = (source_language, asr_model, asr_compute_type, translation_model)
         if any(not isinstance(value, str) or not value.strip() for value in text_values):
             raise BatchContractError("model and language policies must not be empty")
@@ -181,6 +185,7 @@ class BatchPolicy:
             asr_device,
             asr_compute_type.strip(),
             translation_model.strip(),
+            translation_provider,
             translation_device,
             int(translation_batch_size),
             float(source_volume),
@@ -196,6 +201,7 @@ class BatchPolicy:
             "asrDevice": self.asr_device,
             "asrComputeType": self.asr_compute_type,
             "translationModel": self.translation_model,
+            "translationProvider": self.translation_provider,
             "translationDevice": self.translation_device,
             "translationBatchSize": self.translation_batch_size,
             "sourceVolume": self.source_volume,

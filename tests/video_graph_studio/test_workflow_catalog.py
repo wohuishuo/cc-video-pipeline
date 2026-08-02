@@ -7,6 +7,7 @@ sys.path.insert(0, str(APP))
 
 from studio.api import (  # noqa: E402
     CREATOR_BATCH_GRAPHS,
+    CREATOR_CAMPAIGN_GRAPHS,
     CREATOR_GRAPHS,
     INTAKE_GRAPHS,
     LOCALIZATION_GRAPHS,
@@ -45,6 +46,7 @@ def expected_graphs():
         **RELEASE_GRAPHS,
         **CREATOR_GRAPHS,
         **CREATOR_BATCH_GRAPHS,
+        **CREATOR_CAMPAIGN_GRAPHS,
         **PUBLICATION_GRAPHS,
         **PUBLICATION_EXECUTION_GRAPHS,
         **PUBLICATION_BATCH_EXECUTION_GRAPHS,

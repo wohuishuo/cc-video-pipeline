@@ -58,3 +58,17 @@ def test_language_api_exposes_searchable_rows_with_voice_defaults(tmp_path):
     assert len(response["languages"]) == 20
     assert {row["locale"]: row["nllbCode"] for row in response["languages"]} == EXPECTED
     assert all(row["name"] and row["defaultVoice"] for row in response["languages"])
+
+
+def test_translation_provider_api_reports_local_and_deepseek_readiness(tmp_path, monkeypatch):
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    store = RunStore(tmp_path / "studio.db")
+    app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))
+
+    status, response = app.handle("GET", "/api/v1/translation-providers", {}, None)
+
+    assert status == 200
+    assert response["providers"] == [
+        {"id": "nllb", "name": "NLLB (local)", "ready": True, "defaultModel": "facebook/nllb-200-distilled-600M"},
+        {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": False, "defaultModel": "deepseek-v4-flash", "credentialEnvironment": "DEEPSEEK_API_KEY"},
+    ]

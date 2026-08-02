@@ -9,7 +9,7 @@ APP = ROOT / "apps" / "translation"
 sys.path.insert(0, str(APP))
 
 from .helpers import write_transcript_manifest  # noqa: E402
-from translation_app.adapters import NllbAdapter, TARGET_CODES  # noqa: E402
+from translation_app.adapters import DeepSeekAdapter, NllbAdapter, TARGET_CODES  # noqa: E402
 from translation_app.cli import main  # noqa: E402
 
 
@@ -71,6 +71,78 @@ def test_nllb_adapter_declares_every_public_target_language():
     assert TARGET_CODES["es-ES"] == "spa_Latn"
     assert TARGET_CODES["th-TH"] == "tha_Thai"
     assert len(TARGET_CODES) == 20
+
+
+def test_deepseek_adapter_requests_exact_json_segment_coverage_without_leaking_key():
+    observed = {}
+
+    def requester(url, headers, payload, timeout):
+        observed.update(url=url, headers=headers, payload=payload, timeout=timeout)
+        return {
+            "choices": [
+                {"message": {"content": '{"translations":["Hello","World"]}'}}
+            ]
+        }
+
+    adapter = DeepSeekAdapter(
+        "secret-key",
+        model="deepseek-v4-flash",
+        requester=requester,
+        sleep=lambda _seconds: None,
+    )
+    logs = []
+
+    result = adapter.translate(("ä½ å¥½", "ä¸–ç•Œ"), "zh", "en-US", logs.append)
+
+    assert result == ("Hello", "World")
+    assert observed["url"] == "https://api.deepseek.com/chat/completions"
+    assert observed["headers"]["Authorization"] == "Bearer secret-key"
+    assert observed["payload"]["model"] == "deepseek-v4-flash"
+    assert observed["payload"]["response_format"] == {"type": "json_object"}
+    assert "secret-key" not in adapter.identity
+    assert "secret-key" not in " ".join(logs)
+
+
+def test_deepseek_adapter_retries_malformed_coverage_then_fails_bounded():
+    calls = []
+
+    def requester(_url, _headers, _payload, _timeout):
+        calls.append(1)
+        return {"choices": [{"message": {"content": '{"translations":["Only one"]}'}}]}
+
+    adapter = DeepSeekAdapter(
+        "secret-key", requester=requester, sleep=lambda _seconds: None, maximum_attempts=2
+    )
+
+    import pytest
+    from translation_app.contracts import TranslationError
+
+    with pytest.raises(TranslationError, match="exactly one translation"):
+        adapter.translate(("one", "two"), "en", "ru-RU", lambda _message: None)
+    assert len(calls) == 2
+
+
+def test_cli_exposes_translation_provider_selection(tmp_path, capsys):
+    transcript = write_transcript_manifest(tmp_path)
+    seen = {}
+
+    def factory(options):
+        seen["provider"] = options.provider
+        seen["model"] = options.model
+        return CliAdapter()
+
+    code = main(
+        [
+            str(transcript), "--output-dir", str(tmp_path / "out-deepseek"),
+            "--operation-id", "deepseek-op", "--target-language", "en-US",
+            "--provider", "deepseek", "--model", "deepseek-v4-pro", "--json",
+        ],
+        adapter_factory=factory,
+    )
+
+    assert code == 0
+    assert seen == {"provider": "deepseek", "model": "deepseek-v4-pro"}
+    assert json.loads(capsys.readouterr().out)["resultClass"] == "COMPLETED"
 
 
 class CliAdapter:

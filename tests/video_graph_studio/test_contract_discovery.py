@@ -96,7 +96,7 @@ def test_public_launcher_resolves_current_studio_from_an_untrusted_cwd(tmp_path)
         assert contract_status == 200
         assert contracts["value"]["bundle"]["commands"]["CMD-RUN-CREATE"] is not None
         assert catalog_status == 200
-        assert len(catalog["capabilities"]) == 19
+        assert len(catalog["capabilities"]) == 20
         assert all(row["templateId"] and row["nodes"] for row in catalog["capabilities"])
     finally:
         subprocess.run(

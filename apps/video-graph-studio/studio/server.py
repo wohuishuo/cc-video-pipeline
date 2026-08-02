@@ -220,6 +220,7 @@ def build_runtime(
         PreparedFolderEdgeAdapter,
         LocalizedVideoAdapter,
         CreatorDiscoveryAdapter,
+        CreatorSelectionAdapter,
         CreatorBatchAdapter,
         PublicationBatchPlanAdapter,
         PublicationPlanAdapter,
@@ -236,6 +237,7 @@ def build_runtime(
         VerifyVoiceAdapter,
         VerifyLocalizationAdapter,
         VerifyCreatorManifestAdapter,
+        VerifyCreatorSelectionAdapter,
         VerifyCreatorBatchAdapter,
         VerifyPublicationBatchPlanAdapter,
         VerifyPublicationPlanAdapter,
@@ -263,6 +265,7 @@ def build_runtime(
     voice_launcher = repository / "apps" / "voice-rendering" / "run.ps1"
     localization_launcher = repository / "apps" / "localization" / "run.ps1"
     creator_discovery_launcher = repository / "apps" / "creator-discovery" / "run.ps1"
+    creator_selection_launcher = repository / "apps" / "creator-selection" / "run.ps1"
     creator_batch_launcher = repository / "apps" / "creator-batch" / "run.ps1"
     publication_batch_launcher = repository / "apps" / "publication-batch" / "run.ps1"
     publication_launcher = repository / "apps" / "publication" / "run.ps1"
@@ -304,6 +307,10 @@ def build_runtime(
                 creator_discovery_launcher, artifact_root / "creators"
             ),
             "verify-creator": VerifyCreatorManifestAdapter(),
+            "select-creator-videos": CreatorSelectionAdapter(
+                creator_selection_launcher, artifact_root / "creator-selections"
+            ),
+            "verify-selection": VerifyCreatorSelectionAdapter(),
             "localize-creator-batch": CreatorBatchAdapter(
                 creator_batch_launcher, artifact_root / "creator-batches"
             ),
