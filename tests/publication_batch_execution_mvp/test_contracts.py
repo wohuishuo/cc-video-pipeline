@@ -170,3 +170,20 @@ def test_rejects_missing_vault_without_reading_credential_material(tmp_path):
         load_batch_plan(path, confirmation, vault)
 
     assert caught.value.code == "REJECTED_MALFORMED"
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda value: value.update(targetLanguages=[{"locale": "ru-RU"}]),
+        lambda value: value.update(items=["not-an-item", *value["items"][1:]]),
+    ],
+)
+def test_rejects_unhashable_or_non_object_rows_with_stable_contract_error(tmp_path, change):
+    path, _confirmation, vault = build_batch(tmp_path)
+    rewrite(path, change); confirmation = sha256_file(path)
+
+    with pytest.raises(BatchExecutionContractError) as caught:
+        load_batch_plan(path, confirmation, vault)
+
+    assert caught.value.code == "REJECTED_MALFORMED"

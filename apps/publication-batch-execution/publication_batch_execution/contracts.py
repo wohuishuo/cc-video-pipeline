@@ -75,8 +75,8 @@ def _nonempty_strings(value: Any) -> bool:
     return (
         isinstance(value, list)
         and bool(value)
-        and len(set(value)) == len(value)
         and all(isinstance(row, str) and bool(row.strip()) for row in value)
+        and len(set(value)) == len(value)
     )
 
 
@@ -148,6 +148,8 @@ class BatchExecutionInput:
 
 
 def _validate_plan(item: dict[str, Any], target: dict[str, str]) -> ExecutionItem:
+    if not isinstance(item, dict) or set(item) != ITEM_FIELDS:
+        raise BatchExecutionContractError("REJECTED_MALFORMED", "batch item schema is invalid")
     try:
         ordinal = item["ordinal"]
         language = item["targetLanguage"]
@@ -156,9 +158,7 @@ def _validate_plan(item: dict[str, Any], target: dict[str, str]) -> ExecutionIte
     except KeyError as error:
         raise BatchExecutionContractError("REJECTED_MALFORMED", "batch item is incomplete") from error
     if (
-        not isinstance(item, dict)
-        or set(item) != ITEM_FIELDS
-        or isinstance(ordinal, bool)
+        isinstance(ordinal, bool)
         or not isinstance(ordinal, int)
         or ordinal < 1
         or not isinstance(language, str)
