@@ -22,6 +22,7 @@ Choose one of the workflow templates:
 - `Folder+Voice` or `URL+Voice` continues through verified per-segment Edge MP3 clips.
 - `Folder+Dub` or `URL+Dub` runs all ten owner steps and produces verified subtitle-burned H.264/AAC derivatives.
 - `Creator` enumerates a YouTube/Bilibili/Douyin/TikTok profile into a verified Creator Manifest without downloading media.
+- `Publish Plan` fingerprints one finished video and metadata file into private/draft jobs for selected platforms. It never uploads.
 - `Localize` runs the compatibility prepared-folder Edge workflow.
 
 Exactly one workflow and one child process execute at a time. The ten-step dubbing graph calls Source Intake, Transcription, Translation, Voice Rendering and Localization only through their public launchers.
@@ -57,5 +58,6 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Source Intake, Transcription, Translation and Voice Rendering manifest workflows are domain verified; one public YouTube download and local Faster Whisper/NLLB/Edge runs have live evidence.
 - Localization is platform integrated through a browser-admitted ten-step RU+KK run with real FFmpeg/FFprobe outputs. Edge TTS remains a replaceable online adapter and may return retryable service failures.
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
+- Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
 - Creator-profile discovery and authenticated uploads remain later independent slices.
 - No cloud account, billing, remote access or production platform claim is made.

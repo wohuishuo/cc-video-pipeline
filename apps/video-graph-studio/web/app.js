@@ -60,6 +60,11 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Enumerate profile", description: "Page serially, canonicalize URLs, deduplicate IDs and checkpoint the cursor.", owner: "creator-discovery", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
     verify: { title: "Verify creator manifest", description: "Require ordered unique URLs and a matching manifest fingerprint.", owner: "creator-discovery", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
   },
+  "publication-plan": {
+    source: { title: "Finished video", description: "Select one local derivative plus editable metadata and target accounts.", owner: "publication", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Build publication plan", description: "Fingerprint inputs and create private/draft target jobs without contacting platforms.", owner: "publication", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify publication plan", description: "Check video, metadata, job coverage and immutable plan fingerprint.", owner: "publication", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
 };
 
 const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization" };
@@ -157,13 +162,14 @@ async function submitRun(event) {
   const platforms = $$('input[name="platform"]:checked').map((item) => item.value);
   const voice = $("#voice").value;
   const creatorMode = state.templateId === "creator-profile";
+  const publicationMode = state.templateId === "publication-plan";
   const urlMode = state.templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = state.templateId.endsWith("-transcription");
   const translationMode = state.templateId.endsWith("-translation");
   const voiceMode = state.templateId.endsWith("-voice");
   const dubMode = state.templateId.endsWith("-dub");
-  const needsFolder = !urlMode;
-  if ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl)) {
+  const needsFolder = !urlMode && !publicationMode;
+  if (!publicationMode && ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl))) {
     toast("Choose a source folder or supported social URL.", true);
     return;
   }
@@ -173,6 +179,11 @@ async function submitRun(event) {
   }
   if ((translationMode || voiceMode || dubMode) && !languages.length) {
     toast("Choose at least one target language.", true);
+    return;
+  }
+  const publicationTargets = $$('input[name="publication-target"]:checked').map((item) => item.value);
+  if (publicationMode && (!$("#publication-video").value.trim() || !$("#publication-metadata").value.trim() || !$("#publication-account").value.trim() || !publicationTargets.length)) {
+    toast("Choose a finished video, metadata, account and target.", true);
     return;
   }
   const correlationId = crypto.randomUUID();
@@ -200,7 +211,9 @@ async function submitRun(event) {
     };
     const defaultVoices = { "ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural", "kk-KZ": "kk-KZ-DauletNeural" };
     const voicePayload = { ...translationPayload, targetVoices: Object.fromEntries(languages.map((language) => [language, defaultVoices[language]])) };
-    const payload = creatorMode
+    const payload = publicationMode
+      ? { templateId: state.templateId, videoPath: $("#publication-video").value.trim(), metadataPath: $("#publication-metadata").value.trim(), targetPlatforms: publicationTargets, account: $("#publication-account").value.trim(), public: false }
+      : creatorMode
       ? { templateId: state.templateId, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined }
       : dubMode
       ? { ...voicePayload, sourceVolume: 0.12 }
@@ -257,6 +270,7 @@ function resetRunProjection() {
 function selectTemplate(templateId) {
   state.templateId = templateId;
   const creatorMode = templateId === "creator-profile";
+  const publicationMode = templateId === "publication-plan";
   const urlMode = templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = templateId.endsWith("-transcription");
   const translationMode = templateId.endsWith("-translation");
@@ -266,8 +280,8 @@ function selectTemplate(templateId) {
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
-  sourceRoot.closest(".source-field").hidden = urlMode;
-  sourceRoot.required = !urlMode;
+  sourceRoot.closest(".source-field").hidden = urlMode || publicationMode;
+  sourceRoot.required = !urlMode && !publicationMode;
   sourceUrl.required = urlMode;
   const preparedMode = templateId === "prepared-localization";
   $$(".prepared-only").forEach((element) => {
@@ -282,10 +296,13 @@ function selectTemplate(templateId) {
   $("#asr-controls").hidden = !needsAsr;
   $("#translation-controls").hidden = !(translationMode || voiceMode || dubMode);
   $("#creator-controls").hidden = !creatorMode;
+  $("#publication-controls").hidden = !publicationMode;
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
-  const copy = templateId === "creator-profile"
+  const copy = templateId === "publication-plan"
+    ? ["Finished video", "Local derivative · editable metadata", "Build publication plan", "Fingerprint only · no upload", "Verify publication plan", "Private/draft jobs · plan SHA-256"]
+    : templateId === "creator-profile"
     ? ["Creator profile", "YouTube · Bilibili · Douyin · TikTok", "Enumerate profile", "Serial pages · deduplicated · resumable", "Verify creator manifest", "Canonical URLs · cursor · fingerprint"]
     : templateId === "prepared-localization"
     ? ["Prepared folder", "Validate batch manifest", "Edge localization", "Voice · mix · hard subtitles", "Verify output", "Inspect files and receipts"]
@@ -304,7 +321,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = templateId === "creator-profile"
+  const outputDetails = templateId === "publication-plan"
+    ? ["JSON plan", "Plan SHA-256"]
+    : templateId === "creator-profile"
     ? ["Canonical URLs", "Creator Manifest"]
     : templateId === "prepared-localization"
     ? ["MP4 · H.264", "Local receipt"]
@@ -317,7 +336,9 @@ function selectTemplate(templateId) {
       : ["Source Manifest", "SHA-256 receipt"];
   $("#output-format").textContent = outputDetails[0];
   $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = templateId === "creator-profile"
+  const stepIds = templateId === "publication-plan"
+    ? ["", "plan-publication", "verify-publication-plan"]
+    : templateId === "creator-profile"
     ? ["", "discover-creator", "verify-creator"]
     : templateId === "prepared-localization"
     ? ["source", "localize", "verify"]
@@ -331,7 +352,9 @@ function selectTemplate(templateId) {
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = templateId === "creator-profile"
+  const paletteCopy = templateId === "publication-plan"
+    ? ["Finished video", "Local input", "Build publication plan", "No platform contact", "Verify plan", "Confirmation policy"]
+    : templateId === "creator-profile"
     ? ["Creator profile", "Remote input", "Enumerate profile", "Serial page loop", "Verify creator manifest", "Coverage policy"]
     : templateId === "prepared-localization"
     ? ["Prepared folder", "Local query", "Edge localization", "Serial adapter", "Verify outputs", "Receipt policy"]
@@ -350,7 +373,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = templateId === "creator-profile"
+  $(".workspace-label").textContent = templateId === "publication-plan"
+    ? "Guarded Publication Planning"
+    : templateId === "creator-profile"
     ? "Creator Profile Discovery"
     : templateId === "prepared-localization"
     ? "Prepared Folder Localization"
@@ -367,7 +392,7 @@ function selectTemplate(templateId) {
             : voiceMode
               ? `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation + Voice`
               : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
-  $$(".source-preview").forEach((element) => { element.textContent = (urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
+  $$(".source-preview").forEach((element) => { element.textContent = (publicationMode ? $("#publication-video").value : urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
   resetRunProjection();
   focusNode(state.selectedNode);
 }
@@ -440,6 +465,7 @@ function bindEvents() {
   $$('[data-focus-node]').forEach((button) => button.addEventListener("click", () => focusNode(button.dataset.focusNode)));
   $("#source-root").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
   $("#source-url").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
+  $("#publication-video").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
   $$('input[name="template"]').forEach((input) => input.addEventListener("change", () => selectTemplate(input.value)));
 }
 

@@ -38,6 +38,7 @@
       <label class="choice"><input type="radio" name="template" value="folder-dub"> Folder+Dub</label>
       <label class="choice"><input type="radio" name="template" value="url-dub"> URL+Dub</label>
       <label class="choice"><input type="radio" name="template" value="creator-profile"> Creator</label>
+      <label class="choice"><input type="radio" name="template" value="publication-plan"> Publish Plan</label>
     </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
@@ -106,6 +107,27 @@
         <label for="authentication-file">Authentication file</label>
         <input id="authentication-file" name="authenticationFile" autocomplete="off" placeholder="Optional Netscape cookies.txt">
       </div>
+    </div>
+    <div id="publication-controls" class="asr-controls" hidden>
+      <div class="field source-field">
+        <label for="publication-video">Finished video</label>
+        <input id="publication-video" name="videoPath" autocomplete="off" placeholder="Absolute path to finished video">
+      </div>
+      <div class="field source-field">
+        <label for="publication-metadata">Metadata JSON</label>
+        <input id="publication-metadata" name="metadataPath" autocomplete="off" placeholder="Absolute path to metadata.json">
+      </div>
+      <div class="field asr-field device-field">
+        <label for="publication-account">Account</label>
+        <input id="publication-account" name="account" value="primary" autocomplete="off">
+      </div>
+      <fieldset class="choice-field" aria-label="Publication targets">
+        <legend>Targets</legend>
+        <label class="choice active"><input type="checkbox" name="publication-target" value="youtube" checked> YouTube</label>
+        <label class="choice"><input type="checkbox" name="publication-target" value="bilibili"> Bilibili</label>
+        <label class="choice"><input type="checkbox" name="publication-target" value="douyin"> Douyin</label>
+        <label class="choice"><input type="checkbox" name="publication-target" value="tiktok"> TikTok</label>
+      </fieldset>
     </div>
     <fieldset id="target-language-controls" class="choice-field" aria-label="Target languages">
       <legend>Languages</legend>

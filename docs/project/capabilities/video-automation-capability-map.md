@@ -44,7 +44,7 @@ flowchart LR
 | L01-L03 | Translation | `DOMAIN_VERIFIED`; adapter-neutral serial loop and editable artifacts | real local NLLB smoke, reviewed-text republish and quality sampling |
 | V01 | Voice segment loop | `DOMAIN_VERIFIED`; adapter-neutral receipt, real Edge RU+KK completion, failed-clip resume and ten-step browser composition | representative voice/service quality evidence |
 | C01-C03 | Subtitle, audio and composition | `PLATFORM_INTEGRATED`; serial recovery tests, real FFmpeg/FFprobe RU+KK derivatives and browser graph evidence | long-form quality and crash/power-loss evidence |
-| P01-P02 | Publication | guarded preparation exists | authenticated private/draft evidence per platform |
+| P01-P02 | Publication | `DOMAIN_VERIFIED`; immutable plan, exact-hash confirmation, serial checkpoint/resume and browser planning | authenticated private/draft evidence per platform |
 
 ## Required substitutes
 

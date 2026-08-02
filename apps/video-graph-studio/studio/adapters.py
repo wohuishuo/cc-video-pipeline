@@ -684,3 +684,31 @@ class VerifyCreatorManifestAdapter:
         except (OSError,KeyError,TypeError,ValueError,json.JSONDecodeError): valid=False; items=[]
         if not valid: return AdapterResult(False,{},"creator manifest validation failed")
         on_log(f"Verified creator manifest with {len(items)} video URL(s)"); return AdapterResult(True,{"manifest":str(path),"itemCount":len(items)})
+
+
+class PublicationPlanAdapter(CommandAdapter):
+    def __init__(self,launcher:Path,output_root:Path):super().__init__(); self.launcher=Path(launcher).resolve(); self.output_root=Path(output_root).resolve()
+    def execute(self,node,context,on_log,cancel_event):
+        parameters=context["parameters"]; output=self.output_root/str(context["runId"]); argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),"plan",str(parameters["videoPath"]),"--metadata",str(parameters["metadataPath"])]
+        for platform in parameters["targetPlatforms"]:argv.extend(["--target",f"{platform}={parameters['account']}"])
+        argv.extend(["--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}","--json"]); result=super().execute(GraphNode(node.id,"command",{"argv":argv}),context,on_log,cancel_event); receipt_path=output/"planning-receipt.json"
+        if not result.completed or not receipt_path.is_file():return AdapterResult(False,result.details,result.error or "planning receipt missing")
+        try:receipt=json.loads(receipt_path.read_text(encoding="utf-8-sig")); plan=Path(str(receipt["plan"])).resolve()
+        except (OSError,KeyError,TypeError,json.JSONDecodeError) as error:return AdapterResult(False,result.details,f"invalid planning receipt: {error}")
+        if receipt.get("resultClass")!="COMPLETED" or not plan.is_file():return AdapterResult(False,result.details,"Publication did not commit a plan")
+        return AdapterResult(True,{**result.details,"receipt":str(receipt_path),"manifest":str(plan),"manifestSha256":receipt.get("planSha256"),"jobCount":int(receipt.get("jobCount",0))})
+
+
+class VerifyPublicationPlanAdapter:
+    def execute(self,node,context,on_log,cancel_event):
+        committed=next((step.get("result") for step in context.get("steps",[]) if step.get("nodeId")=="plan-publication" and step.get("status")=="COMPLETED"),None)
+        if not isinstance(committed,dict):return AdapterResult(False,{},"committed publication plan missing")
+        path=Path(str(committed.get("manifest",""))).resolve()
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=committed.get("manifestSha256"):return AdapterResult(False,{},"publication plan fingerprint conflict")
+        try:
+            value=json.loads(path.read_text(encoding="utf-8-sig")); video=value["video"]; metadata=value["metadata"]; jobs=value["jobs"]
+            video_path=Path(str(video["path"])); metadata_path=Path(str(metadata["path"])); platforms=[row["platform"] for row in jobs]
+            valid=value.get("schemaVersion")==1 and value.get("public") is False and bool(jobs) and [int(row["ordinal"]) for row in jobs]==list(range(1,len(jobs)+1)) and len(platforms)==len(set(platforms)) and all(row["visibility"]=="private-or-draft" and len(str(row["id"]))==64 and bool(str(row["account"]).strip()) for row in jobs) and video_path.is_file() and video_path.stat().st_size==video["size"] and hashlib.sha256(video_path.read_bytes()).hexdigest()==video["sha256"] and metadata_path.is_file() and hashlib.sha256(metadata_path.read_bytes()).hexdigest()==metadata["sha256"]
+        except (OSError,KeyError,TypeError,ValueError,json.JSONDecodeError):valid=False;jobs=[]
+        if not valid:return AdapterResult(False,{},"publication plan validation failed")
+        on_log(f"Verified publication plan with {len(jobs)} target(s)");return AdapterResult(True,{"manifest":str(path),"jobCount":len(jobs)})

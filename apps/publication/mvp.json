@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "publication",
+  "summary": "Plan and explicitly confirm serial, idempotent multi-platform publication jobs.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/publication_mvp -q",
+  "inputs": ["verified video", "metadata JSON", "platform/account targets", "explicit visibility policy", "plan hash confirmation"],
+  "outputs": ["publication-plan.json", "planning-receipt.json", "publication-manifest.json", "publication-receipt.json"],
+  "dependencies": ["python>=3.12", "Platform I/O public launcher"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}
