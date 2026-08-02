@@ -25,6 +25,8 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'value="url-translation"' in html
     assert 'value="folder-voice"' in html
     assert 'value="url-voice"' in html
+    assert 'value="folder-dub"' in html
+    assert 'value="url-dub"' in html
     assert 'id="source-url"' in html
     assert 'id="source-language"' in html
     assert 'id="asr-model"' in html
@@ -61,6 +63,9 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'url-translation' in script
     assert 'folder-voice' in script
     assert 'url-voice' in script
+    assert 'folder-dub' in script
+    assert 'url-dub' in script
+    assert 'sourceVolume' in script
     assert 'targetVoices' in script
     assert 'sourceLanguage' in script
     assert 'asrModel' in script

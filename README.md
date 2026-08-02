@@ -4,7 +4,7 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-150%20passing-22c55e)](scripts/test-all.ps1)
+[![Tests](https://img.shields.io/badge/tests-165%20passing-22c55e)](scripts/test-all.ps1)
 [![MVPs](https://img.shields.io/badge/independent%20MVPs-13-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
@@ -64,7 +64,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **Video Editing** | Video + edit operation | Edited derivative | `IMPLEMENTED` | [Open](apps/video-editing/README.md) |
 | **Voice Cloning** | Text + reference voice | Synthesized speech | `IMPLEMENTED` | [Open](apps/voice-cloning/README.md) |
 | **Remotion Studio** | Composition + project props | Preview or render | `IMPLEMENTED` | [Open](apps/remotion-studio/README.md) |
-| **Localization** | Transcript + translation + voice + timing | Localized derivative | `DESIGNED` | [Open](apps/localization/README.md) |
+| **Localization** | Source + translation + voice manifests | Subtitle-burned H.264/AAC derivatives | `PLATFORM_INTEGRATED` | [Open](apps/localization/README.md) |
 | **Video Graph Studio** | Prepared folder + language + voice + target | Durable browser-managed workflow | `DOMAIN_VERIFIED` | [Open](apps/video-graph-studio/README.md) |
 
 ## Independent by design
