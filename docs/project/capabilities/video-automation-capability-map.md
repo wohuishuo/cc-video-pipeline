@@ -12,6 +12,9 @@ flowchart LR
     K1["K01 Encrypted Credential Custody"] --> K2["K02 Credential Lifecycle"]
     K2 --> K3["K03 One-child Injection"]
     K3 -. "credential reference" .-> P2["P02 Platform Upload Adapter"]
+    R1["R01 Client Contract Bundle"] --> R2["R02 Command Validation"]
+    R1 --> R3["R03 Compatibility Decision"]
+    R2 -. "transport-neutral command" .-> G2
     G1["G01 Graph Definition"] --> G3["G03 Workflow Process"]
     G2["G02 Workflow Run Owner"] --> G3
     S1["S01 Source Classification"] --> S2["S02 Folder Discovery"]
@@ -48,6 +51,7 @@ flowchart LR
 | A01-A02 | Workspace Access | `DOMAIN_VERIFIED`; digest-only credentials, scope, expiry, revocation, secure Studio admission and redacted CLI evidence | hosted identity provider and security review |
 | N01-N03 | Workspace Storage | `DOMAIN_VERIFIED`; deterministic disjoint roots, confined resolution, capacity projection and real two-workspace Studio routing | hard reservations, hosted storage, backup and production isolation evidence |
 | K01-K03 | Credential Vault | `DOMAIN_VERIFIED`; env-only intake, CurrentUser DPAPI, redacted lifecycle, provider isolation, explicit rotation/revocation and real guarded-publication child injection | real platform authentication, renewal, remote KMS and production security evidence |
+| R01-R03 | Client Contracts | `DOMAIN_VERIFIED`; canonical bundle, strict command validation, endpoint scopes, ownership and semantic compatibility | Studio discovery endpoint, SDK generation and real mobile evidence |
 | G01-G03 | Graph definition, run, queue and process ownership | `DOMAIN_VERIFIED`; durable FIFO plus real process-loss recovery | power-loss, load, security and hosted operations |
 | S01-S04 | Source Intake | `DOMAIN_VERIFIED`; live YouTube evidence | Creator Manifest batch composition and three remaining download platforms |
 | D01-D02 | Creator Discovery | `PLATFORM_INTEGRATED`; durable page loop and real bounded Douyin profile manifest | full-profile scale and live YouTube/Bilibili/TikTok evidence |

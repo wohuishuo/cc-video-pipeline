@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "client-contracts",
+  "summary": "Export and validate transport-neutral Studio contracts for browser, mobile and hosted clients.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/client_contracts_mvp -q",
+  "inputs": ["client semantic version", "command envelope", "export path"],
+  "outputs": ["canonical client contract bundle", "validation decision", "compatibility decision"],
+  "dependencies": ["python>=3.12"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}

@@ -13,6 +13,7 @@ EXPECTED_APPS = {
     "workspace-access",
     "workspace-storage",
     "credential-vault",
+    "client-contracts",
 }
 
 

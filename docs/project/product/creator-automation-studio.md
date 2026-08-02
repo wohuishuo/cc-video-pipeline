@@ -22,6 +22,7 @@ The product is not a magic monolith. It is a visual control plane over independe
 - Credential Vault owns encrypted local secret custody; platform adapters receive one selected value only in their child environment and redact receipts.
 - A translation can be replaced without rewriting source intake, transcription or platform code.
 - Desktop browser, future hosted API and future mobile app consume the same versioned command/query contracts.
+- Client Contracts exports that transport-neutral contract and rejects incompatible command envelopes without reading workflow state.
 
 ## Current accepted slice
 
