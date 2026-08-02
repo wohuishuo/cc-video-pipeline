@@ -17,5 +17,6 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Operations readiness](operations-readiness/delivery-ledger.md)
 - [Workspace Access](workspace-access/delivery-ledger.md)
 - [Workspace Storage](workspace-storage/delivery-ledger.md)
+- [Credential Vault](credential-vault/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

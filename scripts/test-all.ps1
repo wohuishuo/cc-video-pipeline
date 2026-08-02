@@ -27,7 +27,8 @@ try {
     "tests\creator_discovery_mvp",
     "tests\publication_mvp",
     "tests\workspace_access_mvp",
-    "tests\workspace_storage_mvp"
+    "tests\workspace_storage_mvp",
+    "tests\credential_vault_mvp"
   )
   & $python -m pytest --import-mode=importlib @suites -q
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

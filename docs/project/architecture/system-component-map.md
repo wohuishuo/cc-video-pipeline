@@ -7,6 +7,7 @@ flowchart TB
     Client["Browser / future mobile client"] -->|"credential + versioned command"| Admission["Admission adapter"]
     Access["Workspace Access"] -->|"redacted scope decision"| Admission
     Storage["Workspace Storage"] -->|"state/artifact namespace"| Router["Workspace Runtime Router"]
+    Vault["Credential Vault"] -->|"one child environment"| Publish["Platform I/O"]
     Admission -->|"multi workspace"| Router
     Router --> HTTP
     Admission -->|"fixed workspace"| HTTP["HTTP transport adapter"]
@@ -45,7 +46,8 @@ flowchart TB
 | Voice clips/receipt | Voice Rendering | audio composition |
 | Localized video/receipt | Video Composition | publication, preview |
 | Upload plan/receipt | Platform I/O | dashboard, operator |
-| Cookies/tokens | Credential/Profile Adapter | owning platform adapter only |
+| Encrypted local platform secrets and lifecycle | Credential Vault | selected child platform adapter only |
+| Platform interpretation of cookies/tokens | Credential/Profile Adapter | owning platform adapter only |
 
 ## Replaceable client boundary
 
@@ -58,7 +60,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Commercial hosting still needs a real identity provider, remote secret custody, hard resource reservations and production security evidence; it must not move workflow truth into the UI.
+Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Credential Vault now supplies CurrentUser-protected local custody through a separate public CLI; platform-auth composition is still pending. Commercial hosting still needs a real identity provider, remote secret custody, hard resource reservations and production security evidence; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 
