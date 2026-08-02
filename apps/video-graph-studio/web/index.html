@@ -40,6 +40,7 @@
       <label class="choice"><input type="radio" name="template" value="url-dub"> URL+Dub</label>
       <label class="choice"><input type="radio" name="template" value="folder-release"> Folder+Release</label>
       <label class="choice"><input type="radio" name="template" value="url-release"> URL+Release</label>
+      <label class="choice"><input type="radio" name="template" value="publication-batch-execute"> Release Execute</label>
       <label class="choice"><input type="radio" name="template" value="creator-profile"> Creator</label>
       <label class="choice"><input type="radio" name="template" value="creator-batch-dub"> Creator+Dub</label>
       <label class="choice"><input type="radio" name="template" value="publication-plan"> Publish Plan</label>
@@ -172,6 +173,20 @@
       <div class="field source-field">
         <label for="credential-vault-path">Credential Vault path</label>
         <input id="credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
+      </div>
+    </div>
+    <div id="publication-batch-execution-controls" class="asr-controls" hidden>
+      <div class="field source-field">
+        <label for="release-plan-run-id">Completed Release plan run ID</label>
+        <input id="release-plan-run-id" name="releasePlanRunId" autocomplete="off" placeholder="Run ID from Folder+Release or URL+Release">
+      </div>
+      <div class="field source-field">
+        <label for="release-execution-confirmation">Exact batch plan SHA-256</label>
+        <input id="release-execution-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64">
+      </div>
+      <div class="field source-field">
+        <label for="release-credential-vault-path">Credential Vault path</label>
+        <input id="release-credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
       </div>
     </div>
     <div id="youtube-connect-controls" class="asr-controls" hidden>
@@ -316,6 +331,6 @@
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>
-    <script src="/app.js?v=7" defer></script>
+    <script src="/app.js?v=8" defer></script>
 </body>
 </html>

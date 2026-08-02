@@ -239,6 +239,23 @@ PUBLICATION_EXECUTION_GRAPHS = {
     )
 }
 
+PUBLICATION_BATCH_EXECUTION_GRAPHS = {
+    "publication-batch-execute": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "publication-batch-execute",
+            "revision": 1,
+            "nodes": [
+                {"id": "execute-publication-batch", "type": "execute-publication-batch", "config": {}},
+                {"id": "verify-publication-batch-execution", "type": "verify-publication-batch-execution", "config": {}},
+            ],
+            "edges": [
+                {"source": "execute-publication-batch", "target": "verify-publication-batch-execution", "relationship": "Fact"}
+            ],
+        }
+    )
+}
+
 YOUTUBE_CONNECT_GRAPHS = {
     "youtube-connect": GraphDefinition.from_dict(
         {
@@ -331,6 +348,8 @@ class StudioApplication:
             return self._create_publication_plan_run(envelope, payload, template_id)
         if template_id in PUBLICATION_EXECUTION_GRAPHS:
             return self._create_publication_execution_run(envelope, payload, template_id)
+        if template_id in PUBLICATION_BATCH_EXECUTION_GRAPHS:
+            return self._create_publication_batch_execution_run(envelope, payload, template_id)
         if template_id in YOUTUBE_CONNECT_GRAPHS:
             return self._create_youtube_connect_run(envelope, payload, template_id)
         if template_id != "prepared-localization":
@@ -440,6 +459,84 @@ class StudioApplication:
         result = self.store.create_run(CreateRun(operation_id=str(envelope["operationId"]), correlation_id=str(envelope["correlationId"]), graph=YOUTUBE_CONNECT_GRAPHS[template_id], parameters=parameters))
         status = 201 if result.result_class == "COMPLETED" else 200
         if result.result_class == "REJECTED_CONFLICT": status = 409
+        return status, {"resultClass": result.result_class, "value": result.value}
+
+    def _create_publication_batch_execution_run(self, envelope, payload, template_id):
+        release_run_id = str(payload.get("releasePlanRunId", "")).strip()
+        confirmation = str(payload.get("confirmation", "")).strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", confirmation):
+            raise ContractError("REJECTED_MALFORMED", "confirmation must be a SHA-256")
+        try:
+            release_run = self.store.get_run(release_run_id)
+        except KeyError as error:
+            raise ContractError("REJECTED_NOT_FOUND", "release planning run does not exist") from error
+        if release_run["status"] != "COMPLETED" or release_run["graph"].get("graphId") not in RELEASE_GRAPHS:
+            raise ContractError("REJECTED_MALFORMED", "releasePlanRunId must name a completed Release planning run")
+        if not any(
+            step.get("nodeId") == "verify-publication-batch" and step.get("status") == "COMPLETED"
+            for step in release_run["steps"]
+        ):
+            raise ContractError("REJECTED_MALFORMED", "Release planning run lacks a verified batch fact")
+        committed = next(
+            (
+                step.get("result")
+                for step in release_run["steps"]
+                if step.get("nodeId") == "plan-publication-batch" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(committed, dict):
+            raise ContractError("REJECTED_MALFORMED", "Publication Batch Plan fact is missing")
+        plan = Path(str(committed.get("manifest", ""))).resolve()
+        try:
+            actual_sha = hashlib.sha256(plan.read_bytes()).hexdigest() if plan.is_file() else ""
+        except OSError:
+            actual_sha = ""
+        if actual_sha != committed.get("manifestSha256") or confirmation != committed.get("manifestSha256"):
+            raise ContractError("REJECTED_CONFLICT", "batch confirmation does not match the committed Release fact")
+        try:
+            value = json.loads(plan.read_text(encoding="utf-8-sig"))
+            targets = value["targets"]
+            items = value["items"]
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ContractError("REJECTED_MALFORMED", "Publication Batch Plan is invalid") from error
+        valid_policy = (
+            value.get("schemaVersion") == 1
+            and value.get("public") is False
+            and value.get("maximumActiveItems") == 1
+            and isinstance(targets, list)
+            and len(targets) == 1
+            and isinstance(targets[0], dict)
+            and targets[0].get("platform") == "youtube"
+            and bool(str(targets[0].get("account", "")).strip())
+            and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", str(targets[0].get("credentialId", ""))) is not None
+            and isinstance(items, list)
+            and bool(items)
+            and value.get("totalJobCount") == len(items)
+        )
+        if not valid_policy:
+            raise ContractError("REJECTED_MALFORMED", "browser batch execution requires one credential-backed private YouTube target")
+        vault = Path(str(payload.get("credentialVaultPath", ""))).resolve()
+        if not vault.is_file() or not vault.is_relative_to(Path.home().resolve()):
+            raise ContractError("REJECTED_MALFORMED", "credentialVaultPath must be an existing file inside the user home directory")
+        parameters = {
+            "templateId": template_id,
+            "releasePlanRunId": release_run_id,
+            "batchPlanPath": str(plan),
+            "confirmation": confirmation,
+            "credentialVaultPath": str(vault),
+        }
+        result = self.store.create_run(
+            CreateRun(
+                operation_id=str(envelope["operationId"]),
+                correlation_id=str(envelope["correlationId"]),
+                graph=PUBLICATION_BATCH_EXECUTION_GRAPHS[template_id],
+                parameters=parameters,
+            )
+        )
+        status = 201 if result.result_class == "COMPLETED" else 200
+        if result.result_class == "REJECTED_CONFLICT":
+            status = 409
         return status, {"resultClass": result.result_class, "value": result.value}
 
     def _create_intake_run(
