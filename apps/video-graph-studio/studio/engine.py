@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import Any
 
 from .adapters import AdapterResult
 from .contracts import GraphDefinition, GraphNode
 from .graph import validate_graph
 from .store import CommandResult, RunStore, TERMINAL_STATES
+from .resource_leases import ResourceLeaseUnavailable
 
 
 class WorkflowEngine:
@@ -18,6 +20,8 @@ class WorkflowEngine:
         adapters: dict[str, Any],
         *,
         execution_gate: Any | None = None,
+        lease_coordinator: Any | None = None,
+        resource_retry_seconds: float = 1.0,
     ):
         self.store = store
         self.adapters = adapters
@@ -28,6 +32,10 @@ class WorkflowEngine:
         self._cancel_event = threading.Event()
         self._shutdown_event = threading.Event()
         self._execution_gate = execution_gate or threading.Lock()
+        self._lease_coordinator = lease_coordinator
+        self._resource_retry_seconds = resource_retry_seconds
+        self._resource_attempts: dict[str, int] = {}
+        self._lease_failure: str | None = None
 
     @property
     def active_run_id(self) -> str | None:
@@ -92,6 +100,18 @@ class WorkflowEngine:
         if active:
             self.cancel(active)
 
+    def wait_idle(self, timeout: float = 10) -> bool:
+        """Wait for the current drain generation without taking lifecycle ownership."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            with self._lock:
+                thread = self._thread
+                draining = self._draining
+            if not draining or thread is None:
+                return True
+            thread.join(timeout=min(0.1, max(0.0, deadline - time.monotonic())))
+        return False
+
     def _ensure_drain(self) -> None:
         with self._lock:
             if self._draining:
@@ -123,12 +143,48 @@ class WorkflowEngine:
                 with self._lock:
                     self._active_run_id = run_id
                     self._cancel_event = threading.Event()
+                    self._lease_failure = None
+                lease = None
+                requeue = False
+                retry_delay = self._resource_retry_seconds
                 try:
-                    self._execute_claimed(run_id)
+                    if self._lease_coordinator is not None:
+                        try:
+                            lease = self._lease_coordinator.acquire(run_id)
+                        except ResourceLeaseUnavailable as error:
+                            attempts = self._resource_attempts.get(run_id, 0) + 1
+                            self._resource_attempts[run_id] = attempts
+                            retry_delay = min(
+                                self._resource_retry_seconds * (2 ** min(attempts - 1, 5)),
+                                30.0,
+                            )
+                            if attempts & (attempts - 1) == 0:
+                                self.store.append_log(
+                                    run_id,
+                                    f"resource wait: {error.result_class}: {error.detail}; retry {attempts}",
+                                )
+                            self.store.requeue_claim(run_id)
+                            requeue = True
+                        if not requeue:
+                            self._resource_attempts.pop(run_id, None)
+                            lease.start(self._on_lease_failure)
+                    if not requeue:
+                        self._execute_claimed(run_id)
                 finally:
-                    self.store.finish_queue_entry(run_id)
+                    if lease is not None:
+                        try:
+                            lease.close()
+                        except ResourceLeaseUnavailable as error:
+                            self.store.append_log(
+                                run_id,
+                                f"resource release pending reconciliation: {error.result_class}",
+                            )
+                    if not requeue:
+                        self.store.finish_queue_entry(run_id)
                     with self._lock:
                         self._active_run_id = None
+            if requeue:
+                self._shutdown_event.wait(retry_delay)
 
     def _execute_claimed(self, run_id: str) -> None:
         run = self.store.get_run(run_id)
@@ -151,6 +207,10 @@ class WorkflowEngine:
                 step["nodeId"] for step in run["steps"] if step["status"] == "COMPLETED"
             }
             for node_id in validate_graph(graph):
+                if self._lease_failure is not None:
+                    self.store.append_log(run_id, f"resource lease lost: {self._lease_failure}")
+                    self._transition_latest(run_id, "FAILED")
+                    return
                 if node_id in completed:
                     continue
                 if self._cancel_event.is_set():
@@ -176,6 +236,11 @@ class WorkflowEngine:
                     lambda line, rid=run_id: self.store.append_log(rid, line),
                     self._cancel_event,
                 )
+                if self._lease_failure is not None:
+                    self.store.fail_step(run_id, node_id, self._lease_failure)
+                    self.store.append_log(run_id, f"resource lease lost: {self._lease_failure}")
+                    self._transition_latest(run_id, "FAILED")
+                    return
                 if self._cancel_event.is_set():
                     self.store.cancel_step(run_id, node_id)
                     self._finish_cancel(run_id)
@@ -203,3 +268,12 @@ class WorkflowEngine:
     def _transition_latest(self, run_id: str, target: str) -> CommandResult:
         run = self.store.get_run(run_id)
         return self.store.transition(run_id, expected_version=run["version"], target=target)
+
+    def _on_lease_failure(self, detail: str) -> None:
+        with self._lock:
+            self._lease_failure = detail
+            self._cancel_event.set()
+            for adapter in self.adapters.values():
+                stop = getattr(adapter, "stop", None)
+                if callable(stop):
+                    stop()

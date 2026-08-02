@@ -23,6 +23,7 @@ Graph Definition owns graph revision/fingerprint. Workflow Run owns lifecycle/ve
 | HTTP + owners | real loopback requests for health, safe folders, create/replay/conflict/start and terminal projection |
 | Browser | semantic regions, local assets, versioned commands and terminal polling contract |
 | Source Intake composition | real public PowerShell child process; per-run output root; stable child operation ID; manifest fingerprint and media validation |
+| Resource Budget composition | reserve before execution; generation renewal; bounded denial requeue; heartbeat fencing; terminal release; startup reconciliation; real public launcher and child |
 
 ## Failure matrix
 
@@ -41,8 +42,8 @@ Graph Definition owns graph revision/fingerprint. Workflow Run owns lifecycle/ve
 tools\.venv\Scripts\python.exe -m pytest tests/video_graph_studio -q
 ```
 
-Live browser evidence on 2026-08-02 loaded the loopback server and observed `System ready`; completed one local-folder intake; rejected a supplied Douyin creator-profile URL without publishing a success manifest; rejected an unavailable YouTube test video; then anonymously downloaded and verified the 19.014-second public YouTube video `jNQXAC9IVRw` as one MP4 source.
+Live browser evidence on 2026-08-02 loaded the loopback server and observed `System ready`; completed folder/URL acquisition and ten-step RU+KK localization; enumerated a bounded Douyin creator profile; and prepared a four-target private/draft publication plan. A separate real launcher drill reserved Resource Budget capacity before one Studio child and restored all capacity on terminal completion.
 
 ## Non-goals
 
-The suite does not prove Microsoft Edge availability, source translation quality, authenticated platform upload, cloud durability, remote security, scale or commercial readiness.
+The suite does not prove translation quality, authenticated platform upload, cloud durability, remote security, representative scale or commercial readiness.

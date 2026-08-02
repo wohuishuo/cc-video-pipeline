@@ -11,6 +11,7 @@ flowchart LR
     L -->|Projection| D
     F["G07 Filesystem Browser"] -->|Query| D
     E["Existing Localization MVP"] -. Adapter .-> W
+    P -->|Lease lifecycle| B["G09 Resource Budget"]
 ```
 
 | Node | Result and owner | Status | Direct dependencies | Classification |
@@ -22,6 +23,8 @@ flowchart LR
 | G05 | append-only ordered log | verified | G02 identity | hard |
 | G06 | read-only browser projection | verified | G02/G05 Projection | real loopback browser smoke |
 | G07 | allowed-root folder evidence | verified | fixed configured roots | substitute: local filesystem only |
-| G08 | real successful Edge media result | unproven | external Edge service and localization MVP | hard platform gate |
+| G08 | real successful Edge media result | verified | external Edge service and localization MVP | named platform integration |
+| G09 | reserve/renew/release local capacity | verified | Resource Budget public CLI | optional hard admission gate |
+| G10 | authenticated private/draft upload receipt | unproven | Credential Vault, Publication and Platform I/O | hard platform gate |
 
-The lowest unproven platform node is G08. It does not block domain verification of the control plane, but it blocks a claim that a real localized output completed through the website.
+The lowest unproven platform node is G10. It does not block domain verification of the control plane, but it blocks any claim that Studio completed a real authenticated upload.

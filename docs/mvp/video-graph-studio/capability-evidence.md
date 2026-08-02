@@ -1,6 +1,6 @@
 # Video Graph Studio Capability Evidence
 
-The focused suite proves graph validation, durable idempotency, conflict/stale fences, ordered real subprocess execution, partial-failure checkpoints, cancellation cleanup, loopback HTTP, allowed-root filesystem projection and browser command contracts. Live browser runs completed local-folder intake and an anonymous YouTube download through the independent Source Intake and Platform I/O boundaries; invalid remote inputs failed closed with durable receipts.
+The focused suite proves graph validation, durable idempotency, FIFO queue/recovery, conflict/stale fences, ordered real subprocess execution, partial-failure checkpoints, cancellation cleanup, loopback HTTP, allowed-root projection, fixed/multi-workspace routing, browser contracts and optional Resource Budget acquire/renew/requeue/release/reconcile behavior. Live runs cover complete localization, creator discovery, publication planning and a real budgeted Studio child through public launchers.
 
 Run:
 

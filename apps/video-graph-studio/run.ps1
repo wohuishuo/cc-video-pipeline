@@ -4,6 +4,9 @@ param(
     [string]$AccessRegistry,
     [string]$StorageRegistry,
     [string]$WorkspaceId,
+    [string]$ResourceBudgetDatabase,
+    [long]$ResourceReservationBytes = 0,
+    [int]$ResourceLeaseTtlSeconds = 30,
     [switch]$NoBrowser
 )
 
@@ -29,6 +32,16 @@ $env:PYTHONPATH = $appRoot
 $env:PYTHONUTF8 = "1"
 $arguments = @("-m", "studio.server", "--port", $Port, "--data-root", $DataRoot)
 if ($NoBrowser) { $arguments += "--no-browser" }
+if ([bool]$ResourceBudgetDatabase -ne ($ResourceReservationBytes -gt 0)) {
+    throw "ResourceBudgetDatabase and a positive ResourceReservationBytes must be provided together."
+}
+if ($ResourceBudgetDatabase) {
+    $arguments += @(
+        "--resource-budget-database", $ResourceBudgetDatabase,
+        "--resource-reservation-bytes", $ResourceReservationBytes,
+        "--resource-lease-ttl-seconds", $ResourceLeaseTtlSeconds
+    )
+}
 if ($StorageRegistry) {
     if (-not $AccessRegistry -or $WorkspaceId) { throw "Multi-workspace mode requires AccessRegistry and StorageRegistry without WorkspaceId." }
     $arguments += @("--access-registry", $AccessRegistry, "--storage-registry", $StorageRegistry)

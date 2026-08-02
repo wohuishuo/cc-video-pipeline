@@ -2,4 +2,4 @@
 
 **Level:** `DOMAIN_VERIFIED`
 
-Present evidence covers the local domain, browser/HTTP composition, folder intake and anonymous YouTube intake. External Edge completion, authenticated publication, Douyin creator-profile enumeration, cloud durability, remote security, load and production operations remain missing. See the [full ledger](../../project/evidence/video-graph-studio/delivery-ledger.md).
+Present evidence covers the local domain, browser/HTTP composition, durable queue/recovery, secure multi-workspace routing, folder/URL intake, transcription/translation/voice/localization, Douyin creator discovery, guarded publication planning and local Resource Budget leases. Authenticated platform publication, power-loss/cloud durability, remote security, representative load and production operations remain missing. See the [full ledger](../../project/evidence/video-graph-studio/delivery-ledger.md).

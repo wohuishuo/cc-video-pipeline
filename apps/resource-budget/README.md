@@ -12,6 +12,6 @@ $database = "$env:LOCALAPPDATA\VideoGraphStudio\resource-budget.db"
 .\apps\resource-budget\run.ps1 release --database $database --workspace-id local --reservation-id run-001 --expected-generation 2 --json
 ```
 
-Use a new reservation ID for a new run. The same active ID and canonical reserve input replays; changed input conflicts. Renew increments generation, while an exact lost-response retry replays. Release requires the current generation and is idempotent. Expired leases are reclaimed inside the next transaction.
+Use a new reservation ID for a new run. The same active ID and canonical reserve input replays; an expired stable ID with the same fingerprint reactivates at a higher generation so a crashed coordinator can recover. Changed input conflicts. Renew increments generation, while an exact lost-response retry replays. Release requires the current generation and is idempotent. Expired capacity is reclaimed inside the next transaction.
 
-Workspace Storage remains the owner of actual filesystem usage. A caller may configure Resource Budget from its public capacity fact, but external writers can still consume disk outside these leases. Studio admission composition is a later slice.
+Workspace Storage remains the owner of actual filesystem usage. A caller may configure Resource Budget from its public capacity fact, but external writers can still consume disk outside these leases. Video Graph Studio optionally composes these leases before an admitted workflow enters `RUNNING`; Resource Budget still owns every reservation fact.

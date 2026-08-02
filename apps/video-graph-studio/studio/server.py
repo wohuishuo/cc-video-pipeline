@@ -174,6 +174,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--access-registry", type=Path)
     parser.add_argument("--storage-registry", type=Path)
     parser.add_argument("--workspace-id")
+    parser.add_argument("--resource-budget-database", type=Path)
+    parser.add_argument("--resource-reservation-bytes", type=int, default=0)
+    parser.add_argument("--resource-lease-ttl-seconds", type=int, default=30)
     return parser
 
 
@@ -196,6 +199,10 @@ def build_runtime(
     allowed_roots: tuple[Path, ...] | None = None,
     artifact_root: Path | None = None,
     execution_gate=None,
+    resource_budget_commands=None,
+    resource_workspace_id: str = "local",
+    resource_reservation_bytes: int = 0,
+    resource_lease_ttl_seconds: int = 30,
 ):
     from .adapters import (
         PreparedFolderAdapter,
@@ -217,6 +224,7 @@ def build_runtime(
         VerifyPublicationPlanAdapter,
     )
     from .engine import WorkflowEngine
+    from .resource_leases import ResourceLeaseCoordinator
     from .store import RunStore
 
     repository = Path(repository).resolve()
@@ -235,6 +243,15 @@ def build_runtime(
     localization_launcher = repository / "apps" / "localization" / "run.ps1"
     creator_discovery_launcher = repository / "apps" / "creator-discovery" / "run.ps1"
     publication_launcher = repository / "apps" / "publication" / "run.ps1"
+    lease_coordinator = None
+    if resource_budget_commands is not None:
+        lease_coordinator = ResourceLeaseCoordinator(
+            resource_budget_commands,
+            workspace_id=resource_workspace_id,
+            bytes_per_run=resource_reservation_bytes,
+            ttl_seconds=resource_lease_ttl_seconds,
+        )
+        lease_coordinator.reconcile(store.list_runs())
     engine = WorkflowEngine(
         store,
         {
@@ -267,6 +284,7 @@ def build_runtime(
             "verify-publication-plan": VerifyPublicationPlanAdapter(),
         },
         execution_gate=execution_gate,
+        lease_coordinator=lease_coordinator,
     )
     engine.resume_pending()
     application = StudioApplication(
@@ -280,6 +298,12 @@ def build_runtime(
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repository = Path(__file__).resolve().parents[3]
+    if bool(args.resource_budget_database) != bool(args.resource_reservation_bytes):
+        raise SystemExit("resource budget requires both --resource-budget-database and a positive --resource-reservation-bytes")
+    if args.resource_reservation_bytes < 0:
+        raise SystemExit("--resource-reservation-bytes must be positive")
+    if args.resource_lease_ttl_seconds < 3:
+        raise SystemExit("--resource-lease-ttl-seconds must be at least 3")
     if args.storage_registry and (not args.access_registry or args.workspace_id):
         raise SystemExit("multi-workspace mode requires --access-registry and --storage-registry without --workspace-id")
     if not args.storage_registry and bool(args.access_registry) != bool(args.workspace_id):
@@ -287,6 +311,14 @@ def main(argv: list[str] | None = None) -> int:
     admission = None
     workspace_router = None
     allowed_roots = None
+    resource_budget_commands = None
+    if args.resource_budget_database:
+        from .resource_leases import ResourceBudgetCommandAdapter
+
+        resource_budget_commands = ResourceBudgetCommandAdapter(
+            repository / "apps" / "resource-budget" / "run.ps1",
+            args.resource_budget_database,
+        )
     if args.storage_registry:
         admission = WorkspaceAccessCommandAdapter(
             repository / "apps" / "workspace-access" / "run.ps1",
@@ -306,6 +338,10 @@ def main(argv: list[str] | None = None) -> int:
                 allowed_roots=roots,
                 artifact_root=artifact_root,
                 execution_gate=execution_gate,
+                resource_budget_commands=resource_budget_commands,
+                resource_workspace_id=workspace_id,
+                resource_reservation_bytes=args.resource_reservation_bytes,
+                resource_lease_ttl_seconds=args.resource_lease_ttl_seconds,
             )
 
         workspace_router = WorkspaceRuntimeRouter(
@@ -322,11 +358,23 @@ def main(argv: list[str] | None = None) -> int:
         workspace = admission.describe_workspace()
         allowed_roots = tuple(Path(value).resolve() for value in workspace["allowedRoots"])
         application, engine = build_runtime(
-            repository, args.data_root, allowed_roots=allowed_roots
+            repository,
+            args.data_root,
+            allowed_roots=allowed_roots,
+            resource_budget_commands=resource_budget_commands,
+            resource_workspace_id=args.workspace_id,
+            resource_reservation_bytes=args.resource_reservation_bytes,
+            resource_lease_ttl_seconds=args.resource_lease_ttl_seconds,
         )
     else:
         application, engine = build_runtime(
-            repository, args.data_root, allowed_roots=allowed_roots
+            repository,
+            args.data_root,
+            allowed_roots=allowed_roots,
+            resource_budget_commands=resource_budget_commands,
+            resource_workspace_id="local",
+            resource_reservation_bytes=args.resource_reservation_bytes,
+            resource_lease_ttl_seconds=args.resource_lease_ttl_seconds,
         )
     server = create_server(
         "127.0.0.1",
@@ -342,6 +390,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Storage registry: {args.storage_registry.resolve()}", flush=True)
     else:
         print(f"Data root: {args.data_root.resolve()}", flush=True)
+    if args.resource_budget_database:
+        print(f"Resource budget: {args.resource_budget_database.resolve()}", flush=True)
     if not args.no_browser:
         webbrowser.open(url)
     try:

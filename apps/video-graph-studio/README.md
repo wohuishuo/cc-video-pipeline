@@ -42,6 +42,26 @@ Do not pass `-WorkspaceId` in this mode. The browser's workspace field selects t
 
 This is evidence-backed local separation, not production multi-tenancy. The registries are local JSON files without cross-process locking, the capacity check is a serial preflight rather than a hard reservation, and the server remains loopback-only.
 
+## Enforce a local resource budget
+
+Resource enforcement is optional and composes the independent Resource Budget program through its public launcher. First configure a budget for every workspace that Studio may run:
+
+```powershell
+$budget = "$env:LOCALAPPDATA\VideoGraphStudio\resource-budget.db"
+powershell -NoProfile -ExecutionPolicy Bypass -File apps/resource-budget/run.ps1 configure `
+  --database $budget --workspace-id local --byte-limit 10737418240 `
+  --execution-slots 1 --json
+
+powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 `
+  -ResourceBudgetDatabase $budget `
+  -ResourceReservationBytes 1073741824 `
+  -ResourceLeaseTtlSeconds 30
+```
+
+Use the admitted workspace IDs instead of `local` in fixed or multi-workspace mode. A queued run consumes no lease. Immediately before it enters `RUNNING`, Studio reserves the configured byte estimate and one execution slot under the stable identity `studio-<run-id>`. Capacity denial leaves the run durably queued. The worker renews while active and releases after completion, failure or cancellation; restart reconciliation releases stranded terminal leases and reacquires interrupted work by the same identity.
+
+The byte value is an operator estimate, not measured output truth. Workspace Storage still owns actual disk usage, and writers outside Resource Budget can consume disk. This is local SQLite enforcement, not distributed quota, billing or production scheduling.
+
 Choose one of the workflow templates:
 
 - `Folder` or `URL` creates and verifies a Source Manifest.
@@ -89,5 +109,6 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
 - Optional Workspace Access admission is domain verified through its public CLI boundary with real scope separation, wrong-workspace denial and secret-redaction evidence.
 - Multi-workspace routing is domain verified with two credentials, two SQLite state roots, isolated run projections, cross-workspace denial and one shared global execution gate.
+- Optional Resource Budget composition is domain verified with reserve-before-run, renewable generation fencing, durable wait/requeue, terminal release and a real CLI-to-Studio child-process drill.
 - Authenticated upload execution remains a later independent slice.
 - No cloud account, billing, remote access or production platform claim is made.

@@ -154,3 +154,126 @@ def test_cancelling_a_queued_run_does_not_cancel_the_active_run(tmp_path):
     adapter.release_first.set()
     assert wait_terminal(store, first)["status"] == "COMPLETED"
     assert adapter.calls == [f"start:{first}", f"end:{first}"]
+
+
+class FakeLease:
+    def __init__(self, events, fail_on_start=False):
+        self.events = events
+        self.fail_on_start = fail_on_start
+
+    def start(self, on_failure):
+        self.events.append("lease-start")
+        if self.fail_on_start:
+            on_failure("lease heartbeat failed")
+
+    def close(self):
+        self.events.append("lease-close")
+
+
+class FakeLeaseCoordinator:
+    def __init__(self, denials=0, fail_on_start=False):
+        self.denials = denials
+        self.fail_on_start = fail_on_start
+        self.calls = []
+
+    def acquire(self, run_id):
+        self.calls.append(run_id)
+        if self.denials:
+            self.denials -= 1
+            from studio.resource_leases import ResourceLeaseUnavailable
+            raise ResourceLeaseUnavailable("REJECTED_BUDGET", "capacity unavailable")
+        return FakeLease(self.calls, self.fail_on_start)
+
+
+class OrderedAdapter:
+    def __init__(self, events):
+        self.events = events
+
+    def execute(self, node, context, on_log, cancel_event):
+        self.events.append("adapter")
+        return AdapterResult(True, {})
+
+
+class FailingAdapter:
+    def execute(self, node, context, on_log, cancel_event):
+        return AdapterResult(False, {}, "deliberate failure")
+
+
+def test_engine_acquires_before_running_and_releases_after_completion(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    run_id = create_run(store, "leased")
+    coordinator = FakeLeaseCoordinator()
+    engine = WorkflowEngine(
+        store, {"work": OrderedAdapter(coordinator.calls)}, lease_coordinator=coordinator
+    )
+
+    engine.start(run_id)
+    assert wait_terminal(store, run_id)["status"] == "COMPLETED"
+    assert coordinator.calls == [run_id, "lease-start", "adapter", "lease-close"]
+
+
+def test_budget_denial_requeues_same_run_then_completes_without_false_failure(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    run_id = create_run(store, "wait-budget")
+    coordinator = FakeLeaseCoordinator(denials=1)
+    engine = WorkflowEngine(
+        store,
+        {"work": OrderedAdapter(coordinator.calls)},
+        lease_coordinator=coordinator,
+        resource_retry_seconds=0.01,
+    )
+
+    engine.start(run_id)
+    run = wait_terminal(store, run_id)
+
+    assert run["status"] == "COMPLETED"
+    assert coordinator.calls.count(run_id) == 2
+    assert any("resource wait" in item["message"] for item in run["logs"])
+
+
+def test_lease_heartbeat_failure_fences_workflow_completion(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    run_id = create_run(store, "lost-lease")
+    coordinator = FakeLeaseCoordinator(fail_on_start=True)
+    engine = WorkflowEngine(
+        store, {"work": OrderedAdapter(coordinator.calls)}, lease_coordinator=coordinator
+    )
+
+    engine.start(run_id)
+    run = wait_terminal(store, run_id)
+
+    assert run["status"] == "FAILED"
+    assert "adapter" not in coordinator.calls
+    assert coordinator.calls[-1] == "lease-close"
+
+
+def test_failed_workflow_also_closes_resource_lease(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    run_id = create_run(store, "failed-lease")
+    coordinator = FakeLeaseCoordinator()
+    engine = WorkflowEngine(
+        store, {"work": FailingAdapter()}, lease_coordinator=coordinator
+    )
+
+    engine.start(run_id)
+    assert wait_terminal(store, run_id)["status"] == "FAILED"
+    assert coordinator.calls[-1] == "lease-close"
+
+
+def test_cancelled_workflow_also_closes_resource_lease(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    run_id = create_run(store, "cancelled-lease")
+    adapter = BlockingAdapter()
+    coordinator = FakeLeaseCoordinator()
+    engine = WorkflowEngine(
+        store, {"work": adapter}, lease_coordinator=coordinator
+    )
+
+    engine.start(run_id)
+    assert adapter.first_started.wait(timeout=5)
+    assert engine.cancel(run_id).result_class == "COMPLETED"
+    adapter.release_first.set()
+
+    assert wait_terminal(store, run_id)["status"] == "CANCELLED"
+    assert engine.wait_idle(5)
+    assert coordinator.calls[-1] == "lease-close"
