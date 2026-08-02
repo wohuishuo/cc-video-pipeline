@@ -47,4 +47,4 @@ A real Resource Budget launcher reserved capacity for Studio run `78dc6710-8217-
 
 ## Guarded publication execution evidence
 
-Plan run `7917ce20-0467-467a-8bcc-c8ce403db2c9` and execution run `1c10c5a1-b47c-46d6-ab16-0a9e836c5d35` both completed through Studio. Publication required the plan SHA, Credential Vault injected one provider-bound value into a fake platform child, and the verified manifest recorded external ID `fake-youtube-private-001`; plaintext persistence was false. See [the complete drill](guarded-publication-execution-drill.md).
+Plan run `d816f0f1-caee-47d6-8d45-50ceed0f8dae` and execution run `80cd5681-cd9f-4c27-b1a5-a4cca35294f2` both completed through Studio. Publication required the plan SHA, Credential Vault injected one provider-bound value into a fake platform child, and the verified manifest recorded external ID `fake-youtube-private-001`; plaintext persistence was false. See [the complete drill](guarded-publication-execution-drill.md).

@@ -7,7 +7,8 @@
 | Bilibili download | production-verified | real 720p file + FFprobe receipt; 1080 not proven |
 | Douyin download | implemented | both adapters invoked; current public URL requires working cookie/session |
 | TikTok download | implemented | both adapters invoked; current extraction/token generation blocked upstream |
-| YouTube/Bilibili/Douyin upload | implemented | pinned uploader launches and commands prepare; account draft not tested |
+| YouTube upload | domain-verified | credential-backed execution routes to the independent private resumable API MVP; account draft not tested |
+| Bilibili/Douyin upload | implemented | pinned uploader launches and commands prepare; account draft not tested |
 | TikTok upload | implemented | isolated browser bridge and prepared command; account draft not tested |
 
 No upload capability is labeled platform-integrated or production-verified until an account owner logs in and deliberately runs an upload to draft/private state.

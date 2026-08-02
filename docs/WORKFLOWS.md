@@ -77,7 +77,9 @@ flowchart LR
     HASH -- yes --> POLICY{Visibility guaranteed?}
     POLICY -- no --> BLOCKED[(Policy rejection)]
     POLICY -- yes --> UPLOAD[Platform I/O]
-    UPLOAD --> PRIVATE[(Draft / private receipt)]
+    VAULT[Credential Vault] -. "one child environment" .-> UPLOAD
+    UPLOAD --> YOUTUBE[YouTube Publisher]
+    YOUTUBE --> PRIVATE[(Private receipt + video ID)]
 ```
 
 ## Download decision path

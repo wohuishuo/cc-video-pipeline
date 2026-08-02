@@ -5,6 +5,7 @@ import pytest
 
 from video_platform.models import Platform
 from video_platform.upload import DuplicateUpload, UploadLedger, UploadRequest, build_upload_adapters
+from video_platform.uploaders.youtube import YouTubeApiUploadAdapter
 
 
 def _video_and_metadata(tmp_path: Path):
@@ -42,3 +43,24 @@ def test_duplicate_idempotency_key_is_rejected(tmp_path):
     ledger.reserve("same", Platform.TIKTOK)
     with pytest.raises(DuplicateUpload):
         ledger.reserve("same", Platform.TIKTOK)
+
+
+def test_credential_backed_youtube_command_uses_internal_private_publisher(tmp_path):
+    video, metadata = _video_and_metadata(tmp_path)
+    request = UploadRequest(Platform.YOUTUBE, video, metadata, "account", draft=True)
+
+    prepared = YouTubeApiUploadAdapter(tmp_path).prepare(request, "VIDEO_PLATFORM_CREDENTIAL", "operation-1")
+
+    command = " ".join(prepared.command)
+    assert "apps\\youtube-publisher\\run.ps1" in command
+    assert "--credential-env VIDEO_PLATFORM_CREDENTIAL" in command
+    assert "--operation-id operation-1" in command
+    assert "--public" not in command
+
+
+def test_internal_youtube_publisher_rejects_public_request(tmp_path):
+    video, metadata = _video_and_metadata(tmp_path)
+    request = UploadRequest(Platform.YOUTUBE, video, metadata, "account", draft=False)
+
+    with pytest.raises(ValueError, match="private"):
+        YouTubeApiUploadAdapter(tmp_path).prepare(request, "VIDEO_PLATFORM_CREDENTIAL", "operation-1")
