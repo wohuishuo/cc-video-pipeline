@@ -55,6 +55,16 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Localized video composition", description: "Compose translated voice, quiet source audio and burned subtitles into H.264/AAC MP4.", owner: "localization", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
     verify: { title: "Verify localized videos", description: "Require exact language/media coverage and matching derivative fingerprints.", owner: "localization", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
   },
+  "folder-release": {
+    source: { title: "Folder localization", description: "Discover, transcribe, translate, voice and compose every local media item.", owner: "source-intake", relationship: "Fact", delivery: "PLATFORM_INTEGRATED" },
+    localize: { title: "Plan derivative batch", description: "Create one private/draft Publication Plan per localized derivative with durable checkpoints.", owner: "publication-batch", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify release coverage", description: "Require every derivative, metadata file, target job and child plan fingerprint.", owner: "publication-batch", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
+  "url-release": {
+    source: { title: "URL localization", description: "Download, transcribe, translate, voice and compose one supported social video.", owner: "source-intake", relationship: "Fact", delivery: "PLATFORM_INTEGRATED" },
+    localize: { title: "Plan derivative batch", description: "Create one private/draft Publication Plan per localized derivative with durable checkpoints.", owner: "publication-batch", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify release coverage", description: "Require every derivative, metadata file, target job and child plan fingerprint.", owner: "publication-batch", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
   "creator-profile": {
     source: { title: "Creator profile", description: "Accept one supported creator or channel URL and an optional local authentication file.", owner: "creator-discovery", relationship: "Input", delivery: "PLATFORM_INTEGRATED" },
     localize: { title: "Enumerate profile", description: "Page serially, canonicalize URLs, deduplicate IDs and checkpoint the cursor.", owner: "creator-discovery", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
@@ -300,6 +310,7 @@ async function submitRun(event) {
   const publicationMode = state.templateId === "publication-plan";
   const publicationExecuteMode = state.templateId === "publication-execute";
   const youtubeConnectMode = state.templateId === "youtube-connect";
+  const releaseMode = state.templateId.endsWith("-release");
   const urlMode = state.templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = state.templateId.endsWith("-transcription");
   const translationMode = state.templateId.endsWith("-translation");
@@ -314,13 +325,18 @@ async function submitRun(event) {
     toast("Choose a source, language and target.", true);
     return;
   }
-  if ((translationMode || voiceMode || dubMode) && !languages.length) {
+  if ((translationMode || voiceMode || dubMode || releaseMode) && !languages.length) {
     toast("Choose at least one target language.", true);
     return;
   }
   const publicationTargets = $$('input[name="publication-target"]:checked').map((item) => item.value);
+  const releaseTargets = $$('input[name="release-target"]:checked').map((item) => item.value);
   if (publicationMode && (!$("#publication-video").value.trim() || !$("#publication-metadata").value.trim() || !$("#publication-account").value.trim() || !publicationTargets.length)) {
     toast("Choose a finished video, metadata, account and target.", true);
+    return;
+  }
+  if (releaseMode && (!$("#release-metadata-template").value.trim() || !$("#release-account").value.trim() || !releaseTargets.length)) {
+    toast("Choose a metadata template, account label and release target.", true);
     return;
   }
   if (publicationExecuteMode && (!$("#publication-plan-run-id").value.trim() || !$("#publication-confirmation").value.trim() || !$("#credential-vault-path").value.trim())) {
@@ -357,6 +373,8 @@ async function submitRun(event) {
     const defaultVoices = { "ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural", "kk-KZ": "kk-KZ-DauletNeural" };
     const voicePayload = { ...translationPayload, targetVoices: Object.fromEntries(languages.map((language) => [language, defaultVoices[language]])) };
     const youtubeCredentialId = $("#publication-credential-id").value.trim();
+    const releaseCredentialId = $("#release-credential-id").value.trim();
+    const releaseAccount = $("#release-account").value.trim();
     const payload = youtubeConnectMode
       ? { templateId: state.templateId, clientConfigPath: $("#youtube-client-config").value.trim(), credentialVaultPath: $("#youtube-vault-path").value.trim(), credentialId: $("#youtube-credential-id").value.trim(), label: $("#youtube-credential-label").value.trim() }
       : publicationMode
@@ -367,6 +385,16 @@ async function submitRun(event) {
       ? { ...voicePayload, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined, sourceVolume: 0.12 }
       : creatorProfileMode
       ? { templateId: state.templateId, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined }
+      : releaseMode
+      ? {
+          ...voicePayload,
+          sourceVolume: 0.12,
+          metadataTemplatePath: $("#release-metadata-template").value.trim(),
+          targetPlatforms: releaseTargets,
+          targetAccounts: Object.fromEntries(releaseTargets.map((platform) => [platform, releaseAccount])),
+          credentialIds: releaseCredentialId && releaseTargets.includes("youtube") ? { youtube: releaseCredentialId } : {},
+          public: false,
+        }
       : dubMode
       ? { ...voicePayload, sourceVolume: 0.12 }
       : voiceMode
@@ -416,7 +444,7 @@ function resetRunProjection() {
     node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
     node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
   });
-  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId === "creator-batch-dub" ? "0 / 4" : state.templateId.endsWith("-dub") ? "0 / 10" : state.templateId.endsWith("-voice") ? "0 / 8" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
+  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId === "creator-batch-dub" ? "0 / 4" : state.templateId.endsWith("-release") ? "0 / 12" : state.templateId.endsWith("-dub") ? "0 / 10" : state.templateId.endsWith("-voice") ? "0 / 8" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
   $("#progress-bar").style.width = "0%";
   $("#run-id").textContent = "No active run";
   $("#activity-summary").textContent = "Waiting for a run";
@@ -431,6 +459,7 @@ function selectTemplate(templateId) {
   const publicationMode = templateId === "publication-plan";
   const publicationExecuteMode = templateId === "publication-execute";
   const youtubeConnectMode = templateId === "youtube-connect";
+  const releaseMode = templateId.endsWith("-release");
   const publicationAnyMode = publicationMode || publicationExecuteMode;
   const standaloneMode = publicationAnyMode || youtubeConnectMode;
   const urlMode = templateId.startsWith("url-") || creatorMode;
@@ -438,8 +467,9 @@ function selectTemplate(templateId) {
   const translationMode = templateId.endsWith("-translation");
   const voiceMode = templateId.endsWith("-voice");
   const dubMode = templateId.endsWith("-dub");
-  const needsAsr = transcriptionMode || translationMode || voiceMode || dubMode;
+  const needsAsr = transcriptionMode || translationMode || voiceMode || dubMode || releaseMode;
   $("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode);
+  $("#run-form").classList.toggle("release-mode", releaseMode);
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
@@ -451,22 +481,25 @@ function selectTemplate(templateId) {
     element.hidden = !preparedMode;
     element.classList.toggle("control-muted", !preparedMode);
   });
-  $("#target-language-controls").hidden = !(preparedMode || translationMode || voiceMode || dubMode);
+  $("#target-language-controls").hidden = !(preparedMode || translationMode || voiceMode || dubMode || releaseMode);
   $$('input[name="language"]').forEach((input) => {
     input.disabled = preparedMode && input.value !== "ru-RU";
     input.closest("label").classList.toggle("unavailable", input.disabled);
   });
   $("#asr-controls").hidden = !needsAsr;
-  $("#translation-controls").hidden = !(translationMode || voiceMode || dubMode);
+  $("#translation-controls").hidden = !(translationMode || voiceMode || dubMode || releaseMode);
   $("#creator-controls").hidden = !creatorMode;
   $("#publication-controls").hidden = !publicationMode;
+  $("#release-controls").hidden = !releaseMode;
   $("#publication-execution-controls").hidden = !publicationExecuteMode;
   $("#youtube-connect-controls").hidden = !youtubeConnectMode;
   if (publicationExecuteMode) populateLatestPublicationPlan();
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
-  const copy = templateId === "creator-batch-dub"
+  const copy = releaseMode
+    ? [urlMode ? "URL localization" : "Folder localization", "Intake · ASR · translation · voice · dub", "Plan release batch", "One derivative · one Publication child", "Verify release coverage", "Derivatives · metadata · platforms · fingerprints"]
+    : templateId === "creator-batch-dub"
     ? ["Creator profile", "Canonical URL discovery · optional cookies", "Serial creator loop", "Intake · ASR · translation · voice · dub", "Verify batch coverage", "Items · languages · derivative fingerprints"]
     : templateId === "youtube-connect"
     ? ["Google desktop client", "Local config · secret stays out of Studio", "Connect YouTube", "System browser · state · PKCE · Vault", "Verify credential", "Provider · ACTIVE · upload scope"]
@@ -493,7 +526,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = templateId === "creator-batch-dub"
+  const outputDetails = releaseMode
+    ? ["Private/draft plans", "Publication Batch Plan"]
+    : templateId === "creator-batch-dub"
     ? ["Localized MP4 batch", "Creator Batch Manifest"]
     : templateId === "youtube-connect"
     ? ["Vault credential", "Redacted OAuth receipt"]
@@ -514,7 +549,9 @@ function selectTemplate(templateId) {
       : ["Source Manifest", "SHA-256 receipt"];
   $("#output-format").textContent = outputDetails[0];
   $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = templateId === "creator-batch-dub"
+  const stepIds = releaseMode
+    ? ["intake", "plan-publication-batch", "verify-publication-batch"]
+    : templateId === "creator-batch-dub"
     ? ["discover-creator", "localize-creator-batch", "verify-creator-batch"]
     : templateId === "youtube-connect"
     ? ["", "connect-youtube", "verify-youtube-credential"]
@@ -536,7 +573,9 @@ function selectTemplate(templateId) {
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = templateId === "creator-batch-dub"
+  const paletteCopy = releaseMode
+    ? [urlMode ? "URL localization" : "Folder localization", "Committed Localization fact", "Plan derivative batch", "Durable serial Publication loop", "Verify release plans", "Exact target coverage"]
+    : templateId === "creator-batch-dub"
     ? ["Creator Manifest", "Committed discovery fact", "Localize every item", "Durable serial item loop", "Verify batch manifest", "Exact coverage policy"]
     : templateId === "youtube-connect"
     ? ["Desktop OAuth client", "Local input", "Connect YouTube", "System-browser consent", "Verify Vault credential", "Provider/status policy"]
@@ -563,7 +602,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = templateId === "creator-batch-dub"
+  $(".workspace-label").textContent = releaseMode
+    ? `${urlMode ? "URL" : "Folder"} Localization → Publication Batch Planning`
+    : templateId === "creator-batch-dub"
     ? "Creator Profile → Serial Localization Batch"
     : templateId === "youtube-connect"
     ? "Connect YouTube Account"

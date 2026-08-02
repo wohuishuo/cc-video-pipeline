@@ -8,6 +8,7 @@ The public interface is the launcher inside each `apps/<name>/` directory. Paths
 | Upload one private YouTube video through the Data API | YouTube Publisher | `apps/youtube-publisher/run.ps1` |
 | Connect a YouTube account into Credential Vault | YouTube OAuth Bootstrap | `apps/youtube-oauth-bootstrap/run.ps1` |
 | Localize every video from a Creator Manifest serially | Creator Batch | `apps/creator-batch/run.ps1` |
+| Plan every localized derivative for target platforms serially | Publication Batch | `apps/publication-batch/run.ps1` |
 | Transcribe media | Transcription | `apps/transcription/run.ps1` |
 | Detect cuts or loudness | Signal Analysis | `apps/signal-analysis/run.ps1` |
 | Extract frames | Frame Extraction | `apps/frame-extraction/run.ps1` |

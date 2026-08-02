@@ -30,6 +30,27 @@ flowchart LR
 
 The loop continues after an item failure, but the aggregate manifest is withheld until every item has verified language and derivative coverage. Repeating the same operation reuses hash-verified items and retries only incomplete or stale items.
 
+## Localize and plan a release batch
+
+```mermaid
+flowchart LR
+    SOURCE["Folder or supported URL"] --> INTAKE["Source Intake"]
+    INTAKE --> ASR["Transcription"]
+    ASR --> TR["Translation"]
+    TR --> VOICE["Voice Rendering"]
+    VOICE --> LOC["Localization"]
+    LOC --> MANIFEST[("Localization Manifest")]
+    META[("Metadata template")] --> BATCH["Publication Batch"]
+    TARGETS["Selected platforms and accounts"] --> BATCH
+    MANIFEST --> BATCH
+    BATCH -->|"one derivative at a time"| PLAN["Publication"]
+    PLAN --> PLANS[("Private/draft child plans")]
+    PLANS --> BATCH
+    BATCH --> AGG[("Publication Batch Plan")]
+```
+
+Choose `Folder+Release` or `URL+Release` in Video Graph Studio. Publication Batch renders metadata tokens for each derivative and invokes Publication through its public launcher. It owns continuation and aggregate coverage only; it does not upload, publish, own media or hold credential values.
+
 ## Research a reference video
 
 ```mermaid

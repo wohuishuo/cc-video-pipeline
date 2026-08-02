@@ -27,6 +27,8 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'value="url-voice"' in html
     assert 'value="folder-dub"' in html
     assert 'value="url-dub"' in html
+    assert 'value="folder-release"' in html
+    assert 'value="url-release"' in html
     assert 'value="creator-profile"' in html
     assert 'value="creator-batch-dub"' in html
     assert 'value="publication-plan"' in html
@@ -43,6 +45,11 @@ def test_shell_has_creator_controls_and_workflow_regions():
     assert 'id="authentication-file"' in html
     assert 'id="publication-video"' in html
     assert 'id="publication-metadata"' in html
+    assert 'id="release-controls"' in html
+    assert 'id="release-metadata-template"' in html
+    assert 'id="release-account"' in html
+    assert 'id="release-credential-id"' in html
+    assert 'aria-label="Release targets"' in html
     assert 'aria-label="Publication targets"' in html
     assert 'id="source-url"' in html
     assert 'id="source-language"' in html
@@ -61,8 +68,8 @@ def test_shell_has_creator_controls_and_workflow_regions():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=2"' in html
-    assert 'src="/app.js?v=6"' in html
+    assert 'href="/styles.css?v=3"' in html
+    assert 'src="/app.js?v=7"' in html
     assert "https://" not in html
     assert "http://" not in html
 
@@ -89,6 +96,13 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert 'url-voice' in script
     assert 'folder-dub' in script
     assert 'url-dub' in script
+    assert 'folder-release' in script
+    assert 'url-release' in script
+    assert 'releaseMode' in script
+    assert 'metadataTemplatePath' in script
+    assert 'targetAccounts' in script
+    assert 'input[name="release-target"]:checked' in script
+    assert 'state.templateId.endsWith("-release") ? "0 / 12"' in script
     assert 'sourceVolume' in script
     assert 'creator-profile' in script
     assert 'creator-batch-dub' in script
@@ -117,7 +131,10 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert ".template-field{flex:1 0 100%}" in styles
     assert ".runbar { height: 126px;" in styles
     assert ".runbar.creator-batch-mode { height: 180px;" in styles
+    assert ".runbar.release-mode { height: 220px;" in styles
     assert '$("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode)' in script
+    assert '$("#run-form").classList.toggle("release-mode", releaseMode)' in script
+    assert '$("#release-controls").hidden = !releaseMode' in script
     assert 'sourceRoot.required = !urlMode' in script
     assert 'sourceUrl.required = urlMode' in script
     assert 'node.dataset.stepId' in script

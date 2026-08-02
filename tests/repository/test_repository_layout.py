@@ -18,6 +18,7 @@ EXPECTED_APPS = {
     "youtube-publisher",
     "youtube-oauth-bootstrap",
     "creator-batch",
+    "publication-batch",
 }
 
 
