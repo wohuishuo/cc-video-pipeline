@@ -543,10 +543,9 @@ class StudioApplication:
             targets = row.get("targets")
             if (
                 not isinstance(targets, list)
-                or not targets
                 or any(not isinstance(target, dict) for target in targets)
             ):
-                raise ContractError("REJECTED_MALFORMED", "every language requires at least one destination")
+                raise ContractError("REJECTED_MALFORMED", "destination targets must be a list")
             platforms = [target.get("platform") for target in targets]
             if (
                 len(set(platforms)) != len(platforms)
@@ -567,6 +566,11 @@ class StudioApplication:
                     ],
                 }
             )
+        local_output_root = str(payload.get("localOutputRoot", "")).strip()
+        local_output_path = None
+        if local_output_root:
+            local_output_path = Path(local_output_root).resolve()
+            self._require_allowed(local_output_path)
         parameters = {
             "templateId": template_id,
             "creatorRunId": creator_run_id,
@@ -586,6 +590,7 @@ class StudioApplication:
             "voiceProvider": voice_provider,
             "sourceVolume": source_volume,
             "destinationPlans": destination_plans,
+            "localOutputRoot": str(local_output_path) if local_output_path else None,
             "authenticationFile": creator_run.get("parameters", {}).get("authenticationFile"),
         }
         result = self.store.create_run(
@@ -877,6 +882,11 @@ class StudioApplication:
             if not 0 <= source_volume <= 1:
                 raise ContractError("REJECTED_MALFORMED", "sourceVolume must be between 0 and 1")
             parameters["sourceVolume"] = source_volume
+            local_output_root = str(payload.get("localOutputRoot", "")).strip()
+            if local_output_root:
+                local_output_path = Path(local_output_root).resolve()
+                self._require_allowed(local_output_path)
+                parameters["localOutputRoot"] = str(local_output_path)
         if release_mode:
             metadata = Path(str(payload.get("metadataTemplatePath", ""))).resolve()
             self._require_allowed(metadata)

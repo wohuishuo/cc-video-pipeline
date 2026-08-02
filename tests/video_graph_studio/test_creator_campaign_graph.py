@@ -156,6 +156,26 @@ def test_creator_campaign_rejects_an_incomplete_restored_catalog(tmp_path):
     assert len(store.list_runs()) == 1
 
 
+def test_creator_campaign_accepts_local_delivery_without_publication_routes(tmp_path):
+    manifest = _creator_manifest(tmp_path)
+    store = RunStore(tmp_path / "studio.db")
+    creator_run_id = _completed_creator_run(store, manifest)
+    app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))
+    payload = _payload(creator_run_id)
+    payload["destinationPlans"] = [
+        {"locale": "ru-RU", "targets": []},
+        {"locale": "en-US", "targets": []},
+    ]
+    payload["localOutputRoot"] = str(tmp_path / "exports")
+
+    status, response = app.handle("POST", "/api/v1/runs", {}, _envelope(payload))
+    run = store.get_run(response["value"]["runId"])
+
+    assert status == 201
+    assert run["parameters"]["destinationPlans"] == payload["destinationPlans"]
+    assert run["parameters"]["localOutputRoot"] == str((tmp_path / "exports").resolve())
+
+
 def test_selection_and_batch_adapters_use_only_the_selected_fact(tmp_path, monkeypatch):
     source = _creator_manifest(tmp_path)
     output_root = tmp_path / "selection-output"

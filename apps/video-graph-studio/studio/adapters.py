@@ -529,7 +529,8 @@ class VoiceRenderingAdapter(CommandAdapter):
         if not isinstance(committed,dict): return AdapterResult(False,{},"committed translation manifest missing")
         manifest=Path(str(committed.get("manifest",""))).resolve()
         if not manifest.is_file(): return AdapterResult(False,{},"translation manifest missing")
-        output=self.voice_root/str(context["runId"]); parameters=context["parameters"]
+        parameters=context["parameters"]
+        output=self.voice_root/str(context["runId"])
         argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),str(manifest),"--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}","--provider",str(parameters.get("voiceProvider","edge"))]
         for language in parameters["targetLanguages"]: argv.extend(["--voice",f"{language}={parameters['targetVoices'][language]}"])
         argv.append("--json")
@@ -579,7 +580,9 @@ class LocalizedVideoAdapter(CommandAdapter):
         manifests = [Path(str(value.get("manifest", ""))).resolve() for value in (source, translation, voice)]
         if not all(path.is_file() for path in manifests):
             return AdapterResult(False, {}, "upstream composition manifest missing")
-        output = self.output_root / str(context["runId"])
+        parameters = context["parameters"]
+        selected_root = parameters.get("localOutputRoot")
+        output = (Path(str(selected_root)).resolve() if selected_root else self.output_root) / str(context["runId"])
         argv = [
             "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),
             *(str(path) for path in manifests),
@@ -805,7 +808,8 @@ class CreatorBatchAdapter(CommandAdapter):
         if not creator_manifest.is_file() or hashlib.sha256(creator_manifest.read_bytes()).hexdigest() != committed.get("manifestSha256"):
             return AdapterResult(False, {}, "Creator Manifest fingerprint conflict")
         parameters = context["parameters"]
-        output = self.output_root / str(context["runId"])
+        selected_root = parameters.get("localOutputRoot")
+        output = (Path(str(selected_root)).resolve() if selected_root else self.output_root) / str(context["runId"])
         operation_id = f"{context['runId']}:step:{node.id}"
         argv = [
             "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),

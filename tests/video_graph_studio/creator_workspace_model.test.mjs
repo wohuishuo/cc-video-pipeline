@@ -35,21 +35,27 @@ test("counts source by language by per-language destinations exactly", () => {
 
 test("readiness explains missing facts and accepts a complete campaign", () => {
   const state = {
+    sourceMode: "creator",
     creatorRunId: "creator-run",
-    catalog: {items},
+    catalog: {items, complete: true, truncated: false},
     selectedVideoIds: ["v3"],
     selectedLanguages: ["ru-RU"],
     voices: {"ru-RU": "ru-RU-DmitryNeural"},
-    destinations: {"ru-RU": [{platform: "youtube", account: "main"}]},
+    destinations: {},
     translationProvider: {id: "nllb", ready: true, defaultModel: "nllb"},
+    voiceProvider: {id: "edge", ready: true},
+    localOutputRoot: "C:/Videos/Localized",
   };
   assert.deepEqual(campaignReadiness(state), {ready: true, missing: []});
   assert.ok(campaignReadiness({...state, selectedVideoIds: []}).missing.includes("Select at least one video"));
   assert.ok(campaignReadiness({...state, translationProvider: {id: "deepseek", ready: false}}).missing.includes("Configure the selected translation provider"));
+  assert.ok(campaignReadiness({...state, catalog: {...state.catalog, complete: false, truncated: true}}).missing.includes("Load the complete creator catalog"));
+  assert.ok(campaignReadiness({...state, voiceProvider: {id: "qwen3", ready: false}}).missing.includes("Configure the selected voice provider"));
 });
 
 test("campaign payload omits unselected videos and preserves language routing", () => {
   const payload = buildCampaignPayload({
+    sourceMode: "creator",
     creatorRunId: "creator-run",
     selectedVideoIds: ["v3", "v1"],
     selectedLanguages: ["ru-RU", "en-US"],
@@ -59,6 +65,8 @@ test("campaign payload omits unselected videos and preserves language routing", 
       "en-US": [{platform: "youtube", account: "en-main"}],
     },
     translationProvider: {id: "deepseek", ready: true, defaultModel: "deepseek-v4-flash"},
+    voiceProvider: {id: "edge", ready: true},
+    localOutputRoot: "C:/Videos/Localized",
     sourceLanguage: "zh",
     asrModel: "small",
     sourceVolume: 0.08,
@@ -67,8 +75,43 @@ test("campaign payload omits unselected videos and preserves language routing", 
   assert.deepEqual(payload.selectedVideoIds, ["v3", "v1"]);
   assert.ok(!payload.selectedVideoIds.includes("v2"));
   assert.equal(payload.translationProvider, "deepseek");
+  assert.equal(payload.voiceProvider, "edge");
+  assert.equal(payload.localOutputRoot, "C:/Videos/Localized");
   assert.deepEqual(payload.destinationPlans[0], {
     locale: "ru-RU",
     targets: [{platform: "youtube", account: "ru-main"}, {platform: "tiktok", account: "ru-short"}],
+  });
+});
+
+test("local folder payload completes locally with zero publication routes", () => {
+  const state = {
+    sourceMode: "folder",
+    localFolder: "C:/Videos/Input",
+    localVideos: [{path: "C:/Videos/Input/a.mp4"}, {path: "C:/Videos/Input/b.mp4"}],
+    selectedLanguages: ["ru-RU"],
+    translationProvider: {id: "nllb", ready: true, defaultModel: "nllb"},
+    voiceProvider: {id: "original", ready: true},
+    voices: {"ru-RU": "original-audio"},
+    destinations: {},
+    localOutputRoot: "C:/Videos/Output",
+  };
+
+  assert.deepEqual(campaignReadiness(state), {ready: true, missing: []});
+  assert.deepEqual(buildCampaignPayload(state), {
+    templateId: "folder-dub",
+    sourceRoot: "C:/Videos/Input",
+    sourceLanguage: "auto",
+    asrModel: "small",
+    asrDevice: "auto",
+    asrComputeType: "default",
+    targetLanguages: ["ru-RU"],
+    translationProvider: "nllb",
+    translationModel: "nllb",
+    translationDevice: "auto",
+    translationBatchSize: 8,
+    voiceProvider: "original",
+    targetVoices: {"ru-RU": "original-audio"},
+    sourceVolume: 1,
+    localOutputRoot: "C:/Videos/Output",
   });
 });
