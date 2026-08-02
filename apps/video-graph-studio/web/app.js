@@ -1,63 +1,44 @@
-import {
-  buildCampaignPayload,
-  campaignCounts,
-  campaignReadiness,
-  filterCreatorItems,
-  selectVisibleIds,
-} from "./creator-workspace-model.mjs";
+import {buildCampaignPayload, campaignCounts, campaignReadiness, filterCreatorItems, selectVisibleIds} from "./creator-workspace-model.mjs";
 
 const TERMINAL_STATES = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
-const STAGES = ["creator", "videos", "languages", "destinations", "review", "activity"];
+const STAGES = ["source", "videos", "translation", "voice", "output", "review", "activity"];
 const PLATFORM_POLICY = {
-  youtube: {label: "YouTube", status: "READY_PRIVATE", copy: "Private upload after confirmation"},
-  bilibili: {label: "Bilibili", status: "PLAN_ONLY", copy: "Plan is saved; upload adapter pending"},
-  douyin: {label: "Douyin", status: "PLAN_ONLY", copy: "Plan is saved; upload adapter pending"},
-  tiktok: {label: "TikTok", status: "PLAN_ONLY", copy: "Plan is saved; upload adapter pending"},
+  youtube: {label: "YouTube", status: "READY_PRIVATE", copy: "确认凭据后仅私密上传"},
+  bilibili: {label: "Bilibili", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
+  douyin: {label: "抖音", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
+  tiktok: {label: "TikTok", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
 };
-const SUBTITLE_COPY = {
-  SOURCE_AVAILABLE: "Source subtitles",
-  SOURCE_MISSING: "ASR required",
-  UNKNOWN_ASR: "Checked after download",
-};
+const SUBTITLE_COPY = {SOURCE_AVAILABLE: "已有字幕", SOURCE_MISSING: "需要 ASR", UNKNOWN_ASR: "下载后检查"};
 const STEP_COPY = {
-  "select-creator-videos": ["Select exact videos", "Creator Selection"],
-  "verify-selection": ["Verify selection", "Creator Selection"],
-  "localize-creator-batch": ["Download · transcribe · translate · voice · compose", "Creator Batch"],
-  "verify-creator-batch": ["Verify every localized video", "Creator Batch"],
-  "discover-creator": ["Discover creator videos", "Creator Discovery"],
-  "verify-creator": ["Verify creator catalog", "Creator Discovery"],
+  "select-creator-videos": ["固定视频选择", "Creator Selection"], "verify-selection": ["验证视频选择", "Creator Selection"],
+  "localize-creator-batch": ["逐条下载、翻译、配音并合成", "Creator Batch"], "verify-creator-batch": ["验证全部本地成片", "Creator Batch"],
+  "discover-creator": ["读取账号全部作品", "Creator Discovery"], "verify-creator": ["验证账号目录", "Creator Discovery"],
+  intake: ["准备本地源视频", "Source Intake"], "verify-source": ["验证源文件", "Source Intake"],
+  transcribe: ["生成字幕", "Transcription"], "verify-transcript": ["验证字幕", "Transcription"],
+  translate: ["翻译字幕", "Translation"], "verify-translation": ["验证翻译", "Translation"],
+  "render-voice": ["生成配音", "Voice Rendering"], "verify-voice": ["验证配音", "Voice Rendering"],
+  "localize-video": ["合成本地视频", "Localization"], "verify-localization": ["验证本地视频", "Localization"],
 };
 
 const state = {
-  stage: "creator", contracts: null, creatorRunId: null, catalog: null,
-  selectedVideoIds: [], languages: [], selectedLanguages: [], voices: {}, destinations: {},
-  providers: [], translationProvider: null, sourceLanguage: "auto", asrModel: "small",
+  stage: "source", sourceMode: "creator", contracts: null, creatorRunId: null, catalog: null,
+  localFolder: "", localVideos: [], selectedVideoIds: [], languages: [], selectedLanguages: [],
+  translations: [], translationProvider: null, voiceProviders: [], voiceProvider: null, voices: {},
+  destinations: {}, localOutputRoot: "", sourceLanguage: "auto", asrModel: "small",
   asrDevice: "auto", asrComputeType: "default", sourceVolume: 0.12,
   currentRun: null, polling: false, accessRequired: false, workspaceId: "",
 };
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
-const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[character]);
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
 
 async function api(path, options = {}) {
   const token = sessionStorage.getItem("videoGraph.accessToken");
   const workspaceId = sessionStorage.getItem("videoGraph.workspaceId");
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? {Authorization: `Bearer ${token}`} : {}),
-      ...(workspaceId ? {"X-Workspace-Id": workspaceId} : {}),
-      ...(options.headers || {}),
-    },
-  });
-  let body = {};
-  try { body = await response.json(); } catch { /* bounded below */ }
-  if (!response.ok) {
-    const error = new Error(body.detail || body.resultClass || `HTTP ${response.status}`);
-    error.body = body; error.status = response.status; throw error;
-  }
+  const response = await fetch(path, {...options, headers: {"Content-Type":"application/json", ...(token ? {Authorization: `Bearer ${token}`} : {}), ...(workspaceId ? {"X-Workspace-Id": workspaceId} : {}), ...(options.headers || {})}});
+  let body = {}; try { body = await response.json(); } catch { /* response bounded below */ }
+  if (!response.ok) { const error = new Error(body.detail || body.resultClass || `HTTP ${response.status}`); error.body = body; throw error; }
   return body;
 }
 
@@ -65,267 +46,60 @@ function envelope(contractId, correlationId, payload = {}) {
   if (!state.contracts?.commands?.[contractId]) throw new Error(`Unsupported command: ${contractId}`);
   return {contractId, contractVersion: state.contracts.contractVersion, operationId: crypto.randomUUID(), correlationId, payload};
 }
-
-function toast(message, error = false) {
-  const element = $("#toast"); element.textContent = message;
-  element.className = error ? "visible error" : "visible";
-  clearTimeout(element._timer); element._timer = setTimeout(() => { element.className = ""; }, 3600);
-}
-
-function bootstrapAccess() {
-  const fragment = new URLSearchParams(location.hash.slice(1));
-  if (fragment.get("access_token") && fragment.get("workspace")) {
-    sessionStorage.setItem("videoGraph.accessToken", fragment.get("access_token"));
-    sessionStorage.setItem("videoGraph.workspaceId", fragment.get("workspace"));
-    history.replaceState(null, "", `${location.pathname}${location.search}`);
-  }
-}
-
-async function loadContracts() {
-  const response = await api("/api/v1/contracts");
-  const bundle = response.value?.bundle;
-  if (!bundle?.commands?.["CMD-RUN-CREATE"] || !bundle?.commands?.["CMD-RUN-START"]) throw new Error("Contract unavailable");
-  state.contracts = bundle;
-}
+function toast(message, error = false) { const el=$("#toast"); el.textContent=message; el.className=error?"visible error":"visible"; clearTimeout(el._timer); el._timer=setTimeout(()=>{el.className="";},3600); }
+function bootstrapAccess() { const fragment=new URLSearchParams(location.hash.slice(1)); if(fragment.get("access_token")&&fragment.get("workspace")){sessionStorage.setItem("videoGraph.accessToken",fragment.get("access_token"));sessionStorage.setItem("videoGraph.workspaceId",fragment.get("workspace"));history.replaceState(null,"",`${location.pathname}${location.search}`);} }
 
 async function loadInitialData() {
-  const [health, languageResponse, providerResponse, runResponse] = await Promise.all([
-    api("/api/v1/health"), api("/api/v1/languages"), api("/api/v1/translation-providers"), api("/api/v1/runs"),
+  const [health, languages, translations, voices, runs] = await Promise.all([
+    api("/api/v1/health"), api("/api/v1/languages"), api("/api/v1/translation-providers"), api("/api/v1/voice-providers"), api("/api/v1/runs"),
   ]);
-  state.accessRequired = health.accessRequired === true;
-  state.workspaceId = health.workspaceId || sessionStorage.getItem("videoGraph.workspaceId") || "";
-  state.languages = languageResponse.languages || [];
-  state.providers = providerResponse.providers || [];
-  state.translationProvider = state.providers.find((provider) => provider.id === "nllb") || state.providers[0] || null;
-  for (const language of state.languages) state.voices[language.locale] = language.defaultVoice;
-  const recentCreator = (runResponse.runs || []).find((run) => run.status === "COMPLETED" && run.graph?.graphId === "creator-profile");
-  if (recentCreator) {
-    try {
-      state.creatorRunId = recentCreator.runId;
-      state.catalog = await api(`/api/v1/runs/${recentCreator.runId}/creator-catalog`);
-      state.currentRun = recentCreator;
-      $("#project-name").textContent = state.catalog.creator.name || state.catalog.creator.id || "Creator campaign";
-      renderCreatorResult();
-    } catch { state.creatorRunId = null; state.catalog = null; }
-  }
-  renderConnection(true); renderProviders(); renderLanguages(); renderAll();
+  state.accessRequired=health.accessRequired===true; state.workspaceId=health.workspaceId||"";
+  state.localOutputRoot=health.defaultOutputRoot||""; $("#local-output-root").value=state.localOutputRoot;
+  state.languages=languages.languages||[]; state.translations=translations.providers||[]; state.voiceProviders=voices.providers||[];
+  state.translationProvider=state.translations.find((row)=>row.id==="nllb")||state.translations[0]||null;
+  state.voiceProvider=state.voiceProviders.find((row)=>row.id==="edge")||state.voiceProviders[0]||null;
+  for(const language of state.languages) state.voices[language.locale]=language.defaultVoice;
+  const recent=(runs.runs||[]).find((run)=>run.status==="COMPLETED"&&run.graph?.graphId==="creator-profile");
+  if(recent){try{state.creatorRunId=recent.runId;state.catalog=await api(`/api/v1/runs/${recent.runId}/creator-catalog`);state.currentRun=recent;$("#creator-url").value=state.catalog.requestedUrl||"";$("#project-name").textContent=state.catalog.creator.name||"Creator workflow";}catch{state.creatorRunId=null;state.catalog=null;}}
+  renderConnection(true); renderAll();
 }
+async function loadContracts(){const response=await api("/api/v1/contracts");const bundle=response.value?.bundle;if(!bundle?.commands?.["CMD-RUN-CREATE"]||!bundle?.commands?.["CMD-RUN-START"])throw new Error("Contract unavailable");state.contracts=bundle;}
+function renderConnection(ready,detail=""){const pill=$("#health-pill");pill.classList.toggle("ready",ready);pill.querySelector("span").textContent=ready?"Studio ready":detail||"Unavailable";$("#access-button").hidden=!state.accessRequired;}
 
-function renderConnection(ready, detail = "") {
-  const pill = $("#health-pill"); pill.classList.toggle("ready", ready);
-  pill.querySelector("span").textContent = ready ? "Studio ready" : detail || "Unavailable";
-  const access = $("#access-button"); access.hidden = !state.accessRequired;
-  access.textContent = sessionStorage.getItem("videoGraph.accessToken") ? state.workspaceId : "Access required";
-}
+function setSourceMode(mode){if(state.sourceMode!==mode){state.currentRun=null;$("#save-state").textContent="只在电脑上处理 · 尚未开始";}state.sourceMode=mode;$$('[data-source-mode]').forEach((button)=>button.classList.toggle("selected",button.dataset.sourceMode===mode));$("#creator-source-panel").hidden=mode!=="creator";$("#folder-source-panel").hidden=mode!=="folder";renderAll();}
+async function createAndStart(payload,correlationId){const created=await api("/api/v1/runs",{method:"POST",body:JSON.stringify(envelope("CMD-RUN-CREATE",correlationId,payload))});const runId=created.value.runId;await api(`/api/v1/runs/${runId}/start`,{method:"POST",body:JSON.stringify(envelope("CMD-RUN-START",correlationId))});return runId;}
+async function pollRun(runId,onUpdate){state.polling=true;while(state.polling){const run=await api(`/api/v1/runs/${runId}`);onUpdate(run);if(TERMINAL_STATES.has(run.status))return run;await new Promise((resolve)=>setTimeout(resolve,800));}throw new Error("Polling stopped");}
 
-function renderCreatorResult() {
-  if (!state.catalog) return;
-  $("#creator-result").className = "empty-card creator-loaded";
-  $("#creator-result").innerHTML = `<span class="empty-icon">✓</span><div><strong>${escapeHtml(state.catalog.creator.name || "Creator catalog")}</strong><p>${state.catalog.itemCount} verified video(s) · ${escapeHtml(state.catalog.platform)} · no media downloaded</p></div>`;
-}
+async function discoverCreator(forceAll=false){const sourceUrl=$("#creator-url").value.trim();if(!sourceUrl)return toast("请先粘贴账号链接。",true);const button=$("#discover-creator");button.disabled=true;button.textContent="正在读取...";try{const payload={templateId:"creator-profile",sourceUrl,maxItems:forceAll?0:Number($("#creator-max-items").value||0)};const authenticationFile=$("#authentication-file").value.trim();if(authenticationFile)payload.authenticationFile=authenticationFile;const runId=await createAndStart(payload,`creator-${Date.now()}`);state.creatorRunId=runId;const run=await pollRun(runId,(value)=>{state.currentRun=value;renderActivity();});if(run.status!=="COMPLETED")throw new Error(run.steps.find((step)=>step.error)?.error||`Discovery ${run.status}`);state.catalog=await api(`/api/v1/runs/${runId}/creator-catalog`);state.selectedVideoIds=[];$("#project-name").textContent=state.catalog.creator.name||state.catalog.creator.id||"Creator workflow";renderAll();toast(state.catalog.truncated?`只读取了 ${state.catalog.itemCount} 条，点击“加载全部”。`:`已读取全部 ${state.catalog.itemCount} 条视频。`,state.catalog.truncated);showStage("videos");}catch(error){toast(error.message,true);}finally{button.disabled=false;button.textContent="列出全部视频";}}
 
-function showStage(stage) {
-  if (!STAGES.includes(stage)) return;
-  state.stage = stage;
-  $$(".stage-panel").forEach((panel) => { panel.hidden = panel.dataset.stage !== stage; panel.classList.toggle("active", panel.dataset.stage === stage); });
-  $$(".stage-link").forEach((button) => button.classList.toggle("active", button.dataset.stage === stage));
-  const index = STAGES.indexOf(stage);
-  $("#rail-progress").textContent = `${index + 1} of ${STAGES.length}`;
-  $("#previous-stage").disabled = index === 0;
-  $("#next-stage").textContent = index === STAGES.length - 1 ? "Review again ↑" : "Continue →";
-  renderAll(); window.scrollTo({top: 0, behavior: "smooth"});
-}
+async function loadFolder(path){const value=String(path||$("#local-folder").value).trim();try{const folder=await api(`/api/v1/folders?path=${encodeURIComponent(value)}`);state.localFolder=folder.path;state.localVideos=folder.videos||[];$("#local-folder").value=folder.path;$("#project-name").textContent=new URL(`file:///${folder.path.replaceAll("\\","/")}`).pathname.split("/").filter(Boolean).at(-1)||"Local folder";renderFolderBrowser(folder);renderAll();toast(`找到 ${state.localVideos.length} 个本地视频。`);}catch(error){toast(error.message,true);}}
+async function checkOutputFolder(){const path=$("#local-output-root").value.trim();try{const folder=await api(`/api/v1/folders?path=${encodeURIComponent(path)}`);state.localOutputRoot=folder.path;$("#local-output-root").value=folder.path;renderReview();markStages();toast("本地输出目录可用。");}catch(error){toast(error.message,true);}}
+function bindOutputFolderCheck(){$("#browse-output").addEventListener("click",(event)=>{event.stopImmediatePropagation();checkOutputFolder();},true);}
+function renderFolderBrowser(folder){const root=$("#folder-browser");const rows=[];if(folder.parent)rows.push(`<button type="button" data-folder-path="${escapeHtml(folder.parent)}">↑ 上一级</button>`);for(const item of folder.directories||[])rows.push(`<button type="button" data-folder-path="${escapeHtml(item.path)}">${escapeHtml(item.name)}</button>`);root.innerHTML=rows.join("");}
 
-function markStages() {
-  const done = {
-    creator: Boolean(state.catalog), videos: state.selectedVideoIds.length > 0,
-    languages: state.selectedLanguages.length > 0,
-    destinations: state.selectedLanguages.length > 0 && state.selectedLanguages.every((locale) => state.destinations[locale]?.length),
-    review: Boolean(state.currentRun), activity: state.currentRun && TERMINAL_STATES.has(state.currentRun.status),
-  };
-  $$(".stage-link").forEach((button) => button.classList.toggle("done", Boolean(done[button.dataset.stage])));
-  const hints = {
-    creator: state.catalog ? `${state.catalog.itemCount} videos discovered.` : "Discover a creator account to continue.",
-    videos: `${state.selectedVideoIds.length} video(s) selected.`, languages: `${state.selectedLanguages.length} language(s) selected.`,
-    destinations: "Map every language to at least one platform.", review: "Resolve every preflight item before starting.", activity: "Completed work remains checkpointed.",
-  };
-  $("#footer-hint").textContent = hints[state.stage];
-}
+function renderSource(){const loaded=state.catalog;if(loaded){const incomplete=!loaded.complete||loaded.truncated;$("#creator-result").className=`empty-card creator-loaded ${incomplete?"warning":""}`;$("#creator-result").innerHTML=`<span class="empty-icon">${incomplete?"!":"✓"}</span><div><strong>${escapeHtml(loaded.creator.name||"Creator catalog")}</strong><p>${loaded.itemCount} 条视频 · ${incomplete?"清单不完整，不能开始任务":"完整账号清单"}</p>${incomplete?'<button id="load-all-videos" class="warning-button" type="button">加载全部视频</button>':""}</div>`;}if(state.localFolder){$("#folder-result").className="empty-card creator-loaded";$("#folder-result").innerHTML=`<span class="empty-icon">✓</span><div><strong>${escapeHtml(state.localFolder)}</strong><p>${state.localVideos.length} 个支持的视频文件</p></div>`;}}
+function renderCatalog(){const root=$("#video-catalog");if(state.sourceMode==="folder"){$("#creator-video-tools").hidden=true;$("#subtitle-status").hidden=false;$("#selected-video-count").textContent=state.localVideos.length;$("#catalog-warning").innerHTML="";root.innerHTML=state.localVideos.length?state.localVideos.map((item,index)=>`<article class="video-card selected"><span class="file-index">${index+1}</span><div><strong>${escapeHtml(item.name)}</strong><div class="video-meta"><span>${Math.max(1,Math.round(item.size/1024/1024))} MB</span><span class="subtitle-badge">下载步骤已跳过</span></div></div></article>`).join(""):'<div class="empty-card"><span class="empty-icon">F</span><div><strong>请选择含视频的文件夹</strong></div></div>';return;}$("#creator-video-tools").hidden=false;const items=filterCreatorItems(state.catalog?.items||[],$("#video-search").value);$("#catalog-count").textContent=`${items.length} 显示 / ${state.catalog?.itemCount||0} 总计`;$("#selected-video-count").textContent=state.selectedVideoIds.length;const incomplete=state.catalog&&(!state.catalog.complete||state.catalog.truncated);$("#catalog-warning").innerHTML=incomplete?'<div class="notice danger"><strong>目录不完整</strong><span>当前只显示历史任务读取的一部分。点击“加载全部视频”后才能开始。</span><button id="load-all-videos" type="button">加载全部</button></div>':"";if(!state.catalog){root.innerHTML='<div class="empty-card"><span class="empty-icon">A</span><div><strong>先读取创作者账号</strong></div></div>';return;}const selected=new Set(state.selectedVideoIds);root.innerHTML=items.map((item)=>`<label class="video-card ${selected.has(item.id)?"selected":""}"><input type="checkbox" data-video-id="${escapeHtml(item.id)}" ${selected.has(item.id)?"checked":""}><div><strong>${escapeHtml(item.title)}</strong><div class="video-meta"><span>${item.publishedAt?new Date(item.publishedAt*1000).toLocaleDateString():"日期未知"} · ${escapeHtml(item.id)}</span><span class="subtitle-badge">${escapeHtml(SUBTITLE_COPY[item.subtitleStatus]||SUBTITLE_COPY.UNKNOWN_ASR)}</span></div></div></label>`).join("");}
 
-async function createAndStart(payload, correlationId) {
-  const created = await api("/api/v1/runs", {method: "POST", body: JSON.stringify(envelope("CMD-RUN-CREATE", correlationId, payload))});
-  const runId = created.value.runId;
-  await api(`/api/v1/runs/${runId}/start`, {method: "POST", body: JSON.stringify(envelope("CMD-RUN-START", correlationId))});
-  return runId;
-}
+function renderTranslationProviders(){const root=$("#translation-provider");root.innerHTML=state.translations.map((provider)=>`<label class="provider-option ${state.translationProvider?.id===provider.id?"selected":""} ${provider.ready?"":"unavailable"}"><input type="radio" name="translation-provider" data-translation-provider="${provider.id}" ${state.translationProvider?.id===provider.id?"checked":""}><span><b>${escapeHtml(provider.name)}</b><small>${provider.ready?"READY":"SETUP REQUIRED"}</small><p>${provider.id==="nllb"?"在本机运行；模型安装后可离线。":"质量优先的云端翻译；需要 DEEPSEEK_API_KEY。"}</p><code>${escapeHtml(provider.defaultModel)}</code></span></label>`).join("");}
+function renderLanguages(){const query=$("#language-search").value.trim().toLocaleLowerCase();const rows=state.languages.filter((row)=>!query||`${row.name} ${row.locale}`.toLocaleLowerCase().includes(query));const selected=new Set(state.selectedLanguages);$("#selected-language-count").textContent=state.selectedLanguages.length;$("#language-list").innerHTML=rows.map((row)=>`<label class="language-card ${selected.has(row.locale)?"selected":""}"><input type="checkbox" data-language="${row.locale}" ${selected.has(row.locale)?"checked":""}><span><strong>${escapeHtml(row.name)}</strong><code>${row.locale}</code></span></label>`).join("");}
+function providerSupports(provider,locale){return !provider?.supportedLocales||provider.supportedLocales.includes(locale);}
+function renderVoiceProviders(){const root=$("#voice-provider-list");root.innerHTML=state.voiceProviders.map((provider)=>{const compatible=state.selectedLanguages.every((locale)=>providerSupports(provider,locale));const available=provider.ready&&compatible;return `<label class="provider-option ${state.voiceProvider?.id===provider.id?"selected":""} ${available?"":"unavailable"}"><input type="radio" name="voice-provider" data-voice-provider="${provider.id}" ${state.voiceProvider?.id===provider.id?"checked":""} ${available?"":"disabled"}><span><b>${escapeHtml(provider.name)}</b><small>${provider.ready?(compatible?"READY":"LANGUAGE LIMIT"):"SETUP REQUIRED"}</small><p>${escapeHtml(provider.description)}</p></span></label>`;}).join("");const invalid=state.voiceProvider&&state.selectedLanguages.some((locale)=>!providerSupports(state.voiceProvider,locale));$("#voice-compatibility").hidden=!invalid;if(invalid)$("#voice-compatibility").innerHTML="<strong>语言不兼容</strong><span>Qwen3-TTS 当前不支持所选的全部语言，请改用 Edge TTS 或原声字幕。</span>";}
+function renderVoices(){const root=$("#voice-list");if(!state.selectedLanguages.length){root.innerHTML='<div class="empty-card"><span class="empty-icon">T</span><div><strong>先选择翻译语言</strong></div></div>';return;}const languageMap=Object.fromEntries(state.languages.map((row)=>[row.locale,row]));const provider=state.voiceProvider;root.innerHTML=state.selectedLanguages.map((locale)=>{let control;if(provider?.id==="qwen3")control=`<select data-voice="${locale}">${provider.voices.map((voice)=>`<option value="${voice.id}" ${state.voices[locale]===voice.id?"selected":""}>${escapeHtml(voice.name)}</option>`).join("")}</select>`;else if(provider?.id==="original")control='<input value="original-audio" disabled>';else control=`<input data-voice="${locale}" value="${escapeHtml(state.voices[locale]||languageMap[locale]?.defaultVoice||"")}">`;return `<article class="voice-card"><header><strong>${escapeHtml(languageMap[locale]?.name||locale)}</strong><code>${locale}</code></header><label><span>${escapeHtml(provider?.name||"Voice")}</span>${control}</label></article>`;}).join("");$("#source-volume").disabled=provider?.id==="original";$("#source-volume-value").textContent=provider?.id==="original"?"100%":`${Math.round(state.sourceVolume*100)}%`;}
+function applyVoiceDefaults(){const provider=state.voiceProvider;for(const locale of state.selectedLanguages){const language=state.languages.find((row)=>row.locale===locale);if(provider?.id==="original")state.voices[locale]="original-audio";else if(provider?.id==="qwen3")state.voices[locale]=provider.voices[0]?.id||"";else state.voices[locale]=language?.defaultVoice||"";}}
 
-async function pollRun(runId, onUpdate) {
-  state.polling = true;
-  while (state.polling) {
-    const run = await api(`/api/v1/runs/${runId}`); onUpdate(run);
-    if (TERMINAL_STATES.has(run.status)) return run;
-    await new Promise((resolve) => setTimeout(resolve, 800));
-  }
-  throw new Error("Polling stopped");
-}
+function renderDestinations(){const root=$("#destination-matrix");if(!state.selectedLanguages.length){root.innerHTML='<div class="empty-card"><span class="empty-icon">U</span><div><strong>先选择语言</strong></div></div>';return;}const languageMap=Object.fromEntries(state.languages.map((row)=>[row.locale,row]));root.innerHTML=state.selectedLanguages.map((locale)=>{const existing=Object.fromEntries((state.destinations[locale]||[]).map((row)=>[row.platform,row]));const platforms=Object.entries(PLATFORM_POLICY).map(([id,policy])=>{const target=existing[id];return `<div class="platform-card ${target?"selected":""}"><header><input type="checkbox" data-destination-platform="${id}" data-locale="${locale}" ${target?"checked":""}><strong>${policy.label}</strong><small class="${policy.status==="READY_PRIVATE"?"ready":""}">${policy.status}</small></header><input type="text" data-destination-account="${id}" data-locale="${locale}" value="${escapeHtml(target?.account||"")}" placeholder="账号标签"><p>${policy.copy}</p></div>`;}).join("");return `<section class="destination-row"><header><h3>${escapeHtml(languageMap[locale]?.name||locale)} <code>${locale}</code></h3><span>${(state.destinations[locale]||[]).length} 条路线</span></header><div class="platform-options">${platforms}</div></section>`;}).join("");const routes=Object.values(state.destinations).reduce((sum,rows)=>sum+(rows?.length||0),0);$("#route-summary").textContent=`${routes} 条路线`;}
 
-async function discoverCreator() {
-  const sourceUrl = $("#creator-url").value.trim();
-  if (!sourceUrl) return toast("Paste a creator account URL first.", true);
-  const button = $("#discover-creator"); button.disabled = true; button.textContent = "Discovering…";
-  try {
-    const payload = {templateId: "creator-profile", sourceUrl, maxItems: Number($("#creator-max-items").value || 0)};
-    const authenticationFile = $("#authentication-file").value.trim();
-    if (authenticationFile) payload.authenticationFile = authenticationFile;
-    const runId = await createAndStart(payload, `creator-${Date.now()}`);
-    state.creatorRunId = runId;
-    const run = await pollRun(runId, (value) => { state.currentRun = value; renderActivity(); });
-    if (run.status !== "COMPLETED") throw new Error(run.steps.find((step) => step.error)?.error || `Discovery ${run.status.toLowerCase()}`);
-    state.catalog = await api(`/api/v1/runs/${runId}/creator-catalog`);
-    state.selectedVideoIds = [];
-    $("#project-name").textContent = state.catalog.creator.name || state.catalog.creator.id || "Creator campaign";
-    renderCreatorResult();
-    renderCatalog(); markStages(); toast(`Discovered ${state.catalog.itemCount} videos.`); showStage("videos");
-  } catch (error) { toast(error.message, true); }
-  finally { button.disabled = false; button.textContent = "Discover videos"; }
-}
+function sourceIds(){return state.sourceMode==="folder"?state.localVideos.map((row)=>row.path):state.selectedVideoIds;}
+function renderReview(){const counts=campaignCounts(sourceIds(),state.selectedLanguages,state.destinations);$("#review-videos").textContent=counts.videos;$("#review-localized").textContent=counts.localizedVideos;$("#review-publications").textContent=counts.publicationJobs;const source=state.sourceMode==="folder"?state.localFolder:(state.catalog?.creator?.name||"未读取账号");$("#review-summary").innerHTML=`<div class="summary-section"><span>来源</span><strong>${escapeHtml(source||"未选择")}</strong><p>${counts.videos} 个视频 · ${state.sourceMode==="folder"?"本地文件，不下载":"完整账号目录"}</p></div><div class="summary-section"><span>翻译</span><strong>${escapeHtml(state.translationProvider?.name||"未选择")}</strong><p>${state.selectedLanguages.join(" · ")||"未选择语言"}</p></div><div class="summary-section"><span>配音</span><strong>${escapeHtml(state.voiceProvider?.name||"未选择")}</strong><p>${state.voiceProvider?.id==="original"?"保留原声并覆盖翻译字幕":"每种语言使用明确音色"}</p></div><div class="summary-section"><span>本地输出</span><strong>${escapeHtml(state.localOutputRoot||"未选择")}</strong><p>生成 ${counts.localizedVideos} 个本地成片；${counts.publicationJobs} 条可选上传路线</p></div>`;const readiness=campaignReadiness(state);$("#readiness-list").innerHTML=readiness.ready?'<li class="ready">本地处理所需条件全部就绪</li>':readiness.missing.map((item)=>`<li>${escapeHtml(item)}</li>`).join("");$("#start-campaign").disabled=!readiness.ready||Boolean(state.currentRun&&!TERMINAL_STATES.has(state.currentRun.status));}
+function renderActivity(){const run=state.currentRun;$("#active-run-title").textContent=run?(run.graph.graphId==="creator-profile"?"账号目录读取":"本地视频处理"):"还没有任务";$("#active-run-id").textContent=run?.runId||"—";$("#run-status").textContent=run?.status||"NOT STARTED";if(!run){$("#activity-timeline").innerHTML='<div class="empty-card"><span class="empty-icon">R</span><div><strong>尚未运行</strong></div></div>';return;}$("#activity-timeline").innerHTML=run.steps.map((step,index)=>{const[title,owner]=STEP_COPY[step.nodeId]||[step.nodeId,"Capability owner"];return `<div class="timeline-step ${step.status.toLocaleLowerCase()}"><i>${step.status==="COMPLETED"?"✓":index+1}</i><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml(owner)}${step.error?` · ${escapeHtml(step.error)}`:""}</small></div><b>${step.status}</b></div>`;}).join("");$("#log-output").textContent=run.logs?.length?run.logs.map((row)=>`${String(row.sequence).padStart(3,"0")}  ${row.message}`).join("\n"):"等待第一条日志...";$("#save-state").textContent=`${run.status} · ${run.steps.filter((step)=>step.status==="COMPLETED").length}/${run.steps.length} steps`;}
+function renderSourceModes(){$$('[data-source-mode]').forEach((button)=>button.classList.toggle("selected",button.dataset.sourceMode===state.sourceMode));$("#creator-source-panel").hidden=state.sourceMode!=="creator";$("#folder-source-panel").hidden=state.sourceMode!=="folder";}
+function markStages(){const readiness=campaignReadiness(state);const sourceReady=state.sourceMode==="folder"?state.localVideos.length>0:Boolean(state.catalog);const videosReady=state.sourceMode==="folder"?state.localVideos.length>0:state.selectedVideoIds.length>0;const done={source:sourceReady,videos:videosReady,translation:state.selectedLanguages.length>0&&Boolean(state.translationProvider),voice:Boolean(state.voiceProvider)&&state.selectedLanguages.every((locale)=>state.voices[locale]),output:Boolean(state.localOutputRoot),review:readiness.ready,activity:state.currentRun&&TERMINAL_STATES.has(state.currentRun.status)};$$('.stage-link').forEach((button)=>button.classList.toggle("done",Boolean(done[button.dataset.stage])));const hints={source:sourceReady?"来源已选择。":"选择账号或本地文件夹。",videos:`${sourceIds().length} 个视频。`,translation:`${state.selectedLanguages.length} 种目标语言。`,voice:state.voiceProvider?.name||"选择配音方式。",output:state.localOutputRoot||"选择本地输出文件夹。",review:readiness.ready?"可以开始本地处理。":"请处理检查项。",activity:"运行进度会自动更新。"};$("#footer-hint").textContent=hints[state.stage];}
+function renderAll(){renderSourceModes();renderSource();renderCatalog();renderTranslationProviders();renderLanguages();renderVoiceProviders();renderVoices();renderDestinations();renderReview();renderActivity();markStages();}
+function showStage(stage){if(!STAGES.includes(stage))return;state.stage=stage;$$('.stage-panel').forEach((panel)=>{panel.hidden=panel.dataset.stage!==stage;panel.classList.toggle("active",panel.dataset.stage===stage);});$$('.stage-link').forEach((button)=>button.classList.toggle("active",button.dataset.stage===stage));const index=STAGES.indexOf(stage);$("#rail-progress").textContent=`${index+1} / ${STAGES.length}`;$("#previous-stage").disabled=index===0;$("#next-stage").textContent=index===STAGES.length-1?"返回检查 ↑":"继续 →";renderAll();window.scrollTo({top:0,behavior:"smooth"});}
 
-function renderCatalog() {
-  const root = $("#video-catalog");
-  const items = filterCreatorItems(state.catalog?.items || [], $("#video-search").value);
-  $("#catalog-count").textContent = `${items.length} visible / ${state.catalog?.itemCount || 0} total`;
-  $("#selected-video-count").textContent = state.selectedVideoIds.length;
-  if (!state.catalog) { root.innerHTML = '<div class="empty-card"><span class="empty-icon">□</span><div><strong>Discover a creator first</strong><p>The verified video catalog will appear here.</p></div></div>'; return; }
-  if (!items.length) { root.innerHTML = '<div class="empty-card"><span class="empty-icon">⌕</span><div><strong>No matching videos</strong><p>Clear the search to show the full account.</p></div></div>'; return; }
-  const selected = new Set(state.selectedVideoIds);
-  root.innerHTML = items.map((item) => {
-    const subtitle = SUBTITLE_COPY[item.subtitleStatus] || SUBTITLE_COPY.UNKNOWN_ASR;
-    const published = item.publishedAt ? new Date(item.publishedAt * 1000).toLocaleDateString() : "Date unavailable";
-    return `<label class="video-card ${selected.has(item.id) ? "selected" : ""}"><input type="checkbox" data-video-id="${escapeHtml(item.id)}" ${selected.has(item.id) ? "checked" : ""}><div><strong>${escapeHtml(item.title)}</strong><div class="video-meta"><span>${escapeHtml(published)} · ${escapeHtml(item.id)}</span><span class="subtitle-badge">${escapeHtml(subtitle)}</span></div></div></label>`;
-  }).join("");
-}
+async function startCampaign(){const readiness=campaignReadiness(state);if(!readiness.ready)return toast(readiness.missing[0],true);const button=$("#start-campaign");button.disabled=true;button.textContent="正在启动...";try{const runId=await createAndStart(buildCampaignPayload(state),`campaign-${Date.now()}`);showStage("activity");const run=await pollRun(runId,(value)=>{state.currentRun=value;renderActivity();markStages();});state.currentRun=run;renderAll();toast(run.status==="COMPLETED"?"本地视频处理完成。":`任务 ${run.status.toLowerCase()}。`,run.status!=="COMPLETED");}catch(error){toast(error.message,true);}finally{button.textContent="开始本地处理";renderReview();}}
 
-function renderProviders() {
-  const select = $("#translation-provider");
-  select.innerHTML = state.providers.map((provider) => `<option value="${provider.id}">${escapeHtml(provider.name)}${provider.ready ? "" : " · setup required"}</option>`).join("");
-  if (state.translationProvider) select.value = state.translationProvider.id;
-  const provider = state.translationProvider;
-  if (!provider) return;
-  $("#provider-detail").innerHTML = `<strong class="${provider.ready ? "provider-ready" : "provider-missing"}">${provider.ready ? "Ready" : "Setup required"} · ${escapeHtml(provider.defaultModel)}</strong><p>${provider.id === "nllb" ? "Runs locally and offline after the model is installed." : "Quality-first cloud translation. Set DEEPSEEK_API_KEY before launching Studio; the key is never stored in a run."}</p>`;
-}
+function bindEvents(){$$('.stage-link').forEach((button)=>button.addEventListener("click",()=>showStage(button.dataset.stage)));$("#previous-stage").addEventListener("click",()=>showStage(STAGES[Math.max(0,STAGES.indexOf(state.stage)-1)]));$("#next-stage").addEventListener("click",()=>showStage(STAGES[(STAGES.indexOf(state.stage)+1)%STAGES.length]));$$('[data-source-mode]').forEach((button)=>button.addEventListener("click",()=>setSourceMode(button.dataset.sourceMode)));$("#discover-creator").addEventListener("click",()=>discoverCreator(false));document.addEventListener("click",(event)=>{if(event.target.id==="load-all-videos")discoverCreator(true);if(event.target.dataset.folderPath)loadFolder(event.target.dataset.folderPath);});$("#browse-folder").addEventListener("click",()=>loadFolder());$("#browse-output").addEventListener("click",()=>loadFolder($("#local-output-root").value));$("#video-search").addEventListener("input",renderCatalog);$("#select-all-videos").addEventListener("click",()=>{state.selectedVideoIds=selectVisibleIds(state.selectedVideoIds,filterCreatorItems(state.catalog?.items||[],$("#video-search").value));renderAll();});$("#clear-videos").addEventListener("click",()=>{state.selectedVideoIds=[];renderAll();});$("#video-catalog").addEventListener("change",(event)=>{const id=event.target.dataset.videoId;if(!id)return;const selected=new Set(state.selectedVideoIds);event.target.checked?selected.add(id):selected.delete(id);state.selectedVideoIds=(state.catalog?.items||[]).map((row)=>row.id).filter((value)=>selected.has(value));renderAll();});$("#language-search").addEventListener("input",renderLanguages);$("#select-common-languages").addEventListener("click",()=>{state.selectedLanguages=state.languages.filter((row)=>["ru-RU","en-US"].includes(row.locale)).map((row)=>row.locale);applyVoiceDefaults();renderAll();});$("#clear-languages").addEventListener("click",()=>{state.selectedLanguages=[];state.destinations={};renderAll();});$("#translation-provider").addEventListener("change",(event)=>{const id=event.target.dataset.translationProvider;if(!id)return;state.translationProvider=state.translations.find((row)=>row.id===id);renderAll();});$("#language-list").addEventListener("change",(event)=>{const locale=event.target.dataset.language;if(!locale)return;const selected=new Set(state.selectedLanguages);event.target.checked?selected.add(locale):selected.delete(locale);state.selectedLanguages=state.languages.map((row)=>row.locale).filter((value)=>selected.has(value));if(!event.target.checked)delete state.destinations[locale];applyVoiceDefaults();renderAll();});$("#voice-provider-list").addEventListener("change",(event)=>{const id=event.target.dataset.voiceProvider;if(!id)return;state.voiceProvider=state.voiceProviders.find((row)=>row.id===id);applyVoiceDefaults();renderAll();});$("#voice-list").addEventListener("input",(event)=>{const locale=event.target.dataset.voice;if(locale){state.voices[locale]=event.target.value;renderReview();markStages();}});$("#voice-list").addEventListener("change",(event)=>{const locale=event.target.dataset.voice;if(locale){state.voices[locale]=event.target.value;renderReview();markStages();}});$("#source-volume").addEventListener("input",(event)=>{state.sourceVolume=Number(event.target.value)/100;$("#source-volume-value").textContent=`${event.target.value}%`;renderReview();});$("#destination-matrix").addEventListener("change",(event)=>{const locale=event.target.dataset.locale;const platform=event.target.dataset.destinationPlatform||event.target.dataset.destinationAccount;if(!locale||!platform)return;const targets=[...(state.destinations[locale]||[])];const index=targets.findIndex((row)=>row.platform===platform);if(event.target.dataset.destinationPlatform){if(event.target.checked&&index<0)targets.push({platform,account:""});else if(!event.target.checked&&index>=0)targets.splice(index,1);}else if(index>=0)targets[index]={...targets[index],account:event.target.value};state.destinations[locale]=targets;renderAll();});$("#destination-matrix").addEventListener("input",(event)=>{const locale=event.target.dataset.locale;const platform=event.target.dataset.destinationAccount;if(!locale||!platform)return;const targets=[...(state.destinations[locale]||[])];const index=targets.findIndex((row)=>row.platform===platform);if(index>=0)targets[index]={...targets[index],account:event.target.value};state.destinations[locale]=targets;renderReview();markStages();});$("#local-output-root").addEventListener("input",(event)=>{state.localOutputRoot=event.target.value;renderReview();markStages();});$("#source-language").addEventListener("change",(event)=>{state.sourceLanguage=event.target.value;renderReview();});$("#asr-model").addEventListener("change",(event)=>{state.asrModel=event.target.value;renderReview();});$("#start-campaign").addEventListener("click",startCampaign);$("#clear-log").addEventListener("click",()=>{$("#log-output").textContent="视图已清空；持久日志仍保存在运行记录中。";});$("#access-button").addEventListener("click",()=>$("#access-dialog").showModal());$("#access-form").addEventListener("submit",()=>{sessionStorage.setItem("videoGraph.workspaceId",$("#access-workspace").value.trim());sessionStorage.setItem("videoGraph.accessToken",$("#access-token").value);location.reload();});$("#clear-access").addEventListener("click",()=>{sessionStorage.removeItem("videoGraph.workspaceId");sessionStorage.removeItem("videoGraph.accessToken");location.reload();});}
 
-function renderLanguages() {
-  const query = $("#language-search").value.trim().toLocaleLowerCase();
-  const rows = state.languages.filter((row) => !query || `${row.name} ${row.locale}`.toLocaleLowerCase().includes(query));
-  const selected = new Set(state.selectedLanguages);
-  $("#selected-language-count").textContent = state.selectedLanguages.length;
-  $("#language-list").innerHTML = rows.map((row) => `<article class="language-card ${selected.has(row.locale) ? "selected" : ""}"><label class="language-head"><input type="checkbox" data-language="${row.locale}" ${selected.has(row.locale) ? "checked" : ""}><strong>${escapeHtml(row.name)}</strong><code>${row.locale}</code></label><div class="voice-row"><label>Edge voice</label><input data-voice="${row.locale}" value="${escapeHtml(state.voices[row.locale] || row.defaultVoice)}" ${selected.has(row.locale) ? "" : "disabled"}></div></article>`).join("");
-}
-
-function renderDestinations() {
-  const root = $("#destination-matrix");
-  if (!state.selectedLanguages.length) { root.innerHTML = '<div class="empty-card"><span class="empty-icon">↗</span><div><strong>Select languages first</strong><p>One destination row will be created for each selected language.</p></div></div>'; return; }
-  const languageMap = Object.fromEntries(state.languages.map((row) => [row.locale, row]));
-  root.innerHTML = state.selectedLanguages.map((locale) => {
-    const existing = Object.fromEntries((state.destinations[locale] || []).map((row) => [row.platform, row]));
-    const platforms = Object.entries(PLATFORM_POLICY).map(([id, policy]) => {
-      const target = existing[id];
-      return `<div class="platform-card ${target ? "selected" : ""}"><header><input type="checkbox" data-destination-platform="${id}" data-locale="${locale}" ${target ? "checked" : ""}><strong>${policy.label}</strong><small class="${policy.status === "READY_PRIVATE" ? "ready" : ""}">${policy.status}</small></header><input type="text" data-destination-account="${id}" data-locale="${locale}" value="${escapeHtml(target?.account || "")}" placeholder="Account label"><p>${policy.copy}</p></div>`;
-    }).join("");
-    return `<section class="destination-row"><header><h3>${escapeHtml(languageMap[locale]?.name || locale)} <code>${locale}</code></h3><span>${(state.destinations[locale] || []).length} route(s)</span></header><div class="platform-options">${platforms}</div></section>`;
-  }).join("");
-}
-
-function renderReview() {
-  const counts = campaignCounts(state.selectedVideoIds, state.selectedLanguages, state.destinations);
-  $("#review-videos").textContent = counts.videos; $("#review-localized").textContent = counts.localizedVideos; $("#review-publications").textContent = counts.publicationJobs;
-  const provider = state.translationProvider?.name || "Not selected";
-  $("#review-summary").innerHTML = `<div class="summary-section"><span>Creator</span><strong>${escapeHtml(state.catalog?.creator?.name || "Not discovered")}</strong><p>${state.catalog?.itemCount || 0} catalog videos · ${state.selectedVideoIds.length} selected</p></div><div class="summary-section"><span>Processing</span><strong>${escapeHtml(provider)}</strong><p>${escapeHtml(state.sourceLanguage)} speech · ${escapeHtml(state.asrModel)} ASR · source audio ${Math.round(state.sourceVolume * 100)}%</p></div><div class="summary-section"><span>Languages</span><strong>${state.selectedLanguages.map(escapeHtml).join(" · ") || "None"}</strong><p>One Edge voice and subtitle track per language</p></div><div class="summary-section"><span>Execution boundary</span><strong>Localization runs now; publication routes remain explicit</strong><p>YouTube private-ready; other platforms plan-only until adapters are verified.</p></div>`;
-  const readiness = campaignReadiness(state);
-  $("#readiness-list").innerHTML = readiness.ready ? '<li class="ready">All required campaign facts are ready</li>' : readiness.missing.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  $("#start-campaign").disabled = !readiness.ready || Boolean(state.currentRun && !TERMINAL_STATES.has(state.currentRun.status));
-}
-
-function renderActivity() {
-  const run = state.currentRun;
-  $("#active-run-title").textContent = run ? (run.graph.graphId === "creator-profile" ? "Creator discovery" : "Creator localization campaign") : "No active campaign";
-  $("#active-run-id").textContent = run?.runId || "—"; $("#run-status").textContent = run?.status || "NOT STARTED";
-  if (!run) { $("#activity-timeline").innerHTML = '<div class="empty-card"><span class="empty-icon">○</span><div><strong>No run yet</strong><p>Campaign steps will appear here.</p></div></div>'; return; }
-  $("#activity-timeline").innerHTML = run.steps.map((step, index) => {
-    const [title, owner] = STEP_COPY[step.nodeId] || [step.nodeId, "Capability owner"];
-    return `<div class="timeline-step ${step.status.toLocaleLowerCase()}"><i>${step.status === "COMPLETED" ? "✓" : index + 1}</i><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml(owner)}${step.error ? ` · ${escapeHtml(step.error)}` : ""}</small></div><b>${step.status}</b></div>`;
-  }).join("");
-  $("#log-output").textContent = run.logs?.length ? run.logs.map((row) => `${String(row.sequence).padStart(3,"0")}  ${row.message}`).join("\n") : "Waiting for the first committed log entry…";
-  $("#save-state").textContent = `Run ${run.status.toLocaleLowerCase()} · ${run.steps.filter((step) => step.status === "COMPLETED").length}/${run.steps.length} steps`;
-}
-
-function renderAll() { renderCatalog(); renderLanguages(); renderDestinations(); renderReview(); renderActivity(); markStages(); }
-
-async function startCampaign() {
-  const readiness = campaignReadiness(state); if (!readiness.ready) return toast(readiness.missing[0], true);
-  const button = $("#start-campaign"); button.disabled = true; button.textContent = "Starting…";
-  try {
-    const runId = await createAndStart(buildCampaignPayload(state), `campaign-${Date.now()}`);
-    showStage("activity");
-    const run = await pollRun(runId, (value) => { state.currentRun = value; renderActivity(); markStages(); });
-    state.currentRun = run; renderAll();
-    toast(run.status === "COMPLETED" ? "Campaign completed." : `Campaign ${run.status.toLocaleLowerCase()}.`, run.status !== "COMPLETED");
-  } catch (error) { toast(error.message, true); }
-  finally { button.textContent = "Start campaign"; renderReview(); }
-}
-
-function bindEvents() {
-  $$(".stage-link").forEach((button) => button.addEventListener("click", () => showStage(button.dataset.stage)));
-  $("#previous-stage").addEventListener("click", () => showStage(STAGES[Math.max(0, STAGES.indexOf(state.stage) - 1)]));
-  $("#next-stage").addEventListener("click", () => showStage(STAGES[(STAGES.indexOf(state.stage) + 1) % STAGES.length]));
-  $("#discover-creator").addEventListener("click", discoverCreator);
-  $("#video-search").addEventListener("input", renderCatalog);
-  $("#select-all-videos").addEventListener("click", () => { state.selectedVideoIds = selectVisibleIds(state.selectedVideoIds, filterCreatorItems(state.catalog?.items || [], $("#video-search").value)); renderAll(); });
-  $("#clear-videos").addEventListener("click", () => { state.selectedVideoIds = []; renderAll(); });
-  $("#video-catalog").addEventListener("change", (event) => {
-    const id = event.target.dataset.videoId; if (!id) return;
-    const selected = new Set(state.selectedVideoIds); event.target.checked ? selected.add(id) : selected.delete(id);
-    state.selectedVideoIds = [...selected]; renderAll();
-  });
-  $("#language-search").addEventListener("input", renderLanguages);
-  $("#select-common-languages").addEventListener("click", () => { state.selectedLanguages = state.languages.filter((row) => ["ru-RU","en-US"].includes(row.locale)).map((row) => row.locale); renderAll(); });
-  $("#clear-languages").addEventListener("click", () => { state.selectedLanguages = []; state.destinations = {}; renderAll(); });
-  $("#translation-provider").addEventListener("change", (event) => { state.translationProvider = state.providers.find((provider) => provider.id === event.target.value); renderProviders(); renderReview(); });
-  $("#language-list").addEventListener("change", (event) => {
-    if (event.target.dataset.language) {
-      const locale = event.target.dataset.language; const selected = new Set(state.selectedLanguages);
-      event.target.checked ? selected.add(locale) : selected.delete(locale); state.selectedLanguages = state.languages.map((row) => row.locale).filter((value) => selected.has(value));
-      if (!event.target.checked) delete state.destinations[locale]; renderAll();
-    } else if (event.target.dataset.voice) { state.voices[event.target.dataset.voice] = event.target.value; renderReview(); }
-  });
-  $("#destination-matrix").addEventListener("change", (event) => {
-    const locale = event.target.dataset.locale; const platform = event.target.dataset.destinationPlatform || event.target.dataset.destinationAccount; if (!locale || !platform) return;
-    const targets = [...(state.destinations[locale] || [])]; const index = targets.findIndex((row) => row.platform === platform);
-    if (event.target.dataset.destinationPlatform) {
-      if (event.target.checked && index < 0) targets.push({platform, account: ""}); else if (!event.target.checked && index >= 0) targets.splice(index, 1);
-    } else if (index >= 0) targets[index] = {...targets[index], account: event.target.value};
-    state.destinations[locale] = targets; renderAll();
-  });
-  $("#destination-matrix").addEventListener("input", (event) => {
-    const locale = event.target.dataset.locale; const platform = event.target.dataset.destinationAccount;
-    if (!locale || !platform) return;
-    const targets = [...(state.destinations[locale] || [])]; const index = targets.findIndex((row) => row.platform === platform);
-    if (index >= 0) targets[index] = {...targets[index], account: event.target.value};
-    state.destinations[locale] = targets; renderReview(); markStages();
-  });
-  $("#source-language").addEventListener("change", (event) => { state.sourceLanguage = event.target.value; renderReview(); });
-  $("#asr-model").addEventListener("change", (event) => { state.asrModel = event.target.value; renderReview(); });
-  $("#start-campaign").addEventListener("click", startCampaign);
-  $("#clear-log").addEventListener("click", () => { $("#log-output").textContent = "View cleared. Durable logs remain attached to the run."; });
-  $("#access-button").addEventListener("click", () => $("#access-dialog").showModal());
-  $("#access-form").addEventListener("submit", () => { sessionStorage.setItem("videoGraph.workspaceId", $("#access-workspace").value.trim()); sessionStorage.setItem("videoGraph.accessToken", $("#access-token").value); location.reload(); });
-  $("#clear-access").addEventListener("click", () => { sessionStorage.removeItem("videoGraph.workspaceId"); sessionStorage.removeItem("videoGraph.accessToken"); location.reload(); });
-}
-
-async function bootstrap() {
-  bootstrapAccess(); bindEvents(); renderAll();
-  try { await loadContracts(); await loadInitialData(); }
-  catch (error) { renderConnection(false, error.message); toast(error.message, true); }
-}
-
+async function bootstrap(){bootstrapAccess();bindOutputFolderCheck();bindEvents();renderAll();try{await loadContracts();await loadInitialData();}catch(error){renderConnection(false,error.message);toast(error.message,true);}}
 bootstrap();

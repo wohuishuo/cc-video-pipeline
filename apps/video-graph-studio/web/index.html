@@ -1,105 +1,101 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Creator Campaign Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=10">
+  <title>Creator Workflow Studio</title>
+  <link rel="stylesheet" href="/styles.css?v=11">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Creator Campaign Studio home">
-      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span><strong>Creator Campaign</strong><small>VIDEO GRAPH STUDIO</small></span>
-    </a>
-    <div class="project-state">
-      <span id="project-name">New creator campaign</span>
-      <small id="save-state">Local workspace · not started</small>
-    </div>
-    <div class="top-actions">
-      <button id="access-button" class="ghost" type="button" hidden>Access</button>
-      <span id="health-pill" class="health-pill"><i></i><span>Connecting</span></span>
-    </div>
+    <a class="brand" href="/" aria-label="Creator Workflow Studio home"><span class="brand-mark"><i></i><i></i><i></i></span><span><strong>Creator Workflow</strong><small>LOCAL VIDEO STUDIO</small></span></a>
+    <div class="project-state"><span id="project-name">新建本地视频项目</span><small id="save-state">只在电脑上处理 · 尚未开始</small></div>
+    <div class="top-actions"><button id="access-button" class="ghost" type="button" hidden>Access</button><span id="health-pill" class="health-pill"><i></i><span>正在连接</span></span></div>
   </header>
 
   <main class="workspace-shell">
-    <nav class="stage-rail" aria-label="Campaign stages">
-      <div class="rail-heading"><span>WORKFLOW</span><strong id="rail-progress">1 of 6</strong></div>
-      <button class="stage-link active" data-stage="creator" type="button"><b>01</b><span>Creator<small>Find the account</small></span><i></i></button>
-      <button class="stage-link" data-stage="videos" type="button"><b>02</b><span>Videos<small>Select the exact batch</small></span><i></i></button>
-      <button class="stage-link" data-stage="languages" type="button"><b>03</b><span>Languages<small>Translation and voices</small></span><i></i></button>
-      <button class="stage-link" data-stage="destinations" type="button"><b>04</b><span>Destinations<small>Route every language</small></span><i></i></button>
-      <button class="stage-link" data-stage="review" type="button"><b>05</b><span>Review<small>Preflight exact work</small></span><i></i></button>
-      <button class="stage-link" data-stage="activity" type="button"><b>06</b><span>Activity<small>Watch durable steps</small></span><i></i></button>
-      <div class="rail-foot"><span class="worker-dot"></span><div><strong>One active worker</strong><small>Items run serially and resume safely</small></div></div>
+    <nav class="stage-rail" aria-label="Workflow stages">
+      <div class="rail-heading"><span>WORKFLOW</span><strong id="rail-progress">1 / 7</strong></div>
+      <button class="stage-link active" data-stage="source" type="button"><b>01</b><span>来源<small>账号或本地文件夹</small></span><i></i></button>
+      <button class="stage-link" data-stage="videos" type="button"><b>02</b><span>视频<small>确认完整清单</small></span><i></i></button>
+      <button class="stage-link" data-stage="translation" type="button"><b>03</b><span>翻译<small>语言与翻译引擎</small></span><i></i></button>
+      <button class="stage-link" data-stage="voice" type="button"><b>04</b><span>配音<small>Edge / Qwen3 / 原声</small></span><i></i></button>
+      <button class="stage-link" data-stage="output" type="button"><b>05</b><span>输出<small>本地保存，可选上传</small></span><i></i></button>
+      <button class="stage-link" data-stage="review" type="button"><b>06</b><span>检查<small>确认实际工作量</small></span><i></i></button>
+      <button class="stage-link" data-stage="activity" type="button"><b>07</b><span>进度<small>可恢复的执行记录</small></span><i></i></button>
+      <div class="rail-foot"><span class="worker-dot"></span><div><strong>串行安全执行</strong><small>完成一项保存一项，失败后可继续</small></div></div>
     </nav>
 
     <section class="stage-content">
-      <section id="stage-creator" class="stage-panel active" data-stage="creator" aria-labelledby="creator-title">
-        <header class="stage-header">
-          <div><p class="eyebrow">01 · CREATOR</p><h1 id="creator-title">Start with an account, not a single video.</h1><p>Paste a YouTube, Bilibili, Douyin or TikTok creator URL. Discovery lists videos first and downloads nothing.</p></div>
-          <span class="effect-badge safe">READ-ONLY DISCOVERY</span>
-        </header>
-        <div class="form-card hero-form">
-          <label for="creator-url">Creator account URL</label>
-          <div class="url-row"><input id="creator-url" type="url" autocomplete="off" placeholder="https://www.douyin.com/user/…"><button id="discover-creator" class="primary" type="button">Discover videos</button></div>
-          <div class="three-fields">
-            <label><span>Maximum videos</span><input id="creator-max-items" type="number" min="0" max="10000" value="0"><small>0 means all available videos</small></label>
-            <label><span>Spoken language</span><select id="source-language"><option value="auto">Auto detect</option><option value="zh">Chinese</option><option value="en">English</option><option value="ru">Russian</option></select></label>
-            <label><span>Speech model</span><select id="asr-model"><option value="small">Small · balanced</option><option value="large-v3">Large v3 · quality</option><option value="tiny">Tiny · fast</option></select></label>
-          </div>
-          <details><summary>Authentication and advanced download access</summary><label for="authentication-file">Optional Netscape cookie file</label><input id="authentication-file" autocomplete="off" placeholder="C:\Users\…\cookies.txt"><p>Only the path is stored. Cookie contents are never copied into task records.</p></details>
+      <section id="stage-source" class="stage-panel active" data-stage="source">
+        <header class="stage-header"><div><p class="eyebrow">01 · SOURCE</p><h1>先选择视频从哪里来。</h1><p>账号模式会列出完整作品后再下载；本地模式直接处理电脑里的视频，不需要上传到任何平台。</p></div><span class="effect-badge safe">LOCAL FIRST</span></header>
+        <div class="source-mode-grid">
+          <button class="source-mode selected" data-source-mode="creator" type="button"><b>账号全部作品</b><span>YouTube · Bilibili · 抖音 · TikTok</span></button>
+          <button class="source-mode" data-source-mode="folder" type="button"><b>本地视频文件夹</b><span>直接使用电脑上的 MP4 / MOV / MKV</span></button>
         </div>
-        <div id="creator-result" class="empty-card"><span class="empty-icon">◎</span><div><strong>No creator loaded</strong><p>Discovery creates a verified catalog before any media is downloaded.</p></div></div>
+        <div id="creator-source-panel" class="form-card source-panel">
+          <label for="creator-url">创作者账号链接</label>
+          <div class="action-row"><input id="creator-url" type="url" autocomplete="off" placeholder="https://www.douyin.com/user/..."><button id="discover-creator" class="primary" type="button">列出全部视频</button></div>
+          <details><summary>高级：限制数量与登录 Cookie</summary><div class="two-fields"><label><span>最多视频数</span><input id="creator-max-items" type="number" min="0" max="10000" value="0"><small>0 = 全部；限制后的清单会明确标记为不完整</small></label><label><span>Cookie 文件（可选）</span><input id="authentication-file" autocomplete="off" placeholder="C:\Users\...\cookies.txt"></label></div></details>
+          <div id="creator-result" class="empty-card"><span class="empty-icon">A</span><div><strong>还没有读取账号</strong><p>这里只读取作品目录，不会下载视频。</p></div></div>
+        </div>
+        <div id="folder-source-panel" class="form-card source-panel" hidden>
+          <label for="local-folder">本地视频文件夹</label>
+          <div class="action-row"><input id="local-folder" autocomplete="off" placeholder="C:\Users\...\Videos"><button id="browse-folder" class="primary" type="button">打开文件夹</button></div>
+          <p class="field-help">只能读取允许目录；不会移动或删除原文件。</p>
+          <div id="folder-browser" class="folder-browser"></div>
+          <div id="folder-result" class="empty-card"><span class="empty-icon">F</span><div><strong>还没有选择文件夹</strong><p>选择后会显示准确的视频文件清单。</p></div></div>
+        </div>
+        <div class="processing-options"><label><span>原视频语言</span><select id="source-language"><option value="auto">自动识别</option><option value="zh">中文</option><option value="en">英语</option><option value="ru">俄语</option></select></label><label><span>语音识别模型</span><select id="asr-model"><option value="small">Small · 平衡</option><option value="large-v3">Large v3 · 质量</option><option value="tiny">Tiny · 快速</option></select></label></div>
       </section>
 
-      <section id="stage-videos" class="stage-panel" data-stage="videos" aria-labelledby="videos-title" hidden>
-        <header class="stage-header"><div><p class="eyebrow">02 · VIDEOS</p><h1 id="videos-title">Choose exactly what enters the campaign.</h1><p>Search, select all visible results, or pick individual videos. Source order is preserved.</p></div><div class="selection-total"><strong id="selected-video-count">0</strong><span>selected</span></div></header>
-        <div class="toolbar"><label class="search"><span>⌕</span><input id="video-search" placeholder="Search titles or video IDs"></label><button id="select-all-videos" type="button">Select visible</button><button id="clear-videos" type="button">Clear</button><span id="catalog-count">0 videos</span></div>
-        <div id="subtitle-status" class="status-legend"><span><i class="source"></i>Source subtitles</span><span><i class="asr"></i>ASR required</span><span><i class="unknown"></i>Checked after download</span></div>
-        <div id="video-catalog" class="catalog-grid"><div class="empty-card"><span class="empty-icon">□</span><div><strong>Discover a creator first</strong><p>The verified video catalog will appear here.</p></div></div></div>
+      <section id="stage-videos" class="stage-panel" data-stage="videos" hidden>
+        <header class="stage-header"><div><p class="eyebrow">02 · VIDEOS</p><h1 id="videos-title">确认真正要处理的视频。</h1><p id="videos-copy">账号模式可精确选择；本地文件夹模式会处理当前文件夹中的全部视频。</p></div><div class="selection-total"><strong id="selected-video-count">0</strong><span>视频</span></div></header>
+        <div class="toolbar" id="creator-video-tools"><label class="search"><span>⌕</span><input id="video-search" placeholder="搜索标题或视频 ID"></label><button id="select-all-videos" type="button">选择当前全部</button><button id="clear-videos" type="button">清空</button><span id="catalog-count">0 videos</span></div>
+        <div id="subtitle-status" class="status-legend"><span><i class="source"></i>已有字幕</span><span><i class="asr"></i>需要 ASR</span><span><i class="unknown"></i>下载后检查</span></div>
+        <div id="catalog-warning"></div>
+        <div id="video-catalog" class="catalog-grid"><div class="empty-card"><span class="empty-icon">V</span><div><strong>先选择来源</strong><p>视频清单会显示在这里。</p></div></div></div>
       </section>
 
-      <section id="stage-languages" class="stage-panel" data-stage="languages" aria-labelledby="languages-title" hidden>
-        <header class="stage-header"><div><p class="eyebrow">03 · LANGUAGES</p><h1 id="languages-title">Choose translation quality and voices.</h1><p>Select any combination from the language catalog. Every language becomes its own reusable output variant.</p></div><div class="selection-total"><strong id="selected-language-count">0</strong><span>languages</span></div></header>
-        <div class="provider-card"><div><label for="translation-provider">Translation engine</label><select id="translation-provider"><option>Loading providers…</option></select></div><div id="provider-detail"><strong>Checking translation engines</strong><p>Local and cloud readiness will appear here.</p></div></div>
-        <div class="toolbar"><label class="search"><span>⌕</span><input id="language-search" placeholder="Search 20 languages"></label><button id="select-common-languages" type="button">Select RU + EN</button><button id="clear-languages" type="button">Clear</button></div>
+      <section id="stage-translation" class="stage-panel" data-stage="translation" hidden>
+        <header class="stage-header"><div><p class="eyebrow">03 · TRANSLATION</p><h1>翻译语言和引擎分开选择。</h1><p>先选择目标语言，再明确选择本地 NLLB 或云端 DeepSeek。选择不会藏在高级设置里。</p></div><div class="selection-total"><strong id="selected-language-count">0</strong><span>语言</span></div></header>
+        <div id="translation-provider" class="provider-options"></div>
+        <div class="toolbar"><label class="search"><span>⌕</span><input id="language-search" placeholder="搜索 20 种语言"></label><button id="select-common-languages" type="button">俄语 + 英语</button><button id="clear-languages" type="button">清空</button></div>
         <div id="language-list" class="language-grid"></div>
       </section>
 
-      <section id="stage-destinations" class="stage-panel" data-stage="destinations" aria-labelledby="destinations-title" hidden>
-        <header class="stage-header"><div><p class="eyebrow">04 · DESTINATIONS</p><h1 id="destinations-title">Route each language to one or many platforms.</h1><p>A Russian version can go to YouTube and TikTok while English goes to a different YouTube account. Each route is counted explicitly.</p></div></header>
-        <div class="notice"><strong>Publication boundary</strong><span>YouTube private upload is executable after credential confirmation. Bilibili, Douyin and TikTok remain plan-only until their upload adapters are verified.</span></div>
-        <div id="destination-matrix" class="destination-grid"><div class="empty-card"><span class="empty-icon">↗</span><div><strong>Select languages first</strong><p>One destination row will be created for each selected language.</p></div></div></div>
+      <section id="stage-voice" class="stage-panel" data-stage="voice" hidden>
+        <header class="stage-header"><div><p class="eyebrow">04 · VOICE</p><h1>现在单独选择配音方式。</h1><p>Edge TTS 快速；Qwen3-TTS 本地、启动较慢但整条视频只加载一次；也可以保留原声，只覆盖翻译字幕。</p></div></header>
+        <div id="voice-provider-list" class="provider-options"></div>
+        <div id="voice-compatibility" class="notice" hidden></div>
+        <div id="voice-list" class="voice-grid"></div>
+        <label class="range-field"><span>保留原视频声音 <b id="source-volume-value">12%</b></span><input id="source-volume" type="range" min="0" max="100" value="12"></label>
       </section>
 
-      <section id="stage-review" class="stage-panel" data-stage="review" aria-labelledby="review-title" hidden>
-        <header class="stage-header"><div><p class="eyebrow">05 · REVIEW</p><h1 id="review-title">Know the exact work before it starts.</h1><p>Preflight turns the selections into deterministic counts and one durable Campaign Graph.</p></div></header>
-        <div id="campaign-review" class="review-grid"><article><span>Source videos</span><strong id="review-videos">0</strong></article><article><span>Localized videos</span><strong id="review-localized">0</strong></article><article><span>Publication routes</span><strong id="review-publications">0</strong></article></div>
-        <div class="review-layout"><div id="review-summary" class="summary-card"></div><div class="launch-card"><p class="eyebrow">PREFLIGHT</p><ul id="readiness-list"></ul><button id="start-campaign" class="primary large" type="button" disabled>Start campaign</button><small>Runs one video at a time. Completed items are checkpointed.</small></div></div>
+      <section id="stage-output" class="stage-panel" data-stage="output" hidden>
+        <header class="stage-header"><div><p class="eyebrow">05 · OUTPUT</p><h1>先保存到电脑，上传只是可选项。</h1><p>本地 MP4 是完整交付结果。即使一个平台都不选择，任务仍然可以正常开始和完成。</p></div><span class="effect-badge safe">LOCAL OUTPUT REQUIRED</span></header>
+        <div class="form-card local-output-card"><label for="local-output-root">本地输出文件夹</label><div class="action-row"><input id="local-output-root" autocomplete="off" placeholder="C:\Users\...\Videos\CreatorWorkflow"><button id="browse-output" type="button">检查路径</button></div><p>每次运行会在这个目录下创建独立运行文件夹，不覆盖原视频。</p></div>
+        <details id="optional-publication" class="optional-publication"><summary><strong>另外准备上传计划（可选）</strong><span id="route-summary">0 条路线</span></summary><div class="notice"><strong>真实边界</strong><span>YouTube 可准备私密上传；Bilibili、抖音和 TikTok 当前只保存计划，不会假装已经发布。</span></div><div id="destination-matrix" class="destination-grid"></div></details>
       </section>
 
-      <section id="stage-activity" class="stage-panel" data-stage="activity" aria-labelledby="activity-title" hidden>
-        <header class="stage-header"><div><p class="eyebrow">06 · ACTIVITY</p><h1 id="activity-title">One timeline for the whole campaign.</h1><p>See which owner is working, what fact it committed, and where a failure occurred.</p></div><span id="run-status" class="effect-badge">NOT STARTED</span></header>
-        <div class="activity-layout"><div><div class="run-heading"><strong id="active-run-title">No active campaign</strong><code id="active-run-id">—</code></div><div id="activity-timeline" class="timeline"></div></div><aside class="log-panel"><header><strong>Durable log</strong><button id="clear-log" type="button">Clear view</button></header><pre id="log-output">Choose a creator and start a campaign. Exact step logs will appear here.</pre></aside></div>
+      <section id="stage-review" class="stage-panel" data-stage="review" hidden>
+        <header class="stage-header"><div><p class="eyebrow">06 · REVIEW</p><h1>开始前看清每一步和输出位置。</h1><p>检查只阻止缺失的本地处理条件，不会强迫选择上传平台。</p></div></header>
+        <div id="campaign-review" class="review-grid"><article><span>来源视频</span><strong id="review-videos">0</strong></article><article><span>本地成片</span><strong id="review-localized">0</strong></article><article><span>可选上传路线</span><strong id="review-publications">0</strong></article></div>
+        <div class="review-layout"><div id="review-summary" class="summary-card"></div><div class="launch-card"><p class="eyebrow">PREFLIGHT</p><ul id="readiness-list"></ul><button id="start-campaign" class="primary large" type="button" disabled>开始本地处理</button><small>一条一条处理；已经完成的项目会保留。</small></div></div>
       </section>
 
-      <footer class="stage-footer"><button id="previous-stage" type="button" disabled>← Back</button><div><span id="footer-hint">Discover a creator account to continue.</span><button id="next-stage" class="primary" type="button">Continue →</button></div></footer>
+      <section id="stage-activity" class="stage-panel" data-stage="activity" hidden>
+        <header class="stage-header"><div><p class="eyebrow">07 · ACTIVITY</p><h1>一个时间线看完整个任务。</h1><p>这里显示哪个独立能力正在工作、失败在哪里，以及最终本地文件位置。</p></div><span id="run-status" class="effect-badge">NOT STARTED</span></header>
+        <div class="activity-layout"><div><div class="run-heading"><strong id="active-run-title">还没有任务</strong><code id="active-run-id">—</code></div><div id="activity-timeline" class="timeline"></div></div><aside class="log-panel"><header><strong>执行日志</strong><button id="clear-log" type="button">清空视图</button></header><pre id="log-output">选择来源并开始处理后，日志会显示在这里。</pre></aside></div>
+      </section>
+
+      <footer class="stage-footer"><button id="previous-stage" type="button" disabled>← 上一步</button><div><span id="footer-hint">选择账号或本地文件夹。</span><button id="next-stage" class="primary" type="button">继续 →</button></div></footer>
     </section>
   </main>
 
-  <dialog id="access-dialog">
-    <form id="access-form" method="dialog" class="dialog-card">
-      <header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>Connect this browser session</h2></div><button value="cancel" aria-label="Close">×</button></header>
-      <label><span>Workspace</span><input id="access-workspace" autocomplete="username" required></label>
-      <label><span>Bearer credential</span><input id="access-token" type="password" autocomplete="off" required></label>
-      <p>Stored in sessionStorage only and removed when the browser session closes.</p>
-      <footer><button id="clear-access" type="button">Clear session</button><button value="default" class="primary">Connect</button></footer>
-    </form>
-  </dialog>
-
+  <dialog id="access-dialog"><form id="access-form" method="dialog" class="dialog-card"><header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>连接工作区</h2></div><button value="cancel" aria-label="Close">×</button></header><label><span>Workspace</span><input id="access-workspace" required></label><label><span>Bearer credential</span><input id="access-token" type="password" required></label><p>只保存在当前浏览器 sessionStorage。</p><footer><button id="clear-access" type="button">清除</button><button value="default" class="primary">连接</button></footer></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=10"></script>
+  <script type="module" src="/app.js?v=11"></script>
 </body>
 </html>

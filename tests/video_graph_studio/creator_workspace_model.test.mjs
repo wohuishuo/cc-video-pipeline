@@ -51,6 +51,7 @@ test("readiness explains missing facts and accepts a complete campaign", () => {
   assert.ok(campaignReadiness({...state, translationProvider: {id: "deepseek", ready: false}}).missing.includes("Configure the selected translation provider"));
   assert.ok(campaignReadiness({...state, catalog: {...state.catalog, complete: false, truncated: true}}).missing.includes("Load the complete creator catalog"));
   assert.ok(campaignReadiness({...state, voiceProvider: {id: "qwen3", ready: false}}).missing.includes("Configure the selected voice provider"));
+  assert.ok(campaignReadiness({...state, voiceProvider: {id: "qwen3", ready: true, supportedLocales: ["en-US"]}}).missing.includes("Selected voice provider does not support ru-RU"));
 });
 
 test("campaign payload omits unselected videos and preserves language routing", () => {

@@ -346,6 +346,7 @@ class StudioApplication:
                     "database": "ready",
                     "activeWorkers": 1 if self.engine.active_run_id else 0,
                     "queuedRuns": queue["queuedRuns"],
+                    "defaultOutputRoot": self._default_output_root(),
                 }
             if method == "GET" and path == "/api/v1/queue":
                 return 200, {"contractVersion": "1.0", **self.store.queue_snapshot()}
@@ -989,6 +990,15 @@ class StudioApplication:
 
     def _is_allowed(self, path: Path) -> bool:
         return any(path == root or path.is_relative_to(root) for root in self.allowed_roots)
+
+    def _default_output_root(self) -> str:
+        if not self.allowed_roots:
+            return ""
+        videos_root = next(
+            (root for root in self.allowed_roots if root.name.casefold() == "videos"),
+            None,
+        )
+        return str(videos_root or self.allowed_roots[0])
 
     @staticmethod
     def _command_response(

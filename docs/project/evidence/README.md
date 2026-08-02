@@ -19,6 +19,7 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Video Graph Studio multi-workspace routing drill](video-graph-studio/multi-workspace-routing-drill.md)
 - [Video Graph Studio resource-budget drill](video-graph-studio/resource-budget-drill.md)
 - [Video Graph Studio guarded-publication execution drill](video-graph-studio/guarded-publication-execution-drill.md)
+- [Video Graph Studio local-first creator workspace drill](video-graph-studio/local-first-creator-workspace-drill.md)
 - [Video Graph Studio Creator Batch graph composition drill](video-graph-studio/creator-batch-graph-drill.md)
 - [Video Graph Studio Publication Batch Execution graph drill](video-graph-studio/publication-batch-execution-graph-drill.md)
 - [Operations readiness](operations-readiness/delivery-ledger.md)

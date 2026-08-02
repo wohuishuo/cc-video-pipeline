@@ -1,8 +1,6 @@
-# Video Graph Studio
+# Creator Workflow Studio
 
-Video Graph Studio is a local browser workspace for creator localization campaigns. One six-stage flow discovers an account, lists its videos, commits an exact subset, chooses NLLB or DeepSeek translation, assigns voices across 20 languages, records per-language multi-platform destinations, preflights exact work counts and monitors one durable Campaign Graph.
-
-Studio owns admission, continuation and projections. Creator Discovery owns the account catalog, Creator Selection owns the exact subset, Creator Batch owns serial cross-item continuation, and each media capability owns its own manifests and checkpoints.
+Creator Workflow Studio is a local-first browser application for turning a creator account or a folder of videos into translated, voiced local MP4 files. Upload routes are optional. The browser coordinates independently runnable capability MVPs; it does not absorb their manifests, checkpoints, or state ownership.
 
 ## Start
 
@@ -10,103 +8,76 @@ Studio owns admission, continuation and projections. Creator Discovery owns the 
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1
 ```
 
-Studio opens `http://127.0.0.1:8765` and binds only to loopback. To avoid opening another tab:
+Studio opens [http://127.0.0.1:8765](http://127.0.0.1:8765) and binds only to loopback. Use `-NoBrowser` to reuse an existing tab. The default data root is `%LOCALAPPDATA%\VideoGraphStudio`, and the default delivery root is the user's existing `Videos` folder.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 `
-  -NoBrowser -Port 8765
-```
+## Seven-stage workflow
 
-The launcher resolves the shared repository runtime and changes into the application directory before importing `studio.server`, so it works from any caller directory and cannot load a stale same-named package.
+1. **Source** — choose a complete YouTube, Bilibili, Douyin or TikTok creator catalog, or an existing local folder. A saved partial catalog is visibly rejected and offers **Load all videos**.
+2. **Videos** — inspect the exact account catalog and select any subset, or inspect every supported file in the local folder.
+3. **Translation** — choose one or many of 20 locales and explicitly select NLLB local or DeepSeek cloud translation.
+4. **Voice** — independently choose Edge TTS, Qwen3-TTS preset synthesis, or original audio with translated subtitles. Voice choices are validated per locale.
+5. **Output** — choose an allowed local directory. Local MP4 delivery is sufficient; YouTube, Bilibili, Douyin and TikTok routes are collapsed under an optional section.
+6. **Review** — verify exact source-video, localized-video and optional-publication counts before execution.
+7. **Activity** — follow durable owner steps and logs. Processing is serial and completed checkpoints remain reusable.
 
-## Six stages
+There is no decorative infinite canvas, fake connection port, hidden node insertion or mandatory platform selection.
 
-1. **Creator** — paste a YouTube, Bilibili, Douyin or TikTok creator URL. Discovery creates a verified catalog and downloads no media.
-2. **Videos** — search and select visible or individual rows. Creator Selection commits only those IDs in source order.
-3. **Languages** — select one or many of 20 locales, choose NLLB local or DeepSeek cloud translation and edit each Edge voice.
-4. **Destinations** — route every language to one or more YouTube, Bilibili, Douyin or TikTok account labels.
-5. **Review** — see exact source, localized-video and publication-route counts. Preflight explains every missing fact.
-6. **Activity** — start the Campaign Graph and follow its ordered owners and durable logs. One video runs at a time and completed items resume from checkpoints.
+## Provider policy
 
-The UI uses normal document flow and a clickable stage rail. It has no draggable infinite canvas, ports, zoom controls or decorative node insertion.
+Translation and voice are separate choices:
 
-## Translation providers
+| Capability | Providers | Runtime boundary |
+| --- | --- | --- |
+| Translation | NLLB, DeepSeek | NLLB is local; DeepSeek requires `DEEPSEEK_API_KEY` in the server environment |
+| Voice | Edge TTS, Qwen3-TTS, original audio | Edge uses named network voices; Qwen3 uses one resident local model per process; original preserves source audio and burns translated subtitles |
 
-NLLB is the default local adapter. DeepSeek is quality-first and uses the current `deepseek-v4-flash` default. Set its credential before launching Studio:
+DeepSeek and Qwen3 readiness is projected by versioned endpoints without exposing credentials. Qwen3 currently uses preset voices, not voice cloning.
 
-```powershell
-$env:DEEPSEEK_API_KEY = "your-key"
-powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1
-```
-
-The key is read only by the child process environment. It is never accepted by the browser, written to run state, included in adapter identity or logged. `GET /api/v1/translation-providers` reports readiness without exposing credential material.
-
-Both providers publish the same editable Translation Manifest. DeepSeek must return exactly one non-empty result per subtitle segment; malformed coverage is retried a bounded number of times and then fails without publishing a manifest.
-
-## Campaign graph
+## Capability composition
 
 ```mermaid
 flowchart LR
-    U["Creator account"] --> D["Creator Discovery"]
-    D --> C["Verified catalog"]
-    C --> S["Creator Selection"]
+    A["Creator account"] --> D["Creator Discovery"]
+    D --> C["Complete Creator Manifest"]
+    C --> S["Exact Creator Selection"]
+    F["Local video folder"] --> I["Source Intake"]
     S --> B["Creator Batch"]
-    B --> I["Source Intake"]
-    I --> A["Transcription"]
-    A --> T["NLLB or DeepSeek"]
-    T --> V["Voice Rendering"]
+    B --> I
+    I --> R["Transcription"]
+    R --> T["NLLB or DeepSeek"]
+    T --> V["Edge, Qwen3 or original audio"]
     V --> L["Localization"]
-    L --> O["Verified localized videos"]
+    L --> O["Verified local MP4 files"]
+    O -. "optional plan" .-> P["Platform publication"]
 ```
 
-The Studio Campaign Graph contains four top-level owner steps: select, verify selection, localize the selected creator batch and verify aggregate coverage. Creator Batch then calls Source Intake, Transcription, Translation, Voice Rendering and Localization only through public launchers.
+Creator Discovery owns account enumeration. Creator Selection owns the exact selected IDs. Creator Batch owns serial cross-item continuation. Translation, Voice Rendering and Localization own their own outputs. Studio owns admission and projections only.
+
+## Local folders and OneDrive
+
+The folder browser permits only configured roots. The default local launch includes existing `Videos`, `Documents`, `Downloads` and `Desktop` directories under both the user profile and `OneDrive`. It lists exact video paths and sizes without moving or deleting source files.
 
 ## Publication boundary
 
-Destination routing is stored per language and platform:
-
-- YouTube is `READY_PRIVATE`: actual upload still requires a separately confirmed plan SHA and Credential Vault injection.
-- Bilibili, Douyin and TikTok are `PLAN_ONLY`: Studio records intent but does not claim an upload adapter exists.
-
-Selecting a destination never silently publishes. Public upload is never enabled by the ordinary Campaign button.
-
-## Workspace access
-
-The default loopback launch is credential-free. A configured workspace can require a short-lived browser credential:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 `
-  -AccessRegistry "$env:LOCALAPPDATA\VideoGraphStudio\workspace-access.json" `
-  -WorkspaceId local
-```
-
-The browser stores the workspace ID and bearer credential in `sessionStorage`, attaches them to versioned requests and removes bootstrap credentials from the URL. For multi-workspace routing, supply both `-AccessRegistry` and `-StorageRegistry` and omit `-WorkspaceId`. Each workspace receives isolated SQLite and artifact roots while all engines share one process-wide execution gate.
+No platform is required for a valid run. Zero destination routes means “produce local files only.” YouTube remains a separately confirmed private-upload path; Bilibili, Douyin and TikTok remain plan-only until their authenticated execution adapters are independently verified. The ordinary local-processing button never silently publishes.
 
 ## Durable execution
 
-Start requests enter a SQLite-backed FIFO queue. Exactly one workflow and one child process execute at a time. Every capability writes its own receipt and immutable manifest. Restart fences abandoned `RUNNING` steps as `INTERRUPTED`, restores the queue claim and continues from the first missing checkpoint.
-
-The default data root is `%LOCALAPPDATA%\VideoGraphStudio`. Override it with `-DataRoot C:\path\to\studio-data`.
-
-## Stop
-
-Press `Ctrl+C` in the launcher terminal. Studio requests cancellation for its active child, closes the loopback listener and preserves committed checkpoints plus queued work in the data root. Restarting resumes from the first missing fact.
+Starts enter a SQLite-backed FIFO queue. Exactly one workflow and one child process execute at a time. Restart fences abandoned `RUNNING` steps as `INTERRUPTED` and resumes from the first missing checkpoint. Press `Ctrl+C` to stop the server without deleting committed artifacts.
 
 ## Verify
 
 ```powershell
-tools\.venv\Scripts\python.exe -m pytest tests/video_graph_studio -q
+tools\.venv\Scripts\python.exe -m pytest --import-mode=importlib tests\video_graph_studio tests\voice_rendering_mvp tests\creator_batch_mvp tests\localization_mvp -q
 node --test tests/video_graph_studio/*.test.mjs
 ```
 
-The live browser drill is recorded in [creator-workspace-drill.md](../../docs/project/evidence/video-graph-studio/creator-workspace-drill.md).
+See [the local-first browser drill](../../docs/project/evidence/video-graph-studio/local-first-creator-workspace-drill.md) for the tested UI facts and current evidence boundary.
 
 ## Current evidence boundary
 
-- The creator workspace, exact selection, 20-language catalog, NLLB/DeepSeek policy, destination matrix, review counts, versioned commands and responsive browser behavior are domain verified.
-- Creator Discovery has a live cookie-assisted Douyin run with three canonical videos and no media download.
-- Creator Batch composition is domain verified. The browser drill deliberately did not start the three-video media workload.
-- DeepSeek is tested through a deterministic HTTP boundary. No paid request is claimed.
-- YouTube publication is private-ready after separate confirmation. No real authenticated upload is claimed.
-- Bilibili, Douyin and TikTok publication remains plan-only.
-- Remote hosting, production multi-tenancy, mobile app packaging and representative load remain unproven.
+- Complete-catalog rejection, local-folder inventory, provider selection, zero-route local delivery, responsive layout and versioned payloads are domain verified.
+- The browser drill used four real local video files and proved an enabled eight-output, zero-upload preflight; it deliberately did not start the expensive media workload.
+- Edge and Qwen3 provider adapters are domain tested. Qwen3 first-model startup can be slow; no cloned-voice claim is made.
+- DeepSeek is tested at a deterministic HTTP boundary; no paid request is claimed.
+- Authenticated public uploads, remote hosting, production multi-tenancy, mobile packaging and representative load remain unproven.

@@ -43,6 +43,9 @@ export function campaignReadiness(state) {
   if (!state.voiceProvider?.ready) missing.push("Configure the selected voice provider");
   if (!String(state.localOutputRoot || "").trim()) missing.push("Choose a local output folder");
   for (const locale of state.selectedLanguages || []) {
+    if (state.voiceProvider?.supportedLocales?.length && !state.voiceProvider.supportedLocales.includes(locale)) {
+      missing.push(`Selected voice provider does not support ${locale}`);
+    }
     if (!String(state.voices?.[locale] || "").trim()) missing.push(`Choose a voice for ${locale}`);
     const targets = state.destinations?.[locale] || [];
     if (targets.some((target) => !target.platform || !String(target.account || "").trim())) {
