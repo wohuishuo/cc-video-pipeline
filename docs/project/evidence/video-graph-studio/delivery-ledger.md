@@ -3,7 +3,7 @@
 | Field | Record |
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
-| Evidence present | graph/run/process contracts; SQLite idempotency; real child-process ordering and cleanup; real loopback HTTP; browser-to-API health and allowed-folder projection; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source→Localization runs; real two-step cookie-assisted Douyin creator discovery run |
+| Evidence present | graph/run/process contracts; SQLite idempotency; real child-process ordering and cleanup; real loopback HTTP; browser-to-API health and allowed-folder projection; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source→Localization runs; real two-step Douyin creator discovery; real two-step four-target publication planning |
 | Evidence missing | crash/power-loss SQLite recovery drill; authenticated platform adapters; live Douyin creator-profile enumeration; load/security operations |
 | Substitutes | fixed prepared-folder graph; local filesystem roots; test success adapters for API composition |
 | Decisions unapproved | commercial tenancy, billing, remote authentication, paid fallback and automatic publication policy |
@@ -20,3 +20,7 @@ Browser run `578fc2a5-0363-42cc-b475-c6183b976579` completed all ten owner steps
 ## Creator discovery graph live evidence
 
 Browser run `63a3a21d-7d7f-42b2-a15e-27152ee39122` completed both Creator Discovery owner steps on 2026-08-02. It used a local authentication-file reference, enumerated the supplied Douyin profile to three canonical URLs, verified the manifest and recorded six durable log rows. Authentication content was absent from the capability receipt.
+
+## Publication planning graph live evidence
+
+Browser run `7141072c-396a-43de-ba31-460e5c130223` completed both Publication owner steps on 2026-08-02. It fingerprinted one local MP4 and metadata JSON, generated four private/draft target jobs, verified coverage and recorded six durable log rows. No platform was contacted.

@@ -70,11 +70,14 @@ flowchart LR
     SCRIPT[(Script / scene JSON)] --> STUDIO[Remotion Studio]
     ASSETS[(Project assets)] --> STUDIO
     STUDIO --> RENDER[(Rendered master)]
-    RENDER --> UPLOAD[Platform I/O]
-    META[(Metadata JSON)] --> UPLOAD
-    UPLOAD --> GUARD{--execute?}
-    GUARD -- no --> PREPARED[(Prepared command)]
-    GUARD -- yes --> PRIVATE[(Draft / private upload)]
+    RENDER --> PLAN[Publication Plan]
+    META[(Metadata JSON)] --> PLAN
+    PLAN --> HASH{Exact plan SHA confirmed?}
+    HASH -- no --> PREPARED[(Verified plan only)]
+    HASH -- yes --> POLICY{Visibility guaranteed?}
+    POLICY -- no --> BLOCKED[(Policy rejection)]
+    POLICY -- yes --> UPLOAD[Platform I/O]
+    UPLOAD --> PRIVATE[(Draft / private receipt)]
 ```
 
 ## Download decision path

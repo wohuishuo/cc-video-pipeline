@@ -11,7 +11,7 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 5 | Translation to voice clips | serial segment receipts, selectable voices, failure resume, real Edge receipt | Complete |
 | 6 | Assets to localized video | audio policy, subtitle render, FFprobe verification | Complete; live ten-step browser run |
 | 7 | Creator-profile batch discovery | profile enumeration manifest, bounded pagination, dedup/replay | Complete; real bounded Douyin profile run |
-| 8 | Guarded multi-platform publication | prepared plan, explicit execute, private/draft evidence | Pending |
+| 8 | Guarded multi-platform publication | prepared plan, exact-hash execute, private/draft evidence | In progress; planning and execution guards complete, authenticated evidence pending |
 | 9 | Hosted/mobile foundation | auth, tenancy, remote storage, resource budgets, security evidence | Pending |
 
 No later slice may move upstream ownership into Graph Studio for convenience.

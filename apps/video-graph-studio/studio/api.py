@@ -167,6 +167,21 @@ CREATOR_GRAPHS = {
     )
 }
 
+PUBLICATION_GRAPHS = {
+    "publication-plan": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "publication-plan",
+            "revision": 1,
+            "nodes": [
+                {"id": "plan-publication", "type": "plan-publication", "config": {}},
+                {"id": "verify-publication-plan", "type": "verify-publication-plan", "config": {}},
+            ],
+            "edges": [{"source": "plan-publication", "target": "verify-publication-plan", "relationship": "Fact"}],
+        }
+    )
+}
+
 SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **CREATOR_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
@@ -236,6 +251,8 @@ class StudioApplication:
         template_id = str(payload.get("templateId", "prepared-localization"))
         if template_id in SOURCE_GRAPHS:
             return self._create_intake_run(envelope, payload, template_id)
+        if template_id in PUBLICATION_GRAPHS:
+            return self._create_publication_plan_run(envelope, payload, template_id)
         if template_id != "prepared-localization":
             raise ContractError("REJECTED_MALFORMED", f"unknown templateId: {template_id}")
         source = Path(str(payload.get("sourceRoot", ""))).resolve()
@@ -264,6 +281,28 @@ class StudioApplication:
         if result.result_class == "REJECTED_CONFLICT":
             status = 409
         return status, {"resultClass": result.result_class, "value": result.value}
+
+    def _create_publication_plan_run(self, envelope, payload, template_id):
+        video = Path(str(payload.get("videoPath", ""))).resolve()
+        metadata = Path(str(payload.get("metadataPath", ""))).resolve()
+        self._require_allowed(video); self._require_allowed(metadata)
+        if not video.is_file() or video.suffix.lower() not in VIDEO_EXTENSIONS:
+            raise ContractError("REJECTED_NOT_FOUND", "publication video does not exist")
+        if not metadata.is_file() or metadata.suffix.lower() != ".json":
+            raise ContractError("REJECTED_NOT_FOUND", "publication metadata JSON does not exist")
+        targets = payload.get("targetPlatforms")
+        supported = {"youtube", "bilibili", "douyin", "tiktok"}
+        if not isinstance(targets, list) or not targets or len(set(targets)) != len(targets) or not all(value in supported for value in targets):
+            raise ContractError("REJECTED_MALFORMED", "targetPlatforms must be a unique supported list")
+        account = str(payload.get("account", "")).strip()
+        if not account:
+            raise ContractError("REJECTED_MALFORMED", "publication account is required")
+        if payload.get("public") is True:
+            raise ContractError("REJECTED_MALFORMED", "browser publication planning is private/draft only")
+        result = self.store.create_run(CreateRun(operation_id=str(envelope["operationId"]),correlation_id=str(envelope["correlationId"]),graph=PUBLICATION_GRAPHS[template_id],parameters={"templateId":template_id,"videoPath":str(video),"metadataPath":str(metadata),"targetPlatforms":list(targets),"account":account,"public":False}))
+        status=201 if result.result_class=="COMPLETED" else 200
+        if result.result_class=="REJECTED_CONFLICT": status=409
+        return status,{"resultClass":result.result_class,"value":result.value}
 
     def _create_intake_run(
         self, envelope: dict[str, Any], payload: dict[str, Any], template_id: str
