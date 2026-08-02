@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from .contracts import ContractError, GraphDefinition
 from .creator_catalog import project_creator_catalog
 from .engine import WorkflowEngine
+from .language_catalog import SUPPORTED_LANGUAGE_LOCALES, language_rows
 from .store import CreateRun, RunStore
 from .workflow_catalog import build_workflow_catalog
 
@@ -319,6 +320,8 @@ class StudioApplication:
                 return 200, {"contractVersion": "1.0", **self.store.queue_snapshot()}
             if method == "GET" and path == "/api/v1/capabilities":
                 return 200, {"contractVersion": "1.0", "capabilities": self._capabilities()}
+            if method == "GET" and path == "/api/v1/languages":
+                return 200, {"contractVersion": "1.0", "languages": language_rows()}
             if method == "GET" and path == "/api/v1/folders":
                 return self._folders(query)
             if method == "GET" and path == "/api/v1/runs":
@@ -630,7 +633,7 @@ class StudioApplication:
             )
         if template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS or release_mode or creator_batch_mode:
             languages = payload.get("targetLanguages")
-            supported = {"ru-RU", "en-US", "kk-KZ"}
+            supported = set(SUPPORTED_LANGUAGE_LOCALES)
             if (
                 not isinstance(languages, list)
                 or not languages

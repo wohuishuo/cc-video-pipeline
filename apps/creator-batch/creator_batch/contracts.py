@@ -10,7 +10,10 @@ from typing import Any, Mapping, Sequence
 from urllib.parse import urlsplit
 
 
-SUPPORTED_LANGUAGES = ("ru-RU", "en-US", "kk-KZ")
+SUPPORTED_LANGUAGES = (
+    "ru-RU", "en-US", "kk-KZ", "zh-CN", "es-ES", "fr-FR", "de-DE", "it-IT", "pt-BR", "ja-JP",
+    "ko-KR", "ar-SA", "hi-IN", "tr-TR", "uk-UA", "pl-PL", "nl-NL", "id-ID", "vi-VN", "th-TH",
+)
 PLATFORM_HOSTS = {
     "youtube": ("youtube.com", "youtu.be"),
     "bilibili": ("bilibili.com", "b23.tv"),

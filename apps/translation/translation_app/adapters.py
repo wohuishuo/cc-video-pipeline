@@ -12,9 +12,31 @@ SOURCE_CODES = {
     "en": "eng_Latn", "en-us": "eng_Latn", "eng": "eng_Latn", "eng_latn": "eng_Latn",
     "ru": "rus_Cyrl", "ru-ru": "rus_Cyrl", "rus": "rus_Cyrl", "rus_cyrl": "rus_Cyrl",
     "kk": "kaz_Cyrl", "kk-kz": "kaz_Cyrl", "kaz": "kaz_Cyrl", "kaz_cyrl": "kaz_Cyrl",
+    "es": "spa_Latn", "es-es": "spa_Latn", "spa": "spa_Latn", "spa_latn": "spa_Latn",
+    "fr": "fra_Latn", "fr-fr": "fra_Latn", "fra": "fra_Latn", "fra_latn": "fra_Latn",
+    "de": "deu_Latn", "de-de": "deu_Latn", "deu": "deu_Latn", "deu_latn": "deu_Latn",
+    "it": "ita_Latn", "it-it": "ita_Latn", "ita": "ita_Latn", "ita_latn": "ita_Latn",
+    "pt": "por_Latn", "pt-br": "por_Latn", "por": "por_Latn", "por_latn": "por_Latn",
+    "ja": "jpn_Jpan", "ja-jp": "jpn_Jpan", "jpn": "jpn_Jpan", "jpn_jpan": "jpn_Jpan",
+    "ko": "kor_Hang", "ko-kr": "kor_Hang", "kor": "kor_Hang", "kor_hang": "kor_Hang",
+    "ar": "arb_Arab", "ar-sa": "arb_Arab", "arb": "arb_Arab", "arb_arab": "arb_Arab",
+    "hi": "hin_Deva", "hi-in": "hin_Deva", "hin": "hin_Deva", "hin_deva": "hin_Deva",
+    "tr": "tur_Latn", "tr-tr": "tur_Latn", "tur": "tur_Latn", "tur_latn": "tur_Latn",
+    "uk": "ukr_Cyrl", "uk-ua": "ukr_Cyrl", "ukr": "ukr_Cyrl", "ukr_cyrl": "ukr_Cyrl",
+    "pl": "pol_Latn", "pl-pl": "pol_Latn", "pol": "pol_Latn", "pol_latn": "pol_Latn",
+    "nl": "nld_Latn", "nl-nl": "nld_Latn", "nld": "nld_Latn", "nld_latn": "nld_Latn",
+    "id": "ind_Latn", "id-id": "ind_Latn", "ind": "ind_Latn", "ind_latn": "ind_Latn",
+    "vi": "vie_Latn", "vi-vn": "vie_Latn", "vie": "vie_Latn", "vie_latn": "vie_Latn",
+    "th": "tha_Thai", "th-th": "tha_Thai", "tha": "tha_Thai", "tha_thai": "tha_Thai",
 }
 
-TARGET_CODES = {"ru-RU": "rus_Cyrl", "en-US": "eng_Latn", "kk-KZ": "kaz_Cyrl"}
+TARGET_CODES = {
+    "ru-RU": "rus_Cyrl", "en-US": "eng_Latn", "kk-KZ": "kaz_Cyrl", "zh-CN": "zho_Hans",
+    "es-ES": "spa_Latn", "fr-FR": "fra_Latn", "de-DE": "deu_Latn", "it-IT": "ita_Latn",
+    "pt-BR": "por_Latn", "ja-JP": "jpn_Jpan", "ko-KR": "kor_Hang", "ar-SA": "arb_Arab",
+    "hi-IN": "hin_Deva", "tr-TR": "tur_Latn", "uk-UA": "ukr_Cyrl", "pl-PL": "pol_Latn",
+    "nl-NL": "nld_Latn", "id-ID": "ind_Latn", "vi-VN": "vie_Latn", "th-TH": "tha_Thai",
+}
 
 
 class NllbAdapter:

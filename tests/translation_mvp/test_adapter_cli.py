@@ -9,7 +9,7 @@ APP = ROOT / "apps" / "translation"
 sys.path.insert(0, str(APP))
 
 from .helpers import write_transcript_manifest  # noqa: E402
-from translation_app.adapters import NllbAdapter  # noqa: E402
+from translation_app.adapters import NllbAdapter, TARGET_CODES  # noqa: E402
 from translation_app.cli import main  # noqa: E402
 
 
@@ -65,6 +65,12 @@ def test_nllb_adapter_maps_public_languages_and_is_lazy():
     assert created == [("local/model", "zho_Hans", "cpu")]
     assert model.forced == [10]
     assert adapter.identity == "nllb@1:model=local/model:device=cpu:batch=8"
+
+
+def test_nllb_adapter_declares_every_public_target_language():
+    assert TARGET_CODES["es-ES"] == "spa_Latn"
+    assert TARGET_CODES["th-TH"] == "tha_Thai"
+    assert len(TARGET_CODES) == 20
 
 
 class CliAdapter:

@@ -36,6 +36,23 @@ LANGUAGE_ALIASES = {
     "ru": "ru-RU", "ru-ru": "ru-RU",
     "en": "en-US", "en-us": "en-US",
     "kk": "kk-KZ", "kk-kz": "kk-KZ",
+    "zh": "zh-CN", "zh-cn": "zh-CN",
+    "es": "es-ES", "es-es": "es-ES",
+    "fr": "fr-FR", "fr-fr": "fr-FR",
+    "de": "de-DE", "de-de": "de-DE",
+    "it": "it-IT", "it-it": "it-IT",
+    "pt": "pt-BR", "pt-br": "pt-BR",
+    "ja": "ja-JP", "ja-jp": "ja-JP",
+    "ko": "ko-KR", "ko-kr": "ko-KR",
+    "ar": "ar-SA", "ar-sa": "ar-SA",
+    "hi": "hi-IN", "hi-in": "hi-IN",
+    "tr": "tr-TR", "tr-tr": "tr-TR",
+    "uk": "uk-UA", "uk-ua": "uk-UA",
+    "pl": "pl-PL", "pl-pl": "pl-PL",
+    "nl": "nl-NL", "nl-nl": "nl-NL",
+    "id": "id-ID", "id-id": "id-ID",
+    "vi": "vi-VN", "vi-vn": "vi-VN",
+    "th": "th-TH", "th-th": "th-TH",
 }
 
 

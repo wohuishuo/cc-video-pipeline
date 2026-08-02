@@ -37,11 +37,13 @@ def test_transcript_manifest_loader_rejects_changed_artifact(tmp_path):
 
 
 def test_target_languages_are_normalized_but_duplicates_are_rejected():
-    assert normalize_target_languages(["ru", "en-US", "kk-kz"]) == ("ru-RU", "en-US", "kk-KZ")
+    assert normalize_target_languages(["ru", "en-US", "kk-kz", "es-ES", "fr"]) == (
+        "ru-RU", "en-US", "kk-KZ", "es-ES", "fr-FR"
+    )
     with pytest.raises(TranslationError, match="duplicate"):
         normalize_target_languages(["ru", "ru-RU"])
     with pytest.raises(TranslationError, match="unsupported"):
-        normalize_target_languages(["fr-FR"])
+        normalize_target_languages(["xx-XX"])
 
 
 def test_translation_document_preserves_source_segment_identity_and_review_state(tmp_path):

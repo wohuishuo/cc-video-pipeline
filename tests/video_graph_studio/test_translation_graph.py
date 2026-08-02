@@ -89,7 +89,7 @@ def test_translation_template_rejects_duplicate_or_unsupported_languages(tmp_pat
     app, store = application(tmp_path)
     source = tmp_path / "media"
     source.mkdir()
-    for languages in (["ru-RU", "ru-RU"], ["fr-FR"], []):
+    for languages in (["ru-RU", "ru-RU"], ["xx-XX"], []):
         status, response = app.handle(
             "POST", "/api/v1/runs", {},
             envelope({"templateId": "folder-translation", "sourceRoot": str(source), "targetLanguages": languages}),

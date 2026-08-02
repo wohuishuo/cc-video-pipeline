@@ -84,7 +84,7 @@ def test_batch_policy_requires_exact_language_voice_coverage_and_safe_ranges():
     invalid = [
         ([], {}, 0.12, 8, 1080),
         (["ru-RU", "ru-RU"], {"ru-RU": "voice"}, 0.12, 8, 1080),
-        (["fr-FR"], {"fr-FR": "voice"}, 0.12, 8, 1080),
+        (["xx-XX"], {"xx-XX": "voice"}, 0.12, 8, 1080),
         (["ru-RU"], {"en-US": "voice"}, 0.12, 8, 1080),
         (["ru-RU"], {"ru-RU": ""}, 0.12, 8, 1080),
         (["ru-RU"], {"ru-RU": "voice"}, 1.01, 8, 1080),
