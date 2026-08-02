@@ -9,5 +9,6 @@
 - Public-boundary composition tests prove provider matching, CurrentUser DPAPI recovery and one Platform I/O child injection.
 - Failure-path tests prove untrusted credential-backed child stdout/stderr is not persisted in publication errors.
 - A real local plan/confirm/execute drill completed serially through Credential Vault and a fake platform adapter with no known plaintext in vault, plan, receipts, manifest or captured output.
+- Two real Studio Graphs completed planning and confirmed execution through the Publication/Vault public boundaries and a fake platform child; success without an external ID is now rejected.
 
 No authenticated real-platform upload has been executed or verified. Platform quality, review state, real external IDs and rate-limit recovery remain missing evidence.

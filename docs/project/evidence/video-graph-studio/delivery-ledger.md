@@ -3,11 +3,11 @@
 | Field | Record |
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
-| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; process-wide execution gate; optional Resource Budget reserve/renew/requeue/release/reconcile composition; real loopback HTTP; browser-to-API health and allowed-folder projection; secure fixed and multi-workspace admission; isolated per-workspace state/artifact roots; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
+| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; process-wide execution gate; optional Resource Budget reserve/renew/requeue/release/reconcile composition; real loopback HTTP and Client Contracts discovery; browser-to-API health and allowed-folder projection; secure fixed and multi-workspace admission; isolated per-workspace state/artifact roots; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; confirmed private YouTube execution Graph through Publication and Vault with a fake platform boundary; live process-tree crash, startup fence and same-run recovery |
 | Evidence missing | power-loss/filesystem durability; representative resource/load limits; authenticated publication adapters; hosted identity and production tenant isolation; cross-workspace scheduling contract; attack-oriented security operations |
 | Substitutes | fixed graph templates; local filesystem roots; deterministic fake adapters for domain verification |
 | Decisions unapproved | commercial tenancy, billing, remote authentication, paid fallback and automatic publication policy |
-| Forbidden claims | no production verification; no social upload completion claim; no claim that the quiet source mix removes original speech |
+| Forbidden claims | no production verification; fake-platform execution is not social upload completion; no claim that the quiet source mix removes original speech |
 
 ## Translation graph live evidence
 
@@ -44,3 +44,7 @@ One real loopback process authorized and initialized `alpha` and `beta`, committ
 ## Resource-aware lifecycle evidence
 
 A real Resource Budget launcher reserved capacity for Studio run `78dc6710-8217-4cd8-9d99-95c5ccc58fb7` before its real child process completed, then exposed zero active reservations and full byte/slot availability after the terminal path. See [the complete drill](resource-budget-drill.md).
+
+## Guarded publication execution evidence
+
+Plan run `7917ce20-0467-467a-8bcc-c8ce403db2c9` and execution run `1c10c5a1-b47c-46d6-ab16-0a9e836c5d35` both completed through Studio. Publication required the plan SHA, Credential Vault injected one provider-bound value into a fake platform child, and the verified manifest recorded external ID `fake-youtube-private-001`; plaintext persistence was false. See [the complete drill](guarded-publication-execution-drill.md).

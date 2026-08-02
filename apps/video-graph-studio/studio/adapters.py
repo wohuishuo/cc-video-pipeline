@@ -691,6 +691,7 @@ class PublicationPlanAdapter(CommandAdapter):
     def execute(self,node,context,on_log,cancel_event):
         parameters=context["parameters"]; output=self.output_root/str(context["runId"]); argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),"plan",str(parameters["videoPath"]),"--metadata",str(parameters["metadataPath"])]
         for platform in parameters["targetPlatforms"]:argv.extend(["--target",f"{platform}={parameters['account']}"])
+        for platform,credential_id in parameters.get("credentialIds",{}).items():argv.extend(["--credential",f"{platform}={credential_id}"])
         argv.extend(["--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}","--json"]); result=super().execute(GraphNode(node.id,"command",{"argv":argv}),context,on_log,cancel_event); receipt_path=output/"planning-receipt.json"
         if not result.completed or not receipt_path.is_file():return AdapterResult(False,result.details,result.error or "planning receipt missing")
         try:receipt=json.loads(receipt_path.read_text(encoding="utf-8-sig")); plan=Path(str(receipt["plan"])).resolve()
@@ -712,3 +713,29 @@ class VerifyPublicationPlanAdapter:
         except (OSError,KeyError,TypeError,ValueError,json.JSONDecodeError):valid=False;jobs=[]
         if not valid:return AdapterResult(False,{},"publication plan validation failed")
         on_log(f"Verified publication plan with {len(jobs)} target(s)");return AdapterResult(True,{"manifest":str(path),"jobCount":len(jobs)})
+
+
+class PublicationExecuteAdapter(CommandAdapter):
+    def __init__(self,launcher:Path,output_root:Path,platform_io_launcher:Path|None=None):super().__init__(); self.launcher=Path(launcher).resolve(); self.output_root=Path(output_root).resolve(); self.platform_io_launcher=Path(platform_io_launcher).resolve() if platform_io_launcher else None
+    def execute(self,node,context,on_log,cancel_event):
+        parameters=context["parameters"]; output=self.output_root/str(context["runId"]); argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),"execute",str(parameters["planPath"]),"--confirmation",str(parameters["confirmation"]),"--credential-vault",str(parameters["credentialVaultPath"]),"--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}","--json"]
+        if self.platform_io_launcher:argv.extend(["--platform-io-launcher",str(self.platform_io_launcher)])
+        result=super().execute(GraphNode(node.id,"command",{"argv":argv}),context,on_log,cancel_event); receipt_path=output/"publication-receipt.json"
+        if not result.completed or not receipt_path.is_file():return AdapterResult(False,result.details,result.error or "publication receipt missing")
+        try:receipt=json.loads(receipt_path.read_text(encoding="utf-8-sig")); manifest=Path(str(receipt["manifest"])).resolve(); manifest_sha=str(receipt["manifestSha256"])
+        except (OSError,KeyError,TypeError,json.JSONDecodeError) as error:return AdapterResult(False,result.details,f"invalid publication receipt: {error}")
+        if receipt.get("resultClass")!="COMPLETED" or not manifest.is_file() or hashlib.sha256(manifest.read_bytes()).hexdigest()!=manifest_sha:return AdapterResult(False,result.details,"Publication did not commit a verified manifest")
+        return AdapterResult(True,{**result.details,"receipt":str(receipt_path),"manifest":str(manifest),"manifestSha256":manifest_sha})
+
+
+class VerifyPublicationExecutionAdapter:
+    def execute(self,node,context,on_log,cancel_event):
+        committed=next((step.get("result") for step in context.get("steps",[]) if step.get("nodeId")=="execute-publication" and step.get("status")=="COMPLETED"),None)
+        if not isinstance(committed,dict):return AdapterResult(False,{},"committed publication execution missing")
+        path=Path(str(committed.get("manifest",""))).resolve(); expected=str(committed.get("manifestSha256","")); plan=Path(str(context.get("parameters",{}).get("planPath",""))).resolve(); confirmation=str(context.get("parameters",{}).get("confirmation",""))
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected or not plan.is_file() or hashlib.sha256(plan.read_bytes()).hexdigest()!=confirmation:return AdapterResult(False,{},"publication execution fingerprint conflict")
+        try:value=json.loads(path.read_text(encoding="utf-8-sig")); publications=value["publications"]
+        except (OSError,KeyError,TypeError,json.JSONDecodeError):return AdapterResult(False,{},"publication manifest validation failed")
+        valid=value.get("schemaVersion")==1 and value.get("public") is False and Path(str(value.get("plan",""))).resolve()==plan and value.get("planSha256")==confirmation and bool(publications) and all(row.get("status")=="COMPLETED" and row.get("platform")=="youtube" and bool(str(row.get("externalId","")).strip()) for row in publications)
+        if not valid:return AdapterResult(False,{},"publication manifest validation failed")
+        on_log(f"Verified {len(publications)} private publication receipt(s)");return AdapterResult(True,{"manifest":str(path),"publicationCount":len(publications)})

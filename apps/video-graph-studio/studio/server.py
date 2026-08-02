@@ -221,6 +221,7 @@ def build_runtime(
         LocalizedVideoAdapter,
         CreatorDiscoveryAdapter,
         PublicationPlanAdapter,
+        PublicationExecuteAdapter,
         SourceIntakeAdapter,
         TranscriptSourceAdapter,
         TranslateTranscriptAdapter,
@@ -233,6 +234,7 @@ def build_runtime(
         VerifyLocalizationAdapter,
         VerifyCreatorManifestAdapter,
         VerifyPublicationPlanAdapter,
+        VerifyPublicationExecutionAdapter,
     )
     from .engine import WorkflowEngine
     from .resource_leases import ResourceLeaseCoordinator
@@ -293,6 +295,10 @@ def build_runtime(
                 publication_launcher, artifact_root / "publication-plans"
             ),
             "verify-publication-plan": VerifyPublicationPlanAdapter(),
+            "execute-publication": PublicationExecuteAdapter(
+                publication_launcher, artifact_root / "publication-executions"
+            ),
+            "verify-publication-execution": VerifyPublicationExecutionAdapter(),
         },
         execution_gate=execution_gate,
         lease_coordinator=lease_coordinator,

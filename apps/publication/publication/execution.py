@@ -68,7 +68,8 @@ class PublicationExecution:
             if job["id"] in reusable: items.append({**reusable[job["id"]],"reused":True}); continue
             request={**job,"videoPath":video["path"],"metadataPath":metadata["path"]}; log(f"[{index}/{len(jobs)}] publishing {job['platform']}")
             outcome=adapter.execute(request,log); maximum=max(maximum,int(getattr(adapter,"maximum_active",1)))
-            if outcome.completed: items.append({"jobId":job["id"],"platform":job["platform"],"status":"COMPLETED","externalId":outcome.external_id,"facts":outcome.facts,"reused":False})
+            if outcome.completed and outcome.external_id: items.append({"jobId":job["id"],"platform":job["platform"],"status":"COMPLETED","externalId":outcome.external_id,"facts":outcome.facts,"reused":False})
+            elif outcome.completed: failures.append(job["id"]); items.append({"jobId":job["id"],"platform":job["platform"],"status":"FAILED","error":"platform success omitted external identity"})
             else: failures.append(job["id"]); items.append({"jobId":job["id"],"platform":job["platform"],"status":"FAILED","error":outcome.error})
             self._checkpoint(receipt,operation_id,fingerprint,plan_path,plan_sha,items,maximum)
         if failures:

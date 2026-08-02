@@ -15,6 +15,7 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Video Graph Studio secure workspace admission drill](video-graph-studio/secure-admission-drill.md)
 - [Video Graph Studio multi-workspace routing drill](video-graph-studio/multi-workspace-routing-drill.md)
 - [Video Graph Studio resource-budget drill](video-graph-studio/resource-budget-drill.md)
+- [Video Graph Studio guarded-publication execution drill](video-graph-studio/guarded-publication-execution-drill.md)
 - [Operations readiness](operations-readiness/delivery-ledger.md)
 - [Workspace Access](workspace-access/delivery-ledger.md)
 - [Workspace Storage](workspace-storage/delivery-ledger.md)

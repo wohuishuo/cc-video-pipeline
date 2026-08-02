@@ -40,6 +40,7 @@
       <label class="choice"><input type="radio" name="template" value="url-dub"> URL+Dub</label>
       <label class="choice"><input type="radio" name="template" value="creator-profile"> Creator</label>
       <label class="choice"><input type="radio" name="template" value="publication-plan"> Publish Plan</label>
+      <label class="choice"><input type="radio" name="template" value="publication-execute"> Publish Execute</label>
     </fieldset>
     <div class="field source-field">
       <label for="source-root">Source folder</label>
@@ -122,6 +123,10 @@
         <label for="publication-account">Account</label>
         <input id="publication-account" name="account" value="primary" autocomplete="off">
       </div>
+      <div class="field source-field">
+        <label for="publication-credential-id">YouTube credential ID</label>
+        <input id="publication-credential-id" name="credentialId" value="youtube-main" autocomplete="off">
+      </div>
       <fieldset class="choice-field" aria-label="Publication targets">
         <legend>Targets</legend>
         <label class="choice active"><input type="checkbox" name="publication-target" value="youtube" checked> YouTube</label>
@@ -129,6 +134,20 @@
         <label class="choice"><input type="checkbox" name="publication-target" value="douyin"> Douyin</label>
         <label class="choice"><input type="checkbox" name="publication-target" value="tiktok"> TikTok</label>
       </fieldset>
+    </div>
+    <div id="publication-execution-controls" class="asr-controls" hidden>
+      <div class="field source-field">
+        <label for="publication-plan-run-id">Completed plan run ID</label>
+        <input id="publication-plan-run-id" name="planRunId" autocomplete="off" placeholder="Run ID from Publish Plan">
+      </div>
+      <div class="field source-field">
+        <label for="publication-confirmation">Exact plan SHA-256</label>
+        <input id="publication-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64">
+      </div>
+      <div class="field source-field">
+        <label for="credential-vault-path">Credential Vault path</label>
+        <input id="credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json">
+      </div>
     </div>
     <fieldset id="target-language-controls" class="choice-field" aria-label="Target languages">
       <legend>Languages</legend>
@@ -254,6 +273,6 @@
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>
-    <script src="/app.js?v=2" defer></script>
+    <script src="/app.js?v=3" defer></script>
 </body>
 </html>
