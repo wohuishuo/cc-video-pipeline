@@ -5,8 +5,8 @@
   "entrypoint": "run.ps1",
   "install": "install.ps1",
   "test": "python -m pytest --import-mode=importlib tests/voice_rendering_mvp -q",
-  "inputs": ["Translation Manifest", "exact target-language voice policy"],
-  "outputs": ["voice-manifest.json", "voice-receipt.json", "one MP3 per translated segment"],
-  "dependencies": ["python>=3.12", "edge-tts", "ffmpeg"],
+  "inputs": ["Translation Manifest", "explicit Edge, Qwen3 or original-audio provider", "exact target-language voice policy"],
+  "outputs": ["voice-manifest.json", "voice-receipt.json", "one verified provider-native audio clip per translated segment"],
+  "dependencies": ["python>=3.12", "edge-tts", "optional Qwen3-TTS local runtime", "ffmpeg"],
   "delivery_level": "DOMAIN_VERIFIED"
 }

@@ -12,6 +12,7 @@ from voice_rendering_app.operation import VoiceRenderingLoop  # noqa: E402
 
 class FakeAdapter:
     identity = "fake-voice@1"
+    output_suffix = ".mp3"
 
     def __init__(self, failures=()):
         self.failures = set(failures)
@@ -19,7 +20,7 @@ class FakeAdapter:
         self.active = 0
         self.maximum_active = 0
 
-    def synthesize(self, text, voice, output, on_log):
+    def synthesize(self, text, language, voice, output, on_log, *, target_duration=None):
         self.calls.append((voice, text))
         self.active += 1
         self.maximum_active = max(self.maximum_active, self.active)
@@ -80,3 +81,28 @@ def test_replay_skips_adapter_and_voice_change_conflicts(tmp_path):
     assert replay.result_class == "DUPLICATE_COMPLETED"
     assert replay_adapter.calls == []
     assert changed.result_class == "REJECTED_CONFLICT"
+
+
+def test_voice_loop_passes_locale_duration_and_uses_adapter_suffix(tmp_path):
+    observed = []
+
+    class WavAdapter(FakeAdapter):
+        identity = "wav-provider@1"
+        output_suffix = ".wav"
+
+        def synthesize(self, text, language, voice, output, on_log, *, target_duration=None):
+            observed.append((language, target_duration, output.name))
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_bytes(b"voice")
+            return target_duration
+
+    result = VoiceRenderingLoop().execute(
+        translation_manifest(tmp_path), tmp_path / "wav-out", "wav-op",
+        voices=VOICES, adapter=WavAdapter(),
+    )
+
+    assert result.result_class == "COMPLETED"
+    assert [(language, duration) for language, duration, _ in observed] == [
+        ("ru-RU", 1.0), ("ru-RU", 1.0), ("en-US", 1.0), ("en-US", 1.0)
+    ]
+    assert all(name.endswith(".wav.partial") for _, _, name in observed)
