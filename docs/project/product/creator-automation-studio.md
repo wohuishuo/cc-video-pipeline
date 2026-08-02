@@ -25,7 +25,7 @@ The product is not a magic monolith. It is a visual control plane over independe
 
 ## Current accepted slice
 
-Folder and single-video URL intake, source transcription, multilingual translation, Edge voice rendering, localized-video composition, creator-profile discovery and guarded publication planning are browser-operable. Anonymous YouTube intake and authenticated Douyin creator enumeration have named real-platform evidence. A killed local Studio process can fence and resume the same durable run after restart.
+Folder and single-video URL intake, source transcription, multilingual translation, Edge voice rendering, localized-video composition, creator-profile discovery and guarded publication planning are browser-operable. Multiple Graphs can wait in a durable serial queue. Anonymous YouTube intake and authenticated Douyin creator enumeration have named real-platform evidence. A killed local Studio process can fence and resume the same durable run after restart. Workspace Access independently proves short-lived scoped credential lifecycle but is not yet composed into Studio admission.
 
 ## Explicit non-goals for the current slice
 

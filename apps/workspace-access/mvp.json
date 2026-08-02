@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "workspace-access",
+  "summary": "Own workspace identities and short-lived least-privilege access credentials.",
+  "entrypoint": "run.ps1",
+  "install": "install.ps1",
+  "test": "python -m pytest --import-mode=importlib tests/workspace_access_mvp -q",
+  "inputs": ["workspace identity", "canonical allowed roots", "credential scopes and TTL"],
+  "outputs": ["atomic workspace access registry", "one-time bearer credential", "redacted authorization decision"],
+  "dependencies": ["python>=3.12"],
+  "delivery_level": "DOMAIN_VERIFIED"
+}

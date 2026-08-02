@@ -10,6 +10,7 @@ EXPECTED_APPS = {
     "remotion-studio", "source-intake", "translation", "video-graph-studio", "voice-rendering",
     "creator-discovery",
     "publication",
+    "workspace-access",
 }
 
 

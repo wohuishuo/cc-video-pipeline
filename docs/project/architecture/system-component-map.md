@@ -4,7 +4,9 @@ Every mutable artifact family has one authoritative writer. Coordinators own con
 
 ```mermaid
 flowchart TB
-    Client["Browser / future mobile client"] -->|versioned commands| HTTP["HTTP transport adapter"]
+    Client["Browser / future mobile client"] -->|"credential + versioned command"| Admission["Admission adapter"]
+    Access["Workspace Access"] -->|"redacted scope decision"| Admission
+    Admission --> HTTP["HTTP transport adapter"]
     HTTP --> Run["Workflow Run Owner"]
     Run --> Queue["Durable Start Queue"]
     Queue --> Process["Graph Process Manager"]
@@ -29,6 +31,7 @@ flowchart TB
 | Mutable state | One authoritative writer | Readers |
 | --- | --- | --- |
 | Graph revision/fingerprint | Graph Definition | Run admission, browser projection |
+| Workspace identity/credential lifecycle | Workspace Access | admission adapters, operators |
 | Run lifecycle/version | Workflow Run Owner | Process, dashboard |
 | Start-request order/claim | Durable Start Queue | Process, dashboard |
 | Step checkpoint/continuation | Workflow Process Manager | Run projection, recovery |
@@ -51,7 +54,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop currently uses loopback admission. Commercial hosting adds authentication, tenancy and remote storage as adapters/owners; it must not move workflow truth into the UI.
+Desktop currently uses loopback admission. Workspace Access now provides an independent local policy owner but is not yet composed into Studio HTTP. Commercial hosting adds a real identity provider, tenancy and remote storage as adapters/owners; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 
