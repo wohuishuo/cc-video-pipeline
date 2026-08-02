@@ -116,3 +116,15 @@ def test_ciphertext_cannot_be_moved_between_record_contexts(tmp_path):
         assert error.code == "REJECTED_CIPHERTEXT"
     else:
         raise AssertionError("moved ciphertext resolved under another record")
+
+
+def test_resolution_rejects_provider_mismatch_before_releasing_secret(tmp_path):
+    vault = CredentialVault(tmp_path / "vault.json", cipher=FakeCipher(), clock=lambda: NOW)
+    vault.put("youtube-main", "youtube", "Main", "secret")
+
+    try:
+        vault.resolve_secret("youtube-main", expected_provider="douyin")
+    except VaultError as error:
+        assert error.code == "REJECTED_PROVIDER"
+    else:
+        raise AssertionError("credential released to the wrong provider")

@@ -5,6 +5,8 @@ import json
 import shutil
 import sys
 import hashlib
+import os
+import re
 from dataclasses import asdict
 from pathlib import Path
 
@@ -78,6 +80,7 @@ def build_parser() -> argparse.ArgumentParser:
     upload.add_argument("--account", required=True)
     upload.add_argument("--execute", action="store_true", help="Run the upstream uploader; without this flag only prepares the command")
     upload.add_argument("--public", action="store_true", help="Allow public visibility where supported; default is private/draft")
+    upload.add_argument("--credential-env", help="Require credential material in this environment variable for the child adapter")
     upload.add_argument("--json", action="store_true")
     login = subparsers.add_parser("login")
     login.add_argument("platform", choices=[item.value for item in Platform])
@@ -101,6 +104,11 @@ def main(argv: list[str] | None = None) -> int:
         return result.exit_code
     if args.command == "upload":
         try:
+            if args.credential_env:
+                if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", args.credential_env):
+                    raise ValueError("invalid credential environment name")
+                if not os.environ.get(args.credential_env):
+                    raise ValueError("credential environment variable is missing or empty")
             platform = Platform(args.platform)
             request = UploadRequest(platform, args.video, args.metadata, args.account, draft=not args.public)
             adapter = build_upload_adapters(project_root)[platform]

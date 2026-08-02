@@ -129,11 +129,20 @@ class CredentialVault:
         self._commit(registry)
         return VaultResult("COMPLETED", self._public(record))
 
-    def resolve_secret(self, credential_id: str) -> str:
+    def resolve_secret(
+        self, credential_id: str, *, expected_provider: str | None = None
+    ) -> str:
         registry = self._load(require_exists=True)
         record = self._required_record(registry, credential_id)
         if record["status"] != "ACTIVE":
             raise VaultError("REJECTED_REVOKED", "credential is revoked")
+        if expected_provider is not None:
+            if not isinstance(expected_provider, str) or not IDENTIFIER.fullmatch(expected_provider):
+                raise VaultError("REJECTED_MALFORMED", "invalid expected provider")
+            if record["provider"] != expected_provider:
+                raise VaultError(
+                    "REJECTED_PROVIDER", "credential provider does not match child adapter"
+                )
         return self._decrypt(record)
 
     def _protect(self, credential_id: str, secret: bytes) -> str:

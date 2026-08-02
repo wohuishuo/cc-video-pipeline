@@ -45,6 +45,7 @@ $env:VIDEO_PLATFORM_COOKIE = $null
 $args = @(
   "run", "--vault", $vault,
   "--credential-id", "douyin-main",
+  "--expected-provider", "douyin",
   "--target-env", "DOUYIN_COOKIE",
   "--executable", "python",
   "--argument=-m",
@@ -59,6 +60,7 @@ The child is started with an argv array and `shell=False`; the secret is added o
 
 - DPAPI is CurrentUser scoped; the machine-wide flag is never enabled.
 - Credential ID is supplied as DPAPI optional entropy, so ciphertext cannot be moved to another record and resolved there.
+- `--expected-provider` rejects a credential/platform mismatch before decryption and child launch.
 - Protection is non-interactive and the native output buffer is released after every call.
 - Plaintext hashes are not persisted because low-entropy tokens should not gain an offline guessing oracle.
 - The JSON registry is atomic but does not provide multi-process locking, backup, ACL provisioning or remote portability.

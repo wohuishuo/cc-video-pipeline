@@ -60,7 +60,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Credential Vault now supplies CurrentUser-protected local custody through a separate public CLI; platform-auth composition is still pending. Commercial hosting still needs a real identity provider, remote secret custody, hard resource reservations and production security evidence; it must not move workflow truth into the UI.
+Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Guarded Publication now passes credential references through Credential Vault's provider-bound public child boundary into Platform I/O; real authenticated platform proof remains pending. Commercial hosting still needs a real identity provider, remote secret custody, hard resource reservations and production security evidence; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 

@@ -47,7 +47,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | A01-A02 | Workspace Access | `DOMAIN_VERIFIED`; digest-only credentials, scope, expiry, revocation, secure Studio admission and redacted CLI evidence | hosted identity provider and security review |
 | N01-N03 | Workspace Storage | `DOMAIN_VERIFIED`; deterministic disjoint roots, confined resolution, capacity projection and real two-workspace Studio routing | hard reservations, hosted storage, backup and production isolation evidence |
-| K01-K03 | Credential Vault | `DOMAIN_VERIFIED`; env-only intake, CurrentUser DPAPI, redacted lifecycle, explicit rotation/revocation and real one-child injection | platform-auth composition, renewal, remote KMS and production security evidence |
+| K01-K03 | Credential Vault | `DOMAIN_VERIFIED`; env-only intake, CurrentUser DPAPI, redacted lifecycle, provider isolation, explicit rotation/revocation and real guarded-publication child injection | real platform authentication, renewal, remote KMS and production security evidence |
 | G01-G03 | Graph definition, run, queue and process ownership | `DOMAIN_VERIFIED`; durable FIFO plus real process-loss recovery | power-loss, load, security and hosted operations |
 | S01-S04 | Source Intake | `DOMAIN_VERIFIED`; live YouTube evidence | Creator Manifest batch composition and three remaining download platforms |
 | D01-D02 | Creator Discovery | `PLATFORM_INTEGRATED`; durable page loop and real bounded Douyin profile manifest | full-profile scale and live YouTube/Bilibili/TikTok evidence |
@@ -55,7 +55,7 @@ flowchart LR
 | L01-L03 | Translation | `DOMAIN_VERIFIED`; adapter-neutral serial loop and editable artifacts | real local NLLB smoke, reviewed-text republish and quality sampling |
 | V01 | Voice segment loop | `DOMAIN_VERIFIED`; adapter-neutral receipt, real Edge RU+KK completion, failed-clip resume and ten-step browser composition | representative voice/service quality evidence |
 | C01-C03 | Subtitle, audio and composition | `PLATFORM_INTEGRATED`; serial recovery tests, real FFmpeg/FFprobe RU+KK derivatives and browser graph evidence | long-form quality and crash/power-loss evidence |
-| P01-P02 | Publication | `DOMAIN_VERIFIED`; immutable plan, exact-hash confirmation, serial checkpoint/resume and browser planning | authenticated private/draft evidence per platform |
+| P01-P02 | Publication | `DOMAIN_VERIFIED`; immutable plan, exact-hash confirmation, serial checkpoint/resume, credential-reference composition and browser planning | authenticated private/draft evidence per real platform |
 
 ## Required substitutes
 
