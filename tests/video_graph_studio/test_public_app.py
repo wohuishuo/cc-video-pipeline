@@ -42,4 +42,6 @@ def test_server_cli_exposes_port_data_and_browser_controls():
     assert "--port" in completed.stdout
     assert "--data-root" in completed.stdout
     assert "--no-browser" in completed.stdout
-
+    assert "--resource-budget-database" in completed.stdout
+    assert "--resource-reservation-bytes" in completed.stdout
+    assert "--resource-lease-ttl-seconds" in completed.stdout

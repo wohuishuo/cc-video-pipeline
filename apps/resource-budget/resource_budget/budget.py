@@ -102,6 +102,47 @@ class ResourceBudget:
             self._expire(connection, workspace_id, now)
             existing = self._reservation(connection, workspace_id, reservation_id)
             if existing is not None:
+                if (
+                    existing["status"] == "EXPIRED"
+                    and existing["fingerprint"] == fingerprint
+                ):
+                    reserved_bytes, reserved_slots, active = self._totals(
+                        connection, workspace_id
+                    )
+                    if (
+                        reserved_bytes + bytes_requested > budget[0]
+                        or reserved_slots + slots > budget[1]
+                    ):
+                        return BudgetResult(
+                            "REJECTED_BUDGET",
+                            self._capacity_value(
+                                workspace_id,
+                                budget,
+                                reserved_bytes,
+                                reserved_slots,
+                                active,
+                                bytes_requested=bytes_requested,
+                                slots=slots,
+                            ),
+                        )
+                    connection.execute(
+                        """UPDATE reservations
+                        SET status='ACTIVE',generation=generation+1,last_renewed_from=NULL,
+                            expires_at=?,updated_at=?,released_at=NULL
+                        WHERE workspace_id=? AND reservation_id=?""",
+                        (
+                            _timestamp(now + timedelta(seconds=ttl_seconds)),
+                            _timestamp(now),
+                            workspace_id,
+                            reservation_id,
+                        ),
+                    )
+                    return BudgetResult(
+                        "COMPLETED",
+                        self._public(
+                            self._reservation(connection, workspace_id, reservation_id)
+                        ),
+                    )
                 return BudgetResult(
                     "DUPLICATE_COMPLETED"
                     if existing["status"] == "ACTIVE"

@@ -95,3 +95,23 @@ def test_expired_reservation_is_reclaimed_transactionally(tmp_path):
 
     assert second.result_class == "COMPLETED"
     assert first.value["status"] == "EXPIRED"
+
+
+def test_expired_stable_reservation_can_reactivate_without_weakening_conflicts(tmp_path):
+    clock = Clock(); budget = ResourceBudget(tmp_path / "budget.db", clock=clock)
+    budget.configure("alpha", byte_limit=100, execution_slots=1)
+    first = budget.reserve("alpha", "studio-run-one", bytes_requested=100, slots=1, ttl_seconds=5)
+    clock.advance(6)
+
+    reactivated = budget.reserve(
+        "alpha", "studio-run-one", bytes_requested=100, slots=1, ttl_seconds=5
+    )
+    changed = budget.reserve(
+        "alpha", "studio-run-one", bytes_requested=99, slots=1, ttl_seconds=5
+    )
+
+    assert first.value["generation"] == 1
+    assert reactivated.result_class == "COMPLETED"
+    assert reactivated.value["status"] == "ACTIVE"
+    assert reactivated.value["generation"] == 2
+    assert changed.result_class == "REJECTED_CONFLICT"

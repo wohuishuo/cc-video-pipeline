@@ -3,8 +3,8 @@
 | Field | Record |
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
-| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; process-wide execution gate; real loopback HTTP; browser-to-API health and allowed-folder projection; secure fixed and multi-workspace admission; isolated per-workspace state/artifact roots; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
-| Evidence missing | power-loss/filesystem durability; authenticated publication adapters; hosted identity and production tenant isolation; cross-workspace scheduling contract; load/attack-oriented security operations |
+| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; process-wide execution gate; optional Resource Budget reserve/renew/requeue/release/reconcile composition; real loopback HTTP; browser-to-API health and allowed-folder projection; secure fixed and multi-workspace admission; isolated per-workspace state/artifact roots; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
+| Evidence missing | power-loss/filesystem durability; representative resource/load limits; authenticated publication adapters; hosted identity and production tenant isolation; cross-workspace scheduling contract; attack-oriented security operations |
 | Substitutes | fixed graph templates; local filesystem roots; deterministic fake adapters for domain verification |
 | Decisions unapproved | commercial tenancy, billing, remote authentication, paid fallback and automatic publication policy |
 | Forbidden claims | no production verification; no social upload completion claim; no claim that the quiet source mix removes original speech |
@@ -40,3 +40,7 @@ The real Workspace Access CLI admitted scoped read/write requests, rejected miss
 ## Multi-workspace routing evidence
 
 One real loopback process authorized and initialized `alpha` and `beta`, committed the same operation identity into two separate SQLite stores, returned one isolated run per workspace, rejected a cross-workspace credential with HTTP `403` and closed its listener after the drill. See [the complete drill](multi-workspace-routing-drill.md).
+
+## Resource-aware lifecycle evidence
+
+A real Resource Budget launcher reserved capacity for Studio run `78dc6710-8217-4cd8-9d99-95c5ccc58fb7` before its real child process completed, then exposed zero active reservations and full byte/slot availability after the terminal path. See [the complete drill](resource-budget-drill.md).

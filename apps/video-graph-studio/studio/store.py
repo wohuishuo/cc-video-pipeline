@@ -328,6 +328,15 @@ class RunStore:
                 (_now(), run_id),
             )
 
+    def requeue_claim(self, run_id: str) -> None:
+        """Return one live claim to its original FIFO position."""
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """UPDATE start_queue SET status = 'QUEUED', updated_at = ?
+                WHERE run_id = ? AND status = 'RUNNING'""",
+                (_now(), run_id),
+            )
+
     def recover_queue(self) -> int:
         """Return claims abandoned by a previous server generation to FIFO order."""
         with self._lock, self._connect() as connection:

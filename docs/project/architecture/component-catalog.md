@@ -41,6 +41,7 @@
 - **Run owns:** operation identity, lifecycle, optimistic version and terminal result.
 - **Queue owns:** durable FIFO start-request order and active claim state.
 - **Process owns:** current checkpoint, continuation and the one active child handle.
+- **Process consumes:** an optional renewable Resource Budget lease reference before entering active execution.
 - **Forbidden:** owning source, transcript, translation, voice, render or publication artifacts.
 
 ## 8. Source Intake
@@ -88,5 +89,5 @@
 ## 15. Resource Budget
 
 - **Owns:** per-workspace byte/slot limits, durable reservation identity, generation and expiry lifecycle.
-- **Consumes:** an optional Workspace Storage capacity fact as configuration policy input.
+- **Consumes:** an optional Workspace Storage capacity fact as configuration policy input; Studio consumes only public reservation lifecycle results.
 - **Forbidden:** reading files, owning workflow completion, authenticating callers, billing or claiming distributed enforcement.
