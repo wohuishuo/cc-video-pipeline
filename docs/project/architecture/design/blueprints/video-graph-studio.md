@@ -8,7 +8,7 @@ Video Graph Studio lets a creator select local or social-video sources, language
 
 The Workflow Run owns run identity, immutable graph/input fingerprints, lifecycle version and terminal workflow result. The Durable Start Queue owns requested FIFO order and queue-claim lifecycle. The Process Manager owns continuation and the active child handle. None owns media, transcript, translation, voice, render, creator-discovery or publication truth.
 
-SQLite is the current local durable adapter. Browser state is a disposable projection and cannot authorize or complete work.
+SQLite is the current local durable adapter. Anonymous and fixed secure modes use one database. Multi-workspace mode obtains state/artifact roots from Workspace Storage and lazily creates one SQLite RunStore per authorized workspace. Browser state is a disposable projection and cannot authorize or complete work.
 
 ## 3. Interfaces and contracts
 
@@ -39,7 +39,7 @@ stateDiagram-v2
     COMPLETED --> COMPLETED: idempotent replay
 ```
 
-Several runs may be queued. Only one workflow and one child process execute at a time. A successor starts only after its predecessor commits and verifies its declared result.
+Several runs may be queued. Every workspace has its own durable FIFO. All engines in one Studio process share an execution gate, so only one workflow and one child process execute at a time across all initialized workspaces. FIFO is guaranteed inside a workspace; cross-workspace scheduling order is not yet a public contract. A successor starts only after its predecessor commits and verifies its declared result.
 
 ## 5. Failure and recovery
 
@@ -55,7 +55,7 @@ Several runs may be queued. Only one workflow and one child process execute at a
 
 The local server binds only to `127.0.0.1`; paths must remain under configured allowed roots. Default local mode stays anonymous. Optional secure mode binds one Studio process and data root to one Workspace Access identity, queries its roots through the public CLI, and checks a route-specific scope before calling the Run application. `runs:read` covers run queries, `artifacts:read` covers folder browsing and `runs:write` covers mutations.
 
-The browser stores its credential in session storage only and strips a bootstrap fragment immediately. The HTTP adapter sends the plaintext to Workspace Access only through a subprocess environment variable; it is absent from argv, decisions, logs, manifests and receipts. Static files and health are public so a disconnected client can load and learn that admission is required. This is single-workspace local admission, not tenant isolation. A hosted version still requires remote identity, verified routing into Workspace Storage namespaces, secret custody, audit and abuse-control owners before accepting remote traffic.
+The browser stores its credential in session storage only and strips a bootstrap fragment immediately. The HTTP adapter sends the plaintext to Workspace Access only through a subprocess environment variable; it is absent from argv, decisions, logs, manifests and receipts. Static files and health are public so a disconnected client can load and learn that admission is required. In multi-workspace mode authorization happens before runtime lookup; source roots come from Access and state/artifact roots come from Storage. A hosted version still requires remote identity, secret custody, hard reservations, audit and abuse-control owners before accepting remote traffic.
 
 ## 7. Observability
 

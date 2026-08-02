@@ -2,6 +2,7 @@ param(
     [int]$Port = 8765,
     [string]$DataRoot = (Join-Path $env:LOCALAPPDATA "VideoGraphStudio"),
     [string]$AccessRegistry,
+    [string]$StorageRegistry,
     [string]$WorkspaceId,
     [switch]$NoBrowser
 )
@@ -28,7 +29,12 @@ $env:PYTHONPATH = $appRoot
 $env:PYTHONUTF8 = "1"
 $arguments = @("-m", "studio.server", "--port", $Port, "--data-root", $DataRoot)
 if ($NoBrowser) { $arguments += "--no-browser" }
-if ([bool]$AccessRegistry -ne [bool]$WorkspaceId) { throw "AccessRegistry and WorkspaceId must be provided together." }
-if ($AccessRegistry) { $arguments += @("--access-registry", $AccessRegistry, "--workspace-id", $WorkspaceId) }
+if ($StorageRegistry) {
+    if (-not $AccessRegistry -or $WorkspaceId) { throw "Multi-workspace mode requires AccessRegistry and StorageRegistry without WorkspaceId." }
+    $arguments += @("--access-registry", $AccessRegistry, "--storage-registry", $StorageRegistry)
+} else {
+    if ([bool]$AccessRegistry -ne [bool]$WorkspaceId) { throw "AccessRegistry and WorkspaceId must be provided together." }
+    if ($AccessRegistry) { $arguments += @("--access-registry", $AccessRegistry, "--workspace-id", $WorkspaceId) }
+}
 & $python @arguments
 exit $LASTEXITCODE

@@ -3,8 +3,8 @@
 | Field | Record |
 | --- | --- |
 | Supported completion level | `DOMAIN_VERIFIED` |
-| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; real loopback HTTP; browser-to-API health and allowed-folder projection; optional secure workspace admission; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
-| Evidence missing | power-loss/filesystem durability; authenticated publication adapters; hosted tenant isolation and recovery; load/attack-oriented security operations |
+| Evidence present | graph/run/process contracts; SQLite idempotency; durable FIFO start queue; queued cancellation isolation; real child-process ordering and cleanup; process-wide execution gate; real loopback HTTP; browser-to-API health and allowed-folder projection; secure fixed and multi-workspace admission; isolated per-workspace state/artifact roots; browser-admitted folder intake; successful anonymous YouTube download; real four-step transcription, six-step RU+KK translation and ten-step Source-to-Localization runs; real Douyin creator discovery; real two-step four-target publication planning; live process-tree crash, startup fence and same-run recovery |
+| Evidence missing | power-loss/filesystem durability; authenticated publication adapters; hosted identity and production tenant isolation; cross-workspace scheduling contract; load/attack-oriented security operations |
 | Substitutes | fixed graph templates; local filesystem roots; deterministic fake adapters for domain verification |
 | Decisions unapproved | commercial tenancy, billing, remote authentication, paid fallback and automatic publication policy |
 | Forbidden claims | no production verification; no social upload completion claim; no claim that the quiet source mix removes original speech |
@@ -36,3 +36,7 @@ Loopback HTTP runs `cfa0115e-2da3-44a3-9425-a4ea26efa256` and `c859bf34-65ee-46c
 ## Secure admission evidence
 
 The real Workspace Access CLI admitted scoped read/write requests, rejected missing credentials, the wrong workspace and insufficient scopes, constrained folder browsing to the configured roots, and kept both plaintext credentials out of the persisted registry. See [the complete drill](secure-admission-drill.md).
+
+## Multi-workspace routing evidence
+
+One real loopback process authorized and initialized `alpha` and `beta`, committed the same operation identity into two separate SQLite stores, returned one isolated run per workspace, rejected a cross-workspace credential with HTTP `403` and closed its listener after the drill. See [the complete drill](multi-workspace-routing-drill.md).

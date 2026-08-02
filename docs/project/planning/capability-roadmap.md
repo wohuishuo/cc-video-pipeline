@@ -15,7 +15,8 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 9 | Local lifecycle recovery | startup fence, same-run resume, retained checkpoints, real process-loss drill | Complete for local process loss; power-loss evidence pending |
 | 10 | Durable multi-run admission | FIFO start requests, serial drain, cancellation isolation, restart requeue | Complete for local control plane |
 | 11 | Workspace access owner | workspace identity, roots, hashed short-lived scopes, expiry and revocation | Domain complete; secure local Studio composition complete |
-| 12 | Workspace storage owner | deterministic tenant namespaces, path confinement, capacity decision, atomic registry | Domain complete; Studio routing composition pending |
-| 13 | Hosted/mobile admission | multi-workspace routing, remote identity, resource budgets, attack review and security evidence | Pending |
+| 12 | Workspace storage owner | deterministic tenant namespaces, path confinement, capacity decision, atomic registry | Domain complete; multi-workspace Studio composition complete |
+| 13 | Local multi-workspace routing | authorize before route, isolated SQLite/artifacts, shared global execution gate, cross-workspace denial | Domain complete; production tenant isolation not claimed |
+| 14 | Hosted/mobile admission | remote identity, client compatibility, hard resource budgets, attack review and security evidence | Pending |
 
 No later slice may move upstream ownership into Graph Studio for convenience.

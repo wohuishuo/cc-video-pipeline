@@ -25,7 +25,7 @@ class WorkspaceAccessCommandAdapter:
         self,
         launcher: Path,
         registry: Path,
-        workspace_id: str,
+        workspace_id: str | None = None,
         *,
         timeout_seconds: float = 10,
     ) -> None:
@@ -34,14 +34,17 @@ class WorkspaceAccessCommandAdapter:
         self.workspace_id = workspace_id
         self.timeout_seconds = timeout_seconds
 
-    def describe_workspace(self) -> dict[str, Any]:
+    def describe_workspace(self, workspace_id: str | None = None) -> dict[str, Any]:
+        target_workspace = workspace_id or self.workspace_id
+        if not target_workspace:
+            raise RuntimeError("Workspace ID is required")
         result = self._invoke(
             [
                 "describe",
                 "--registry",
                 str(self.registry),
                 "--workspace-id",
-                self.workspace_id,
+                target_workspace,
                 "--json",
             ]
         )
@@ -50,7 +53,7 @@ class WorkspaceAccessCommandAdapter:
         return result["value"]
 
     def authorize(self, workspace_id: str, token: str, scope: str) -> AdmissionDecision:
-        if workspace_id != self.workspace_id:
+        if self.workspace_id is not None and workspace_id != self.workspace_id:
             return AdmissionDecision(False, "REJECTED_WORKSPACE", "workspace is not served here")
         if not token:
             return AdmissionDecision(False, "REJECTED_UNAUTHORIZED", "credential required")
@@ -61,7 +64,7 @@ class WorkspaceAccessCommandAdapter:
                     "--registry",
                     str(self.registry),
                     "--workspace-id",
-                    self.workspace_id,
+                    workspace_id,
                     "--required-scope",
                     scope,
                     "--token-env",

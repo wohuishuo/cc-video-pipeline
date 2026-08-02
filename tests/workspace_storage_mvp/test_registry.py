@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import sys
 
@@ -108,3 +109,19 @@ def test_registry_commit_is_atomic_and_description_is_public(tmp_path):
     assert described.value["workspaceId"] == "alpha"
     assert "credential" not in str(described.value).lower()
     assert list(tmp_path.glob(".storage.json.*.tmp")) == []
+
+
+def test_describe_rejects_a_registry_namespace_redirect(tmp_path):
+    path = tmp_path / "storage.json"
+    registry = StorageRegistry(path)
+    registry.provision_workspace("alpha", tmp_path / "runtime", quota_bytes=10_000)
+    value = json.loads(path.read_text(encoding="utf-8"))
+    value["workspaces"][0]["roots"]["state"] = str((tmp_path / "escape").resolve())
+    path.write_text(json.dumps(value), encoding="utf-8")
+
+    try:
+        registry.describe_workspace("alpha")
+    except StorageRegistryError as error:
+        assert error.code == "REJECTED_PATH"
+    else:
+        raise AssertionError("redirected namespace was described")

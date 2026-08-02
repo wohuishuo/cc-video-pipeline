@@ -6,8 +6,10 @@ Every mutable artifact family has one authoritative writer. Coordinators own con
 flowchart TB
     Client["Browser / future mobile client"] -->|"credential + versioned command"| Admission["Admission adapter"]
     Access["Workspace Access"] -->|"redacted scope decision"| Admission
-    Storage["Workspace Storage"] -. "future namespace descriptor" .-> HTTP
-    Admission --> HTTP["HTTP transport adapter"]
+    Storage["Workspace Storage"] -->|"state/artifact namespace"| Router["Workspace Runtime Router"]
+    Admission -->|"multi workspace"| Router
+    Router --> HTTP
+    Admission -->|"fixed workspace"| HTTP["HTTP transport adapter"]
     HTTP --> Run["Workflow Run Owner"]
     Run --> Queue["Durable Start Queue"]
     Queue --> Process["Graph Process Manager"]
@@ -33,7 +35,7 @@ flowchart TB
 | --- | --- | --- |
 | Graph revision/fingerprint | Graph Definition | Run admission, browser projection |
 | Workspace identity/credential lifecycle | Workspace Access | admission adapters, operators |
-| Workspace state/artifact/temp namespace and capacity projection | Workspace Storage | future workspace router, operators |
+| Workspace state/artifact/temp namespace and capacity projection | Workspace Storage | Workspace Runtime Router, operators |
 | Run lifecycle/version | Workflow Run Owner | Process, dashboard |
 | Start-request order/claim | Durable Start Queue | Process, dashboard |
 | Step checkpoint/continuation | Workflow Process Manager | Run projection, recovery |
@@ -56,7 +58,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop defaults to anonymous loopback admission. Optional secure mode composes Workspace Access through its public CLI, binds one Studio process to one workspace, applies route-specific scopes and limits browsing to the workspace roots. Workspace Storage now independently proves deterministic tenant namespaces but is not yet composed into HTTP routing. Commercial hosting still needs a real identity provider, remote secret custody and a verified multi-workspace router; it must not move workflow truth into the UI.
+Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Commercial hosting still needs a real identity provider, remote secret custody, hard resource reservations and production security evidence; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 

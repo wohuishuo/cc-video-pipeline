@@ -98,13 +98,19 @@ class StorageRegistry:
         workspace = self._workspace(registry, workspace_id)
         if workspace is None:
             return StorageResult("REJECTED_NOT_FOUND", {"workspaceId": workspace_id})
+        storage_root = self._verified_storage_root(registry)
+        workspace_root = self._verified_workspace_root(registry, workspace)
+        roots = {
+            kind: str(self._verified_namespace_root(registry, workspace, kind))
+            for kind in NAMESPACE_KINDS
+        }
         return StorageResult(
             "COMPLETED",
             {
                 "workspaceId": workspace["workspaceId"],
-                "storageRoot": workspace["storageRoot"],
-                "workspaceRoot": workspace["workspaceRoot"],
-                "roots": dict(workspace["roots"]),
+                "storageRoot": str(storage_root),
+                "workspaceRoot": str(workspace_root),
+                "roots": roots,
                 "quotaBytes": workspace["quotaBytes"],
             },
         )

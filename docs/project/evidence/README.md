@@ -13,6 +13,7 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Video Graph Studio process-loss recovery drill](video-graph-studio/recovery-drill.md)
 - [Video Graph Studio durable FIFO queue drill](video-graph-studio/durable-queue-drill.md)
 - [Video Graph Studio secure workspace admission drill](video-graph-studio/secure-admission-drill.md)
+- [Video Graph Studio multi-workspace routing drill](video-graph-studio/multi-workspace-routing-drill.md)
 - [Operations readiness](operations-readiness/delivery-ledger.md)
 - [Workspace Access](workspace-access/delivery-ledger.md)
 - [Workspace Storage](workspace-storage/delivery-ledger.md)
