@@ -17,4 +17,4 @@ Authenticated callers can name an environment boundary without putting its value
   --credential-env VIDEO_PLATFORM_CREDENTIAL --execute --json
 ```
 
-The command rejects a missing or empty named environment variable, never echoes its value and lets the selected upstream child inherit it. Credential Vault and Guarded Publication compose this contract automatically. Whether an upstream uploader understands the credential or session format remains that platform adapter's responsibility.
+The command rejects a missing or empty named environment variable and never echoes its value. A credential-backed private YouTube execution routes through the repository-owned [YouTube Publisher](../youtube-publisher/README.md), which consumes OAuth JSON, uses the resumable Data API protocol and requires a non-empty external video ID. Other upload targets remain isolated third-party browser adapters and do not yet consume this OAuth contract.

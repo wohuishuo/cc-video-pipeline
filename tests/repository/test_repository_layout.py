@@ -15,6 +15,7 @@ EXPECTED_APPS = {
     "credential-vault",
     "client-contracts",
     "resource-budget",
+    "youtube-publisher",
 }
 
 

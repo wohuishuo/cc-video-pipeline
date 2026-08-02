@@ -16,10 +16,22 @@ from .models import Platform
 from .receipts import write_receipt
 from .process import ProcessRunner
 from .upload import UploadLedger, UploadRequest, build_upload_adapters
+from .uploaders.youtube import YouTubeApiUploadAdapter
 
 
 def _json_text(payload: object) -> str:
     return json.dumps(payload, ensure_ascii=True, indent=2)
+
+
+def _upload_digest(video: Path, metadata: Path, account: str | None = None) -> str:
+    digest = hashlib.sha256()
+    for path in (video.resolve(), metadata.resolve()):
+        with path.open("rb") as source:
+            while chunk := source.read(1024 * 1024):
+                digest.update(chunk)
+    if account is not None:
+        digest.update(account.encode("utf-8"))
+    return digest.hexdigest()
 
 
 def _print(payload: object, json_output: bool) -> None:
@@ -49,10 +61,15 @@ def _doctor(json_output: bool) -> int:
 def _capabilities(json_output: bool) -> int:
     downloader_ready = bool(shutil.which("yt-dlp") and shutil.which("ffprobe"))
     checkout = Path(__file__).resolve().parents[1] / ".tools" / "social-auto-upload"
+    youtube_publisher = Path(__file__).resolve().parents[1] / "apps" / "youtube-publisher" / "run.ps1"
     platforms = {
         platform.value: {
             "download": "adapter-ready" if downloader_ready else "dependency-missing",
-            "upload": "dependency-installed" if checkout.is_dir() else "not-installed",
+            "upload": (
+                "private-api-ready" if platform is Platform.YOUTUBE and youtube_publisher.is_file()
+                else "dependency-installed" if checkout.is_dir()
+                else "not-installed"
+            ),
         }
         for platform in Platform
     }
@@ -111,8 +128,14 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("credential environment variable is missing or empty")
             platform = Platform(args.platform)
             request = UploadRequest(platform, args.video, args.metadata, args.account, draft=not args.public)
-            adapter = build_upload_adapters(project_root)[platform]
-            prepared = adapter.prepare(request)
+            internal_youtube = platform is Platform.YOUTUBE and bool(args.credential_env)
+            digest = _upload_digest(request.video, request.metadata, request.account if internal_youtube else None) if internal_youtube or args.execute else ""
+            if internal_youtube:
+                adapter = YouTubeApiUploadAdapter(project_root)
+                prepared = adapter.prepare(request, args.credential_env, digest)
+            else:
+                adapter = build_upload_adapters(project_root)[platform]
+                prepared = adapter.prepare(request)
             payload = {
                 "platform": platform.value,
                 "status": prepared.status,
@@ -121,9 +144,23 @@ def main(argv: list[str] | None = None) -> int:
                 "executed": False,
             }
             if args.execute:
-                digest = hashlib.sha256(args.video.resolve().read_bytes() + args.metadata.resolve().read_bytes()).hexdigest()
-                UploadLedger(project_root / "receipts" / "uploads.jsonl").reserve(digest, platform)
+                if not internal_youtube:
+                    UploadLedger(project_root / "receipts" / "uploads.jsonl").reserve(digest, platform)
                 result = ProcessRunner().run(prepared.command, cwd=adapter.checkout)
+                if internal_youtube:
+                    try:
+                        child = json.loads(result.stdout)
+                    except json.JSONDecodeError:
+                        child = {}
+                    value = child.get("value", {}) if isinstance(child, dict) else {}
+                    external_id = value.get("externalId") if isinstance(value, dict) else None
+                    child_class = child.get("resultClass") if isinstance(child, dict) else None
+                    completed = result.exit_code == 0 and child_class in {"COMPLETED", "DUPLICATE_COMPLETED"} and isinstance(external_id, str) and bool(external_id.strip())
+                    payload.update({"status": "ok" if completed else "failed", "executed": True, "exit_code": result.exit_code, "external_id": external_id.strip() if completed else None, "visibility": "private", "publisher": "youtube-publisher@1"})
+                    if not completed:
+                        payload["error"] = "internal YouTube publisher failed or omitted external identity"
+                    _print(payload, args.json)
+                    return 0 if completed else (result.exit_code or 2)
                 payload.update({"status": "ok" if result.exit_code == 0 else "failed", "executed": True, "exit_code": result.exit_code})
                 _print(payload, args.json)
                 return result.exit_code

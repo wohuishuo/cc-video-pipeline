@@ -15,6 +15,13 @@ isolated account profile
   -> prepared upload command
   -> explicit --execute
   -> draft/private platform verification
+
+credential-backed YouTube route
+  -> YouTube Publisher public CLI
+  -> OAuth refresh in child memory
+  -> private resumable session
+  -> non-empty video ID
+  -> redacted idempotent receipt
 ```
 
 State owners stay separate: downloader owns downloaded media; FFprobe owns media facts; each upload adapter owns only its platform profile; the receipt layer owns evidence but no platform state.
