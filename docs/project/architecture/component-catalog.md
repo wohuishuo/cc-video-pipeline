@@ -28,6 +28,7 @@
 
 - **Owns:** canonical command envelopes, endpoint/scope descriptions and declared client compatibility.
 - **Consumes:** no workflow state; exports a transport-neutral bundle.
+- **Provides:** canonical CLI `show` projected by Studio at public `GET /api/v1/contracts` before admission.
 - **Forbidden:** reading SQLite, authenticating callers, owning run progress or letting client projections become authoritative.
 
 ## 6. Graph Definition

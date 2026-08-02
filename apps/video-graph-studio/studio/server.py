@@ -19,6 +19,7 @@ from .workspace_routing import (
     WorkspaceRuntimeRouter,
     WorkspaceStorageCommandAdapter,
 )
+from .client_contracts import ClientContractsError
 
 
 MAX_BODY_BYTES = 1024 * 1024
@@ -32,6 +33,7 @@ def create_server(
     web_root: Path,
     admission=None,
     workspace_router=None,
+    client_contracts=None,
 ) -> ThreadingHTTPServer:
     if host != "127.0.0.1":
         raise ValueError("Video Graph Studio may bind only to 127.0.0.1")
@@ -52,6 +54,15 @@ def create_server(
                 body = self._read_json() if self.command == "POST" else None
                 if body is _INVALID:
                     self._send_json(400, {"resultClass": "REJECTED_MALFORMED"})
+                    return
+                if parsed.path == "/api/v1/contracts" and self.command == "GET":
+                    if client_contracts is None:
+                        self._send_json(503, {"resultClass": "REJECTED_UNAVAILABLE", "detail": "client contracts are unavailable"})
+                        return
+                    try:
+                        self._send_json(200, client_contracts.discover())
+                    except ClientContractsError:
+                        self._send_json(503, {"resultClass": "REJECTED_UNAVAILABLE", "detail": "client contracts are unavailable"})
                     return
                 if admission is not None and parsed.path != "/api/v1/health":
                     decision = self._authorize(parsed.path)
@@ -312,6 +323,11 @@ def main(argv: list[str] | None = None) -> int:
     workspace_router = None
     allowed_roots = None
     resource_budget_commands = None
+    from .client_contracts import ClientContractsCommandAdapter
+
+    client_contracts = ClientContractsCommandAdapter(
+        repository / "apps" / "client-contracts" / "run.ps1"
+    )
     if args.resource_budget_database:
         from .resource_leases import ResourceBudgetCommandAdapter
 
@@ -383,6 +399,7 @@ def main(argv: list[str] | None = None) -> int:
         web_root=repository / "apps" / "video-graph-studio" / "web",
         admission=admission,
         workspace_router=workspace_router,
+        client_contracts=client_contracts,
     )
     url = f"http://127.0.0.1:{server.server_port}/"
     print(f"Video Graph Studio: {url}", flush=True)

@@ -21,5 +21,10 @@ def test_cli_exports_validates_and_checks_client(tmp_path):
     compatible=run_cli("check-client","--client-version","1.2.0","--json")
 
     assert exported.returncode==validated.returncode==compatible.returncode==0
+    shown=run_cli("show","--json")
+    shown_value=json.loads(shown.stdout)
+    assert shown.returncode==0
+    assert shown_value["value"]["bundle"]["contractVersion"]=="1.0"
+    assert len(shown_value["value"]["sha256"])==64
     assert json.loads(validated.stdout)["resultClass"]=="VALID"
     assert json.loads(compatible.stdout)["resultClass"]=="COMPATIBLE"

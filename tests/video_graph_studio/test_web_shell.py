@@ -52,7 +52,7 @@ def test_shell_has_creator_controls_and_workflow_regions():
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     assert 'href="/styles.css?v=1"' in html
-    assert 'src="/app.js?v=1"' in html
+    assert 'src="/app.js?v=2"' in html
     assert "https://" not in html
     assert "http://" not in html
 
@@ -61,7 +61,10 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     script = (WEB / "app.js").read_text(encoding="utf-8")
     assert 'contractId: "CMD-RUN-CREATE"' in script
     assert 'contractId: "CMD-RUN-START"' in script
-    assert 'contractVersion: "1.0"' in script
+    assert 'api("/api/v1/contracts")' in script
+    assert "state.contracts.contractVersion" in script
+    assert "async function loadContracts()" in script
+    assert "Contract unavailable" in script
     assert "crypto.randomUUID()" in script
     assert 'TERMINAL_STATES.has(run.status)' in script
     assert "templateId" in script

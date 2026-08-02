@@ -16,8 +16,18 @@ def test_bundle_names_commands_endpoints_scopes_and_state_owners():
     assert set(bundle["commands"])=={"CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL"}
     assert bundle["endpoints"]["POST /api/v1/runs"]["scope"]=="runs:write"
     assert bundle["endpoints"]["GET /api/v1/runs"]["scope"]=="runs:read"
+    assert bundle["endpoints"]["GET /api/v1/contracts"]=={"scope":None,"projection":"client-contracts"}
     assert bundle["ownership"]["runState"]=="Video Graph Studio"
     assert bundle["ownership"]["clientProjection"]=="disposable"
+
+
+def test_show_returns_the_exact_canonical_bundle_and_export_digest(tmp_path):
+    owner=ClientContracts(); shown=owner.show(); output=tmp_path/"contracts.json"
+    exported=owner.export(output)
+
+    assert shown.result_class=="COMPLETED"
+    assert shown.value["bundle"]==owner.bundle()
+    assert shown.value["sha256"]==exported.value["sha256"]
 
 
 def test_export_is_atomic_and_exact_replay_is_duplicate(tmp_path):
