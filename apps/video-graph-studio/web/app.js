@@ -1,103 +1,78 @@
+import {
+  evaluateReadiness,
+  groupWorkflowGoals,
+  nextZoom,
+  projectGraph,
+  resolveTemplate,
+} from "./workflow-model.mjs";
+
 const TERMINAL_STATES = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
-const TEMPLATE_NODE_COPY = {
-  "prepared-localization": {
-    source: { title: "Prepared folder", description: "Resolve the folder and validate its localization batch manifest.", owner: "source-intake", relationship: "Query", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Edge localization", description: "Generate Russian voice, mix original ambience and burn translated subtitles.", owner: "localization", relationship: "Adapter", delivery: "IMPLEMENTED" },
-    verify: { title: "Verify output", description: "Require inspectable video files and matching execution receipts.", owner: "output-verification", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "folder-intake": {
-    source: { title: "Local folder", description: "Resolve one allowed local folder without copying its media.", owner: "source-intake", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Discover media", description: "Build a deterministic manifest and idempotent intake receipt.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify source", description: "Check every declared media path and digest before continuation.", owner: "source-intake", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "url-intake": {
-    source: { title: "Social URL", description: "Accept one supported YouTube, Bilibili, Douyin or TikTok URL.", owner: "source-intake", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Download 1080p", description: "Invoke Platform I/O anonymously first with bounded quality fallback.", owner: "platform-io", relationship: "Adapter", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify source", description: "Check downloaded media and commit a reusable source manifest.", owner: "source-intake", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "folder-transcription": {
-    source: { title: "Folder intake", description: "Discover local media and commit a reusable source manifest.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Serial transcription", description: "Transcribe one verified media item at a time with resumable checkpoints.", owner: "transcription", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify transcripts", description: "Check source, JSON and SRT fingerprints before continuation.", owner: "transcription", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "url-transcription": {
-    source: { title: "URL intake", description: "Download one supported social video and commit its source manifest.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Serial transcription", description: "Transcribe one verified media item at a time with resumable checkpoints.", owner: "transcription", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify transcripts", description: "Check source, JSON and SRT fingerprints before continuation.", owner: "transcription", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "folder-translation": {
-    source: { title: "Folder intake", description: "Discover local media and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Serial translation", description: "Transcribe, verify and translate every language/media work item sequentially.", owner: "translation", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify translations", description: "Require exact language/media coverage and matching JSON/SRT fingerprints.", owner: "translation", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "url-translation": {
-    source: { title: "URL intake", description: "Download one supported social video and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Serial translation", description: "Transcribe, verify and translate every language/media work item sequentially.", owner: "translation", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify translations", description: "Require exact language/media coverage and matching JSON/SRT fingerprints.", owner: "translation", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "folder-voice": {
-    source: { title: "Folder intake", description: "Discover local media and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Serial voice rendering", description: "Translate and render one Edge TTS clip per segment with checkpoints.", owner: "voice-rendering", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify voice clips", description: "Check every MP3 hash, size and measured duration.", owner: "voice-rendering", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "url-voice": {
-    source: { title: "URL intake", description: "Download one supported social video and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Serial voice rendering", description: "Translate and render one Edge TTS clip per segment with checkpoints.", owner: "voice-rendering", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify voice clips", description: "Check every MP3 hash, size and measured duration.", owner: "voice-rendering", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "folder-dub": {
-    source: { title: "Folder intake", description: "Discover local media and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Localized video composition", description: "Compose translated voice, quiet source audio and burned subtitles into H.264/AAC MP4.", owner: "localization", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
-    verify: { title: "Verify localized videos", description: "Require exact language/media coverage and matching derivative fingerprints.", owner: "localization", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
-  },
-  "url-dub": {
-    source: { title: "URL intake", description: "Download social media and preserve a verified source fact.", owner: "source-intake", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Localized video composition", description: "Compose translated voice, quiet source audio and burned subtitles into H.264/AAC MP4.", owner: "localization", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
-    verify: { title: "Verify localized videos", description: "Require exact language/media coverage and matching derivative fingerprints.", owner: "localization", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
-  },
-  "folder-release": {
-    source: { title: "Folder localization", description: "Discover, transcribe, translate, voice and compose every local media item.", owner: "source-intake", relationship: "Fact", delivery: "PLATFORM_INTEGRATED" },
-    localize: { title: "Plan derivative batch", description: "Create one private/draft Publication Plan per localized derivative with durable checkpoints.", owner: "publication-batch", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify release coverage", description: "Require every derivative, metadata file, target job and child plan fingerprint.", owner: "publication-batch", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "url-release": {
-    source: { title: "URL localization", description: "Download, transcribe, translate, voice and compose one supported social video.", owner: "source-intake", relationship: "Fact", delivery: "PLATFORM_INTEGRATED" },
-    localize: { title: "Plan derivative batch", description: "Create one private/draft Publication Plan per localized derivative with durable checkpoints.", owner: "publication-batch", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify release coverage", description: "Require every derivative, metadata file, target job and child plan fingerprint.", owner: "publication-batch", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "creator-profile": {
-    source: { title: "Creator profile", description: "Accept one supported creator or channel URL and an optional local authentication file.", owner: "creator-discovery", relationship: "Input", delivery: "PLATFORM_INTEGRATED" },
-    localize: { title: "Enumerate profile", description: "Page serially, canonicalize URLs, deduplicate IDs and checkpoint the cursor.", owner: "creator-discovery", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
-    verify: { title: "Verify creator manifest", description: "Require ordered unique URLs and a matching manifest fingerprint.", owner: "creator-discovery", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
-  },
-  "creator-batch-dub": {
-    source: { title: "Creator profile", description: "Enumerate one supported creator profile into an ordered canonical URL fact.", owner: "creator-discovery", relationship: "Fact", delivery: "PLATFORM_INTEGRATED" },
-    localize: { title: "Serial creator loop", description: "Run Intake, ASR, Translation, Voice and Localization for exactly one creator item at a time.", owner: "creator-batch", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify batch coverage", description: "Require every creator item, language and localized derivative fingerprint.", owner: "creator-batch", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "publication-plan": {
-    source: { title: "Finished video", description: "Select one local derivative plus editable metadata and target accounts.", owner: "publication", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Build publication plan", description: "Fingerprint inputs and create private/draft target jobs without contacting platforms.", owner: "publication", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify publication plan", description: "Check video, metadata, job coverage and immutable plan fingerprint.", owner: "publication", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "publication-execute": {
-    source: { title: "Verified plan run", description: "Resolve one completed private YouTube plan from this workspace.", owner: "video-graph-studio", relationship: "Fact", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Execute guarded publication", description: "Require the exact plan SHA and ask Publication to compose Vault and Platform I/O.", owner: "publication", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify platform receipt", description: "Require a fingerprinted manifest and non-empty external publication identity.", owner: "publication", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "publication-batch-execute": {
-    source: { title: "Verified Release plan", description: "Resolve one completed Folder+Release or URL+Release batch fact from this workspace.", owner: "video-graph-studio", relationship: "Fact", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Execute serial release", description: "Run one private YouTube publication at a time with durable child checkpoints and safe resume.", owner: "publication-batch-execution", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify release receipts", description: "Independently check every child plan, receipt, manifest, external ID and aggregate fingerprint.", owner: "video-graph-studio", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
-  },
-  "youtube-connect": {
-    source: { title: "Google desktop client", description: "Select one local Google desktop OAuth client JSON without copying its secret into Studio.", owner: "youtube-oauth-bootstrap", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
-    localize: { title: "Connect YouTube", description: "Open the system browser, validate loopback state and PKCE, then store refresh credentials through Vault.", owner: "youtube-oauth-bootstrap", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
-    verify: { title: "Verify credential", description: "Ask Credential Vault to confirm one active provider-bound YouTube credential.", owner: "credential-vault", relationship: "Query", delivery: "DOMAIN_VERIFIED" },
-  },
+const DEFAULT_VOICES = {
+  "ru-RU": "ru-RU-DmitryNeural",
+  "en-US": "en-US-GuyNeural",
+  "kk-KZ": "kk-KZ-DauletNeural",
+};
+const EFFECT_COPY = {
+  "local-only": "Works only with local files. No social platform is contacted.",
+  "downloads-source": "Reads or downloads the selected source. It does not publish anything.",
+  "planning-only": "Creates local private or draft plans. It does not upload anything.",
+  "contacts-youtube-private": "Contacts YouTube only after exact confirmation and creates private uploads.",
+  "reads-profile": "Reads the selected creator profile to build an ordered video manifest.",
+  "opens-google-consent": "Opens Google consent and stores the resulting credential in the local Vault.",
+};
+const CONFIG_BY_REQUIREMENT = {
+  "source-folder": "folder-source-field",
+  "source-url": "url-source-field",
+  asr: "asr-controls",
+  translation: "translation-controls",
+  languages: "target-language-controls",
+  voices: "target-language-controls",
+  voice: "prepared-controls",
+  platforms: "prepared-controls",
+  "creator-options": "creator-controls",
+  video: "publication-controls",
+  metadata: "publication-controls",
+  "publication-targets": "publication-controls",
+  account: "publication-controls",
+  "metadata-template": "release-controls",
+  "release-account": "release-controls",
+  "release-targets": "release-controls",
+  "plan-run": "publication-execution-controls",
+  "release-run": "publication-batch-execution-controls",
+  confirmation: null,
+  vault: null,
+  "client-config": "youtube-connect-controls",
+  "vault-destination": "youtube-connect-controls",
+  credential: "youtube-connect-controls",
+  label: "youtube-connect-controls",
+};
+const CONTROL_REGIONS = [
+  "folder-source-field", "url-source-field", "asr-controls", "translation-controls",
+  "target-language-controls", "prepared-controls", "creator-controls", "publication-controls",
+  "release-controls", "publication-execution-controls", "publication-batch-execution-controls",
+  "youtube-connect-controls",
+];
+
+const state = {
+  catalog: [],
+  workflow: null,
+  goalId: null,
+  sourceKind: null,
+  templateId: null,
+  currentRun: null,
+  recentRuns: [],
+  pollTimer: null,
+  folder: null,
+  selectedNode: null,
+  zoom: 100,
+  busy: false,
+  accessRequired: false,
+  workspaceId: sessionStorage.getItem("videoGraph.workspaceId") || "",
+  contracts: null,
+  connection: { contracts: false, health: false, access: false, catalog: false },
+  connectionError: "",
 };
 
-const state = { currentRun: null, recentRuns: [], pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization", accessRequired: false, workspaceId: sessionStorage.getItem("videoGraph.workspaceId") || "", contracts: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -113,10 +88,16 @@ async function api(path, options = {}) {
       ...(options.headers || {}),
     },
   });
-  const body = await response.json();
+  let body;
+  try {
+    body = await response.json();
+  } catch {
+    body = {};
+  }
   if (!response.ok) {
     const error = new Error(body.detail || body.resultClass || `HTTP ${response.status}`);
     error.body = body;
+    error.status = response.status;
     throw error;
   }
   return body;
@@ -141,6 +122,7 @@ async function loadContracts() {
     throw new Error("Contract unavailable");
   }
   state.contracts = bundle;
+  state.connection.contracts = true;
 }
 
 function toast(message, error = false) {
@@ -149,38 +131,6 @@ function toast(message, error = false) {
   element.className = error ? "visible error" : "visible";
   clearTimeout(element._timer);
   element._timer = setTimeout(() => { element.className = ""; }, 3500);
-}
-
-async function checkHealth() {
-  try {
-    const health = await api("/api/v1/health");
-    const pill = $("#health-pill");
-    state.accessRequired = health.accessRequired === true;
-    state.workspaceId = health.workspaceId || sessionStorage.getItem("videoGraph.workspaceId") || "";
-    const accessButton = $("#access-button");
-    accessButton.hidden = !state.accessRequired;
-    $("#access-workspace").value = state.workspaceId;
-    const hasAccess = !state.accessRequired || Boolean(sessionStorage.getItem("videoGraph.accessToken")) && sessionStorage.getItem("videoGraph.workspaceId") === state.workspaceId;
-    accessButton.classList.toggle("required", !hasAccess);
-    accessButton.textContent = hasAccess ? state.workspaceId : "Access required";
-    if (!hasAccess) {
-      pill.classList.remove("ready");
-      pill.lastChild.textContent = " Access required";
-      return;
-    }
-    pill.classList.add("ready");
-    const queued = health.queuedRuns ? ` / ${health.queuedRuns} queued` : "";
-    pill.lastChild.textContent = health.activeWorkers ? ` 1 worker active${queued}` : health.queuedRuns ? ` ${health.queuedRuns} queued` : " System ready";
-    await refreshRunList();
-  } catch (error) {
-    const denied = error.body?.resultClass === "REJECTED_UNAUTHORIZED" || error.body?.resultClass === "REJECTED_WORKSPACE";
-    $("#health-pill").classList.remove("ready");
-    $("#health-pill").lastChild.textContent = denied ? " Access denied" : " Offline";
-    if (denied) {
-      $("#access-button").classList.add("required");
-      $("#access-button").textContent = "Access denied";
-    }
-  }
 }
 
 function bootstrapAccess() {
@@ -194,6 +144,92 @@ function bootstrapAccess() {
   }
 }
 
+function hasWorkspaceAccess() {
+  if (!state.accessRequired) return true;
+  return Boolean(sessionStorage.getItem("videoGraph.accessToken"))
+    && sessionStorage.getItem("videoGraph.workspaceId") === state.workspaceId;
+}
+
+async function loadHealth() {
+  const health = await api("/api/v1/health");
+  state.connection.health = true;
+  state.accessRequired = health.accessRequired === true;
+  state.workspaceId = health.workspaceId || sessionStorage.getItem("videoGraph.workspaceId") || "";
+  state.connection.access = hasWorkspaceAccess();
+  const accessButton = $("#access-button");
+  accessButton.hidden = !state.accessRequired;
+  accessButton.classList.toggle("required", !state.connection.access);
+  accessButton.textContent = state.connection.access ? state.workspaceId : "Access required";
+  $("#access-workspace").value = state.workspaceId;
+  return health;
+}
+
+async function loadCatalog() {
+  const response = await api("/api/v1/capabilities");
+  const catalog = response.capabilities || response.value?.capabilities || response.value || [];
+  if (!Array.isArray(catalog) || !catalog.length || catalog.some((item) => !item.templateId || !Array.isArray(item.nodes))) {
+    throw new Error("Workflow Catalog unavailable");
+  }
+  state.catalog = catalog;
+  state.connection.catalog = true;
+  renderGoalOptions();
+}
+
+async function reconnect() {
+  const reconnectButton = $("#reconnect-button");
+  reconnectButton.disabled = true;
+  reconnectButton.textContent = "Checking…";
+  state.contracts = null;
+  state.connection = { contracts: false, health: false, access: false, catalog: false };
+  state.connectionError = "";
+  let health = null;
+  const errors = [];
+  try {
+    await loadContracts();
+  } catch (error) {
+    errors.push(error.status === 404
+      ? "Server version mismatch: restart Studio so the contracts endpoint is available."
+      : `Client contract: ${error.message}`);
+  }
+  try {
+    health = await loadHealth();
+  } catch (error) {
+    const denied = ["REJECTED_UNAUTHORIZED", "REJECTED_WORKSPACE"].includes(error.body?.resultClass);
+    errors.push(denied ? "Workspace access was rejected." : `Studio service: ${error.message}`);
+    if (denied) $("#access-button").hidden = false;
+  }
+  if (state.connection.health && state.connection.access) {
+    try {
+      await loadCatalog();
+    } catch (error) {
+      errors.push(`Workflow Catalog: ${error.message}`);
+    }
+    try {
+      await refreshRunList();
+    } catch (error) {
+      errors.push(`Run history: ${error.message}`);
+    }
+  } else if (state.connection.health && !state.connection.access) {
+    errors.push("Connect this browser session to the admitted workspace.");
+  }
+  state.connectionError = errors.join(" ");
+  renderConnection(health);
+  renderReadiness();
+  reconnectButton.disabled = false;
+  reconnectButton.textContent = "Reconnect";
+}
+
+function renderConnection(health) {
+  const pill = $("#health-pill");
+  pill.classList.toggle("ready", Object.values(state.connection).every(Boolean));
+  if (!state.connection.health) pill.lastElementChild.textContent = "Offline";
+  else if (!state.connection.access) pill.lastElementChild.textContent = "Access required";
+  else if (!state.connection.contracts) pill.lastElementChild.textContent = "Restart required";
+  else if (!state.connection.catalog) pill.lastElementChild.textContent = "Catalog unavailable";
+  else if (health?.activeWorkers) pill.lastElementChild.textContent = `1 worker active${health.queuedRuns ? ` / ${health.queuedRuns} queued` : ""}`;
+  else pill.lastElementChild.textContent = health?.queuedRuns ? `${health.queuedRuns} queued` : "System ready";
+}
+
 function saveAccess(event) {
   event.preventDefault();
   const workspaceId = $("#access-workspace").value.trim();
@@ -203,7 +239,7 @@ function saveAccess(event) {
   sessionStorage.setItem("videoGraph.accessToken", token);
   $("#access-token").value = "";
   $("#access-dialog").close();
-  checkHealth();
+  reconnect();
 }
 
 function clearAccess() {
@@ -211,7 +247,220 @@ function clearAccess() {
   sessionStorage.removeItem("videoGraph.accessToken");
   $("#access-token").value = "";
   $("#access-dialog").close();
-  checkHealth();
+  reconnect();
+}
+
+function renderGoalOptions() {
+  const select = $("#workflow-goal");
+  const previous = state.goalId;
+  select.replaceChildren();
+  for (const section of groupWorkflowGoals(state.catalog)) {
+    const group = document.createElement("optgroup");
+    group.label = section.group;
+    for (const goal of section.goals) {
+      const option = document.createElement("option");
+      option.value = goal.goalId;
+      option.textContent = goal.title;
+      group.append(option);
+    }
+    select.append(group);
+  }
+  const goals = groupWorkflowGoals(state.catalog).flatMap((section) => section.goals);
+  const preferred = goals.find((goal) => goal.goalId === previous)
+    || goals.find((goal) => goal.goalId === "dub") || goals[0];
+  if (preferred) {
+    select.value = preferred.goalId;
+    selectGoal(preferred.goalId);
+  }
+}
+
+function selectGoal(goalId) {
+  const goal = groupWorkflowGoals(state.catalog).flatMap((section) => section.goals)
+    .find((item) => item.goalId === goalId);
+  if (!goal) return;
+  state.goalId = goalId;
+  const sourceControls = $("#source-kind-controls");
+  const sourceVariants = goal.variants.filter((variant) => ["folder", "url"].includes(variant.sourceKind));
+  sourceControls.hidden = sourceVariants.length < 2;
+  const preferredKind = goal.variants.some((variant) => variant.sourceKind === state.sourceKind)
+    ? state.sourceKind
+    : goal.variants.find((variant) => variant.sourceKind === "url")?.sourceKind || goal.variants[0].sourceKind;
+  state.sourceKind = preferredKind;
+  $$('input[name="source-kind"]').forEach((input) => {
+    input.checked = input.value === preferredKind;
+    input.disabled = !goal.variants.some((variant) => variant.sourceKind === input.value);
+  });
+  applyWorkflow(resolveTemplate(state.catalog, goalId, preferredKind));
+}
+
+function applyWorkflow(workflow) {
+  state.workflow = workflow;
+  state.templateId = workflow?.templateId || null;
+  state.currentRun = null;
+  state.selectedNode = workflow?.nodes?.[0]?.id || null;
+  for (const id of CONTROL_REGIONS) $("#" + id).hidden = true;
+  const requirements = new Set(workflow?.requirements || []);
+  for (const requirement of requirements) {
+    const region = CONFIG_BY_REQUIREMENT[requirement];
+    if (region) $("#" + region).hidden = false;
+  }
+  if (requirements.has("plan-run")) $("#publication-execution-controls").hidden = false;
+  if (requirements.has("release-run")) $("#publication-batch-execution-controls").hidden = false;
+  $("#workflow-summary").innerHTML = workflow
+    ? `<strong></strong><span></span>` : "<strong>Choose an outcome</strong>";
+  if (workflow) {
+    $("#workflow-summary strong").textContent = workflow.title;
+    $("#workflow-summary span").textContent = workflow.summary;
+    $("#canvas-title").textContent = workflow.title;
+    $("#canvas-description").textContent = workflow.summary;
+    $("#save-state").textContent = `${workflow.templateId} · draft`;
+  }
+  if (workflow?.templateId === "publication-execute") populateLatestPublicationPlan();
+  if (workflow?.templateId === "publication-batch-execute") populateLatestPublicationBatchPlan();
+  renderGraph();
+  renderReadiness();
+}
+
+function checkedValues(name) {
+  return $$(`input[name="${name}"]:checked`).map((item) => item.value);
+}
+
+function readDraftValues() {
+  const targetLanguages = checkedValues("language");
+  return {
+    sourceRoot: $("#source-root").value.trim(),
+    sourceUrl: $("#source-url").value.trim(),
+    sourceLanguage: $("#source-language").value,
+    asrModel: $("#asr-model").value,
+    asrDevice: $("#asr-device").value,
+    translationDevice: $("#translation-device").value,
+    translationBatchSize: Number($("#translation-batch-size").value),
+    targetLanguages,
+    targetVoices: Object.fromEntries(targetLanguages.map((language) => [language, DEFAULT_VOICES[language]])),
+    sourceVolume: 0.12,
+    voice: $("#voice").value,
+    platforms: checkedValues("platform"),
+    maxItems: Number($("#creator-max-items").value),
+    authenticationFile: $("#authentication-file").value.trim(),
+    videoPath: $("#publication-video").value.trim(),
+    metadataPath: $("#publication-metadata").value.trim(),
+    publicationTargets: checkedValues("publication-target"),
+    account: $("#publication-account").value.trim(),
+    planRunId: $("#publication-plan-run-id").value.trim(),
+    confirmation: state.templateId === "publication-batch-execute"
+      ? $("#release-execution-confirmation").value.trim() : $("#publication-confirmation").value.trim(),
+    credentialVaultPath: state.templateId === "publication-batch-execute"
+      ? $("#release-credential-vault-path").value.trim()
+      : state.templateId === "youtube-connect" ? $("#youtube-vault-path").value.trim()
+      : $("#credential-vault-path").value.trim(),
+    releasePlanRunId: $("#release-plan-run-id").value.trim(),
+    metadataTemplatePath: $("#release-metadata-template").value.trim(),
+    releaseAccount: $("#release-account").value.trim(),
+    releaseTargets: checkedValues("release-target"),
+    clientConfigPath: $("#youtube-client-config").value.trim(),
+    credentialId: $("#youtube-credential-id").value.trim(),
+    label: $("#youtube-credential-label").value.trim(),
+  };
+}
+
+function renderReadiness() {
+  const result = evaluateReadiness({ connection: state.connection, workflow: state.workflow, values: readDraftValues() });
+  const list = $("#readiness-list");
+  list.replaceChildren();
+  for (const check of result.checks) {
+    const item = document.createElement("li");
+    item.className = check.status;
+    const label = document.createElement("span");
+    label.textContent = check.label;
+    const detail = document.createElement("small");
+    detail.textContent = check.detail;
+    item.append(label, detail);
+    list.append(item);
+  }
+  const error = $("#connection-error");
+  error.hidden = !state.connectionError;
+  error.textContent = state.connectionError;
+  const effect = $("#effect-summary");
+  effect.textContent = EFFECT_COPY[result.effect] || "No platform action selected.";
+  effect.classList.toggle("risk", ["contacts-youtube-private", "opens-google-consent"].includes(result.effect));
+  $("#run-button").disabled = !result.ready || state.busy;
+  return result;
+}
+
+function renderGraph() {
+  const graph = projectGraph(state.workflow, state.currentRun);
+  const track = $("#graph-track");
+  track.replaceChildren();
+  $("#graph-empty-state").hidden = graph.length > 0;
+  $("#node-count").textContent = `${graph.length} step${graph.length === 1 ? "" : "s"}`;
+  $("#loop-count").textContent = `${new Set(graph.map((node) => node.loop)).size} loops`;
+  graph.forEach((node, index) => {
+    if (index) {
+      const edge = document.createElement("div");
+      edge.className = "graph-edge";
+      const relationship = state.workflow.edges[index - 1]?.relationship || "Fact";
+      edge.innerHTML = "<span></span>";
+      edge.querySelector("span").textContent = relationship;
+      track.append(edge);
+    }
+    const button = document.createElement("button");
+    const status = String(node.status || "WAITING").toLowerCase();
+    button.type = "button";
+    button.className = `graph-node ${String(node.relationship).toLowerCase()} ${status}`;
+    button.dataset.nodeId = node.id;
+    button.innerHTML = `
+      <span class="node-head"><span class="step-number"></span><span class="node-status"></span></span>
+      <span class="node-content"><span class="loop-badge"></span><h3></h3><p></p>
+      <span class="node-meta"><span>Owner <b class="node-owner"></b></span><span class="node-relationship"></span></span></span>`;
+    button.querySelector(".step-number").textContent = `STEP ${String(node.step).padStart(2, "0")}`;
+    button.querySelector(".node-status").textContent = node.status;
+    button.querySelector(".loop-badge").textContent = `${node.loop} Loop`;
+    button.querySelector("h3").textContent = node.title;
+    button.querySelector("p").textContent = node.description;
+    button.querySelector(".node-owner").textContent = node.owner;
+    button.querySelector(".node-relationship").textContent = node.relationship;
+    track.append(button);
+  });
+  if (!graph.some((node) => node.id === state.selectedNode)) state.selectedNode = graph[0]?.id || null;
+  setZoom(state.zoom);
+  focusNode(state.selectedNode);
+}
+
+function handleGraphNodeClick(event) {
+  const node = event.target.closest("[data-node-id]");
+  if (node && $("#graph-track").contains(node)) focusNode(node.dataset.nodeId);
+}
+
+function focusNode(nodeId) {
+  state.selectedNode = nodeId;
+  $$(".graph-node").forEach((node) => node.classList.toggle("selected", node.dataset.nodeId === nodeId));
+  const node = projectGraph(state.workflow, state.currentRun).find((item) => item.id === nodeId);
+  if (!node) return;
+  $("#inspector-step").textContent = String(node.step).padStart(2, "0");
+  $("#inspector-title").textContent = node.title;
+  $("#inspector-description").textContent = node.description;
+  $("#inspector-state").textContent = node.status;
+  $("#inspector-state").className = `state ${String(node.status).toLowerCase()}`;
+  $("#inspector-loop").textContent = node.loop;
+  $("#inspector-owner").textContent = node.owner;
+  $("#inspector-relationship").textContent = node.relationship;
+  $("#inspector-retry").textContent = node.retry;
+  $("#inspector-output").textContent = node.output;
+}
+
+function setZoom(value) {
+  state.zoom = Math.max(60, Math.min(140, Math.round(value)));
+  $("#graph-track").style.setProperty("--graph-zoom", String(state.zoom / 100));
+  $("#zoom-level").textContent = `${state.zoom}%`;
+}
+
+function fitGraph() {
+  const count = state.workflow?.nodes?.length || 0;
+  if (!count) return setZoom(100);
+  const available = Math.max(260, $("#graph-grid").clientWidth - 64);
+  const natural = count * 210 + Math.max(0, count - 1) * 52 + 84;
+  setZoom(Math.min(100, Math.max(60, Math.floor(available / natural * 100))));
+  $("#graph-grid").scrollTo({ left: 0, top: 0, behavior: "smooth" });
 }
 
 function templateForRun(run) {
@@ -220,39 +469,44 @@ function templateForRun(run) {
 
 async function refreshRunList() {
   const [runsResponse, queue] = await Promise.all([api("/api/v1/runs"), api("/api/v1/queue")]);
-  state.recentRuns = runsResponse.runs;
+  state.recentRuns = runsResponse.runs || [];
   if (state.templateId === "publication-execute") populateLatestPublicationPlan();
   if (state.templateId === "publication-batch-execute") populateLatestPublicationBatchPlan();
-  $("#queue-count").textContent = `${queue.queuedRuns} waiting`;
+  $("#queue-count").textContent = `${queue.queuedRuns || 0} waiting`;
   const list = $("#run-list");
   list.replaceChildren();
-  runsResponse.runs.slice(0, 8).forEach((run) => {
+  for (const run of state.recentRuns.slice(0, 8)) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `run-row${state.currentRun?.runId === run.runId ? " selected" : ""}`;
-    const title = document.createElement("strong");
-    title.textContent = run.graph.graphId;
-    const status = document.createElement("b");
-    status.className = run.status.toLowerCase();
-    status.textContent = run.status;
-    const identity = document.createElement("small");
-    identity.textContent = run.runId.slice(0, 13);
-    button.append(title, status, identity);
-    button.addEventListener("click", () => {
-      const templateId = templateForRun(run);
-      if (TEMPLATE_NODE_COPY[templateId]) selectTemplate(templateId);
-      state.currentRun = run;
-      renderRun(run);
-      if (!TERMINAL_STATES.has(run.status)) pollRun(run.runId);
-    });
+    button.innerHTML = "<strong></strong><b></b><small></small>";
+    button.querySelector("strong").textContent = run.graph.graphId;
+    button.querySelector("b").className = run.status.toLowerCase();
+    button.querySelector("b").textContent = run.status;
+    button.querySelector("small").textContent = run.runId.slice(0, 13);
+    button.addEventListener("click", () => selectRun(run));
     list.append(button);
-  });
-  if (!runsResponse.runs.length) {
+  }
+  if (!state.recentRuns.length) {
     const empty = document.createElement("p");
     empty.className = "muted";
     empty.textContent = "No runs yet.";
     list.append(empty);
   }
+}
+
+function selectRun(run) {
+  const templateId = templateForRun(run);
+  const workflow = state.catalog.find((item) => item.templateId === templateId);
+  if (workflow) {
+    state.goalId = workflow.goalId;
+    state.sourceKind = workflow.sourceKind;
+    $("#workflow-goal").value = workflow.goalId;
+    applyWorkflow(workflow);
+  }
+  state.currentRun = run;
+  renderRun(run);
+  if (!TERMINAL_STATES.has(run.status)) pollRun(run.runId);
 }
 
 function populateLatestPublicationPlan() {
@@ -272,8 +526,7 @@ function populateLatestPublicationBatchPlan() {
 }
 
 async function openFolderBrowser() {
-  const dialog = $("#folder-dialog");
-  dialog.showModal();
+  $("#folder-dialog").showModal();
   await loadFolder($("#source-root").value || "");
 }
 
@@ -287,19 +540,16 @@ async function loadFolder(path) {
     $("#folder-media-count").textContent = `${folder.videoCount} video${folder.videoCount === 1 ? "" : "s"} in this folder`;
     const list = $("#folder-list");
     list.replaceChildren();
-    folder.directories.forEach((directory) => {
+    for (const directory of folder.directories) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "folder-row";
-      button.innerHTML = `<i>◆</i><span></span>`;
+      button.innerHTML = "<i>◆</i><span></span>";
       button.querySelector("span").textContent = directory.name;
-      button.addEventListener("dblclick", () => loadFolder(directory.path));
       button.addEventListener("click", () => loadFolder(directory.path));
       list.append(button);
-    });
-    if (!folder.directories.length) {
-      list.innerHTML = '<p class="muted">No child folders. You can still choose this folder.</p>';
     }
+    if (!folder.directories.length) list.innerHTML = '<p class="muted">No child folders. You can still choose this folder.</p>';
   } catch (error) {
     toast(error.message, true);
   }
@@ -308,364 +558,84 @@ async function loadFolder(path) {
 function selectFolder() {
   if (!state.folder) return;
   $("#source-root").value = state.folder.path;
-  $$(".source-preview").forEach((element) => { element.textContent = state.folder.path; });
+  renderReadiness();
+}
+
+function buildPayload(values) {
+  const templateId = state.templateId;
+  const sourcePayload = state.workflow.sourceKind === "url" || state.workflow.sourceKind === "creator"
+    ? { sourceUrl: values.sourceUrl, maxHeight: 1080 } : { sourceRoot: values.sourceRoot };
+  const asrDevice = values.asrDevice;
+  const transcriptPayload = {
+    templateId, ...sourcePayload, sourceLanguage: values.sourceLanguage,
+    asrModel: values.asrModel, asrDevice,
+    asrComputeType: asrDevice === "cpu" ? "int8" : asrDevice === "cuda" ? "float16" : "default",
+  };
+  const translationPayload = {
+    ...transcriptPayload, targetLanguages: values.targetLanguages,
+    translationModel: "facebook/nllb-200-distilled-600M",
+    translationDevice: values.translationDevice, translationBatchSize: values.translationBatchSize,
+  };
+  const voicePayload = { ...translationPayload, targetVoices: values.targetVoices };
+  if (templateId === "youtube-connect") return { templateId, clientConfigPath: values.clientConfigPath, credentialVaultPath: values.credentialVaultPath, credentialId: values.credentialId, label: values.label };
+  if (templateId === "publication-plan") {
+    const credentialId = $("#publication-credential-id").value.trim();
+    return { templateId, videoPath: values.videoPath, metadataPath: values.metadataPath, targetPlatforms: values.publicationTargets, account: values.account, credentialIds: credentialId && values.publicationTargets.includes("youtube") ? { youtube: credentialId } : {}, public: false };
+  }
+  if (templateId === "publication-execute") return { templateId, planRunId: values.planRunId, confirmation: values.confirmation, credentialVaultPath: values.credentialVaultPath };
+  if (templateId === "publication-batch-execute") return { templateId, releasePlanRunId: values.releasePlanRunId, confirmation: values.confirmation, credentialVaultPath: values.credentialVaultPath };
+  if (templateId === "creator-profile") return { templateId, sourceUrl: values.sourceUrl, maxItems: values.maxItems, authenticationFile: values.authenticationFile || undefined };
+  if (templateId === "creator-batch-dub") return { ...voicePayload, sourceUrl: values.sourceUrl, maxItems: values.maxItems, authenticationFile: values.authenticationFile || undefined, sourceVolume: values.sourceVolume };
+  if (templateId.endsWith("-release")) {
+    const credentialId = $("#release-credential-id").value.trim();
+    return { ...voicePayload, sourceVolume: values.sourceVolume, metadataTemplatePath: values.metadataTemplatePath, targetPlatforms: values.releaseTargets, targetAccounts: Object.fromEntries(values.releaseTargets.map((platform) => [platform, values.releaseAccount])), credentialIds: credentialId && values.releaseTargets.includes("youtube") ? { youtube: credentialId } : {}, public: false };
+  }
+  if (templateId.endsWith("-dub")) return { ...voicePayload, sourceVolume: values.sourceVolume };
+  if (templateId.endsWith("-voice")) return voicePayload;
+  if (templateId.endsWith("-translation")) return translationPayload;
+  if (templateId.endsWith("-transcription")) return transcriptPayload;
+  if (templateId.endsWith("-intake")) return { templateId, ...sourcePayload };
+  return { templateId, sourceRoot: values.sourceRoot, languages: values.targetLanguages, voice: values.voice, platforms: values.platforms };
 }
 
 async function submitRun(event) {
   event.preventDefault();
-  const sourceRoot = $("#source-root").value.trim();
-  const sourceUrl = $("#source-url").value.trim();
-  const languages = $$('input[name="language"]:checked').map((item) => item.value);
-  const platforms = $$('input[name="platform"]:checked').map((item) => item.value);
-  const voice = $("#voice").value;
-  const creatorProfileMode = state.templateId === "creator-profile";
-  const creatorBatchMode = state.templateId === "creator-batch-dub";
-  const creatorMode = creatorProfileMode || creatorBatchMode;
-  const publicationMode = state.templateId === "publication-plan";
-  const publicationExecuteMode = state.templateId === "publication-execute";
-  const publicationBatchExecuteMode = state.templateId === "publication-batch-execute";
-  const youtubeConnectMode = state.templateId === "youtube-connect";
-  const releaseMode = state.templateId.endsWith("-release");
-  const urlMode = state.templateId.startsWith("url-") || creatorMode;
-  const transcriptionMode = state.templateId.endsWith("-transcription");
-  const translationMode = state.templateId.endsWith("-translation");
-  const voiceMode = state.templateId.endsWith("-voice");
-  const dubMode = state.templateId.endsWith("-dub");
-  const needsFolder = !urlMode && !publicationMode && !publicationExecuteMode && !publicationBatchExecuteMode && !youtubeConnectMode;
-  if (!publicationMode && !publicationExecuteMode && !publicationBatchExecuteMode && !youtubeConnectMode && ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl))) {
-    toast("Choose a source folder or supported social URL.", true);
-    return;
-  }
-  if (state.templateId === "prepared-localization" && (!languages.length || !platforms.length)) {
-    toast("Choose a source, language and target.", true);
-    return;
-  }
-  if ((translationMode || voiceMode || dubMode || releaseMode) && !languages.length) {
-    toast("Choose at least one target language.", true);
-    return;
-  }
-  const publicationTargets = $$('input[name="publication-target"]:checked').map((item) => item.value);
-  const releaseTargets = $$('input[name="release-target"]:checked').map((item) => item.value);
-  if (publicationMode && (!$("#publication-video").value.trim() || !$("#publication-metadata").value.trim() || !$("#publication-account").value.trim() || !publicationTargets.length)) {
-    toast("Choose a finished video, metadata, account and target.", true);
-    return;
-  }
-  if (releaseMode && (!$("#release-metadata-template").value.trim() || !$("#release-account").value.trim() || !releaseTargets.length)) {
-    toast("Choose a metadata template, account label and release target.", true);
-    return;
-  }
-  if (publicationExecuteMode && (!$("#publication-plan-run-id").value.trim() || !$("#publication-confirmation").value.trim() || !$("#credential-vault-path").value.trim())) {
-    toast("Choose a completed plan run, its exact SHA-256 and Credential Vault.", true);
-    return;
-  }
-  if (publicationBatchExecuteMode && (!$("#release-plan-run-id").value.trim() || !$("#release-execution-confirmation").value.trim() || !$("#release-credential-vault-path").value.trim())) {
-    toast("Choose a completed Release plan run, its exact batch SHA-256 and Credential Vault.", true);
-    return;
-  }
-  if (youtubeConnectMode && (!$("#youtube-client-config").value.trim() || !$("#youtube-vault-path").value.trim() || !$("#youtube-credential-id").value.trim() || !$("#youtube-credential-label").value.trim())) {
-    toast("Choose the Google desktop client JSON, Credential Vault, credential ID and label.", true);
-    return;
-  }
+  if (!renderReadiness().ready) return;
   const correlationId = crypto.randomUUID();
-  const button = $("#run-button");
-  button.disabled = true;
+  state.busy = true;
   setRunControlsBusy(true);
-  button.innerHTML = "<span>◌</span> Creating…";
+  $("#run-button").textContent = "Creating Graph…";
+  renderReadiness();
   try {
-    const sourcePayload = urlMode ? { sourceUrl, maxHeight: 1080 } : { sourceRoot };
-    const asrDevice = $("#asr-device").value;
-    const transcriptPayload = {
-      templateId: state.templateId,
-      ...sourcePayload,
-      sourceLanguage: $("#source-language").value,
-      asrModel: $("#asr-model").value,
-      asrDevice,
-      asrComputeType: asrDevice === "cpu" ? "int8" : asrDevice === "cuda" ? "float16" : "default",
-    };
-    const translationPayload = {
-      ...transcriptPayload,
-      targetLanguages: languages,
-      translationModel: "facebook/nllb-200-distilled-600M",
-      translationDevice: $("#translation-device").value,
-      translationBatchSize: Number($("#translation-batch-size").value),
-    };
-    const defaultVoices = { "ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural", "kk-KZ": "kk-KZ-DauletNeural" };
-    const voicePayload = { ...translationPayload, targetVoices: Object.fromEntries(languages.map((language) => [language, defaultVoices[language]])) };
-    const youtubeCredentialId = $("#publication-credential-id").value.trim();
-    const releaseCredentialId = $("#release-credential-id").value.trim();
-    const releaseAccount = $("#release-account").value.trim();
-    const payload = youtubeConnectMode
-      ? { templateId: state.templateId, clientConfigPath: $("#youtube-client-config").value.trim(), credentialVaultPath: $("#youtube-vault-path").value.trim(), credentialId: $("#youtube-credential-id").value.trim(), label: $("#youtube-credential-label").value.trim() }
-      : publicationMode
-      ? { templateId: state.templateId, videoPath: $("#publication-video").value.trim(), metadataPath: $("#publication-metadata").value.trim(), targetPlatforms: publicationTargets, account: $("#publication-account").value.trim(), credentialIds: youtubeCredentialId && publicationTargets.includes("youtube") ? { youtube: youtubeCredentialId } : {}, public: false }
-      : publicationExecuteMode
-      ? { templateId: state.templateId, planRunId: $("#publication-plan-run-id").value.trim(), confirmation: $("#publication-confirmation").value.trim(), credentialVaultPath: $("#credential-vault-path").value.trim() }
-      : publicationBatchExecuteMode
-      ? { templateId: state.templateId, releasePlanRunId: $("#release-plan-run-id").value.trim(), confirmation: $("#release-execution-confirmation").value.trim(), credentialVaultPath: $("#release-credential-vault-path").value.trim() }
-      : creatorBatchMode
-      ? { ...voicePayload, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined, sourceVolume: 0.12 }
-      : creatorProfileMode
-      ? { templateId: state.templateId, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined }
-      : releaseMode
-      ? {
-          ...voicePayload,
-          sourceVolume: 0.12,
-          metadataTemplatePath: $("#release-metadata-template").value.trim(),
-          targetPlatforms: releaseTargets,
-          targetAccounts: Object.fromEntries(releaseTargets.map((platform) => [platform, releaseAccount])),
-          credentialIds: releaseCredentialId && releaseTargets.includes("youtube") ? { youtube: releaseCredentialId } : {},
-          public: false,
-        }
-      : dubMode
-      ? { ...voicePayload, sourceVolume: 0.12 }
-      : voiceMode
-      ? voicePayload
-      : translationMode
-      ? {
-          ...translationPayload,
-        }
-      : transcriptionMode
-      ? transcriptPayload
-      : state.templateId.endsWith("-intake")
-        ? { templateId: state.templateId, ...sourcePayload }
-        : { templateId: state.templateId, sourceRoot, languages, voice, platforms };
+    const payload = buildPayload(readDraftValues());
     const create = await api("/api/v1/runs", {
       method: "POST",
-      body: JSON.stringify({
-        ...envelope("CMD-RUN-CREATE", correlationId, payload),
-        contractId: "CMD-RUN-CREATE",
-      }),
+      body: JSON.stringify({ ...envelope("CMD-RUN-CREATE", correlationId, payload), contractId: "CMD-RUN-CREATE" }),
     });
     const runId = create.value.runId;
     await api(`/api/v1/runs/${runId}/start`, {
       method: "POST",
       body: JSON.stringify({ ...envelope("CMD-RUN-START", correlationId), contractId: "CMD-RUN-START" }),
     });
-    toast("Graph admitted to the durable serial queue.");
-    button.disabled = false;
+    toast("Graph admitted. Its Loops will execute one at a time.");
+    state.busy = false;
     setRunControlsBusy(false);
-    button.innerHTML = "<span>+</span> Queue another graph";
-    await checkHealth();
+    $("#run-button").textContent = "Create & run Graph";
+    await refreshRunList();
     pollRun(runId);
   } catch (error) {
-    toast(error.message, true);
-    button.disabled = false;
+    state.busy = false;
     setRunControlsBusy(false);
-    button.innerHTML = "<span>▶</span> Run graph";
+    $("#run-button").textContent = "Create & run Graph";
+    state.connectionError = error.message;
+    toast(error.message, true);
+    renderReadiness();
   }
 }
 
 function setRunControlsBusy(busy) {
-  $$('#run-form input[name="template"]').forEach((input) => { input.disabled = busy; });
-}
-
-function resetRunProjection() {
-  state.currentRun = null;
-  $$(".graph-node").forEach((node) => {
-    node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
-    node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
-  });
-  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId === "creator-batch-dub" ? "0 / 4" : state.templateId.endsWith("-release") ? "0 / 12" : state.templateId.endsWith("-dub") ? "0 / 10" : state.templateId.endsWith("-voice") ? "0 / 8" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
-  $("#progress-bar").style.width = "0%";
-  $("#run-id").textContent = "No active run";
-  $("#activity-summary").textContent = "Waiting for a run";
-  $("#log-output").textContent = "Choose a source and run the graph. Durable logs will appear here.";
-}
-
-function selectTemplate(templateId) {
-  state.templateId = templateId;
-  const creatorProfileMode = templateId === "creator-profile";
-  const creatorBatchMode = templateId === "creator-batch-dub";
-  const creatorMode = creatorProfileMode || creatorBatchMode;
-  const publicationMode = templateId === "publication-plan";
-  const publicationExecuteMode = templateId === "publication-execute";
-  const publicationBatchExecuteMode = templateId === "publication-batch-execute";
-  const youtubeConnectMode = templateId === "youtube-connect";
-  const releaseMode = templateId.endsWith("-release");
-  const publicationAnyMode = publicationMode || publicationExecuteMode || publicationBatchExecuteMode;
-  const standaloneMode = publicationAnyMode || youtubeConnectMode;
-  const urlMode = templateId.startsWith("url-") || creatorMode;
-  const transcriptionMode = templateId.endsWith("-transcription");
-  const translationMode = templateId.endsWith("-translation");
-  const voiceMode = templateId.endsWith("-voice");
-  const dubMode = templateId.endsWith("-dub");
-  const needsAsr = transcriptionMode || translationMode || voiceMode || dubMode || releaseMode;
-  $("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode);
-  $("#run-form").classList.toggle("release-mode", releaseMode);
-  const sourceRoot = $("#source-root");
-  const sourceUrl = $("#source-url");
-  $("#url-source-field").hidden = !urlMode;
-  sourceRoot.closest(".source-field").hidden = urlMode || standaloneMode;
-  sourceRoot.required = !urlMode && !standaloneMode;
-  sourceUrl.required = urlMode;
-  const preparedMode = templateId === "prepared-localization";
-  $$(".prepared-only").forEach((element) => {
-    element.hidden = !preparedMode;
-    element.classList.toggle("control-muted", !preparedMode);
-  });
-  $("#target-language-controls").hidden = !(preparedMode || translationMode || voiceMode || dubMode || releaseMode);
-  $$('input[name="language"]').forEach((input) => {
-    input.disabled = preparedMode && input.value !== "ru-RU";
-    input.closest("label").classList.toggle("unavailable", input.disabled);
-  });
-  $("#asr-controls").hidden = !needsAsr;
-  $("#translation-controls").hidden = !(translationMode || voiceMode || dubMode || releaseMode);
-  $("#creator-controls").hidden = !creatorMode;
-  $("#publication-controls").hidden = !publicationMode;
-  $("#release-controls").hidden = !releaseMode;
-  $("#publication-execution-controls").hidden = !publicationExecuteMode;
-  $("#publication-batch-execution-controls").hidden = !publicationBatchExecuteMode;
-  $("#youtube-connect-controls").hidden = !youtubeConnectMode;
-  if (publicationExecuteMode) populateLatestPublicationPlan();
-  if (publicationBatchExecuteMode) populateLatestPublicationBatchPlan();
-  $$('.template-field .choice').forEach((label) => {
-    label.classList.toggle("active", label.querySelector("input").value === templateId);
-  });
-  const copy = publicationBatchExecuteMode
-    ? ["Verified Release plan", "Same workspace · exact batch SHA-256", "Execute serial private release", "Durable child checkpoints · maximum one active", "Verify every publication", "Plans · receipts · external IDs · aggregate fingerprint"]
-    : releaseMode
-    ? [urlMode ? "URL localization" : "Folder localization", "Intake · ASR · translation · voice · dub", "Plan release batch", "One derivative · one Publication child", "Verify release coverage", "Derivatives · metadata · platforms · fingerprints"]
-    : templateId === "creator-batch-dub"
-    ? ["Creator profile", "Canonical URL discovery · optional cookies", "Serial creator loop", "Intake · ASR · translation · voice · dub", "Verify batch coverage", "Items · languages · derivative fingerprints"]
-    : templateId === "youtube-connect"
-    ? ["Google desktop client", "Local config · secret stays out of Studio", "Connect YouTube", "System browser · state · PKCE · Vault", "Verify credential", "Provider · ACTIVE · upload scope"]
-    : templateId === "publication-execute"
-    ? ["Verified plan run", "Same workspace · exact SHA-256", "Execute private YouTube upload", "Credential Vault · Platform I/O", "Verify publication receipt", "External ID · manifest fingerprint"]
-    : templateId === "publication-plan"
-    ? ["Finished video", "Local derivative · editable metadata", "Build publication plan", "Fingerprint only · no upload", "Verify publication plan", "Private/draft jobs · plan SHA-256"]
-    : templateId === "creator-profile"
-    ? ["Creator profile", "YouTube · Bilibili · Douyin · TikTok", "Enumerate profile", "Serial pages · deduplicated · resumable", "Verify creator manifest", "Canonical URLs · cursor · fingerprint"]
-    : templateId === "prepared-localization"
-    ? ["Prepared folder", "Validate batch manifest", "Edge localization", "Voice · mix · hard subtitles", "Verify output", "Inspect files and receipts"]
-    : templateId === "folder-intake"
-      ? ["Local folder", "Resolve an allowed source", "Discover media", "Build deterministic manifest", "Verify source", "Check files and receipt"]
-      : templateId === "url-intake"
-        ? ["Social URL", "YouTube · Bilibili · Douyin · TikTok", "Download 1080p", "Anonymous first · cookie optional", "Verify source", "Check files and receipt"]
-        : templateId === "folder-transcription"
-          ? ["Folder intake", "Discover and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
-          : templateId === "url-transcription"
-            ? ["URL intake", "Download and verify media", "Serial transcription", "Faster Whisper · checkpointed", "Verify transcripts", "JSON · SRT · fingerprints"]
-            : dubMode
-              ? [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · translation · voice", "Localized video composition", "FFmpeg · voice mix · burned subtitles", "Verify localized videos", "H.264/AAC MP4 · fingerprints"]
-            : voiceMode
-              ? [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · translation", "Serial voice rendering", "Edge TTS · per segment · resumable", "Verify voice clips", "MP3 · hashes · durations"]
-              : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
-  ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
-    .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = publicationBatchExecuteMode
-    ? ["Publication Batch Manifest", "Per-item external platform IDs"]
-    : releaseMode
-    ? ["Private/draft plans", "Publication Batch Plan"]
-    : templateId === "creator-batch-dub"
-    ? ["Localized MP4 batch", "Creator Batch Manifest"]
-    : templateId === "youtube-connect"
-    ? ["Vault credential", "Redacted OAuth receipt"]
-    : templateId === "publication-execute"
-    ? ["Publication Manifest", "External platform ID"]
-    : templateId === "publication-plan"
-    ? ["JSON plan", "Plan SHA-256"]
-    : templateId === "creator-profile"
-    ? ["Canonical URLs", "Creator Manifest"]
-    : templateId === "prepared-localization"
-    ? ["MP4 · H.264", "Local receipt"]
-    : dubMode
-      ? ["H.264 · AAC", "Localization Manifest"]
-    : voiceMode
-      ? ["Segment MP3", "Voice Manifest"]
-    : translationMode || transcriptionMode
-      ? ["JSON · SRT", translationMode ? "Translation Manifest" : "Transcript Manifest"]
-      : ["Source Manifest", "SHA-256 receipt"];
-  $("#output-format").textContent = outputDetails[0];
-  $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = publicationBatchExecuteMode
-    ? ["", "execute-publication-batch", "verify-publication-batch-execution"]
-    : releaseMode
-    ? ["intake", "plan-publication-batch", "verify-publication-batch"]
-    : templateId === "creator-batch-dub"
-    ? ["discover-creator", "localize-creator-batch", "verify-creator-batch"]
-    : templateId === "youtube-connect"
-    ? ["", "connect-youtube", "verify-youtube-credential"]
-    : templateId === "publication-execute"
-    ? ["", "execute-publication", "verify-publication-execution"]
-    : templateId === "publication-plan"
-    ? ["", "plan-publication", "verify-publication-plan"]
-    : templateId === "creator-profile"
-    ? ["", "discover-creator", "verify-creator"]
-    : templateId === "prepared-localization"
-    ? ["source", "localize", "verify"]
-    : dubMode
-      ? ["intake", "localize-video", "verify-localization"]
-    : voiceMode
-      ? ["intake", "render-voice", "verify-voice"]
-      : translationMode
-      ? ["intake", "translate", "verify-translation"]
-      : transcriptionMode
-      ? ["intake", "transcribe", "verify-transcript"]
-      : ["", "intake", "verify"];
-  $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = publicationBatchExecuteMode
-    ? ["Verified Release plan", "Committed batch fact", "Execute serial release", "Durable continuation owner", "Verify aggregate", "Per-child evidence policy"]
-    : releaseMode
-    ? [urlMode ? "URL localization" : "Folder localization", "Committed Localization fact", "Plan derivative batch", "Durable serial Publication loop", "Verify release plans", "Exact target coverage"]
-    : templateId === "creator-batch-dub"
-    ? ["Creator Manifest", "Committed discovery fact", "Localize every item", "Durable serial item loop", "Verify batch manifest", "Exact coverage policy"]
-    : templateId === "youtube-connect"
-    ? ["Desktop OAuth client", "Local input", "Connect YouTube", "System-browser consent", "Verify Vault credential", "Provider/status policy"]
-    : templateId === "publication-execute"
-    ? ["Verified plan run", "Committed fact", "Execute publication", "Guarded command", "Verify receipt", "External identity policy"]
-    : templateId === "publication-plan"
-    ? ["Finished video", "Local input", "Build publication plan", "No platform contact", "Verify plan", "Confirmation policy"]
-    : templateId === "creator-profile"
-    ? ["Creator profile", "Remote input", "Enumerate profile", "Serial page loop", "Verify creator manifest", "Coverage policy"]
-    : templateId === "prepared-localization"
-    ? ["Prepared folder", "Local query", "Edge localization", "Serial adapter", "Verify outputs", "Receipt policy"]
-    : templateId === "folder-intake"
-      ? ["Local folder", "Local input", "Discover media", "Serial command", "Verify source", "Manifest policy"]
-      : templateId === "url-intake"
-        ? ["Social URL", "Remote input", "Download 1080p", "Platform adapter", "Verify source", "Manifest policy"]
-        : templateId === "folder-transcription"
-          ? ["Folder intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
-          : templateId === "url-transcription"
-            ? ["URL intake", "Source owner", "Transcribe", "Serial ASR loop", "Verify transcript", "Artifact policy"]
-            : dubMode
-              ? [urlMode ? "URL intake" : "Folder intake", "Source owner", "Compose derivatives", "Serial FFmpeg loop", "Verify localized videos", "Localization policy"]
-            : voiceMode
-              ? [urlMode ? "URL intake" : "Folder intake", "Source owner", "Render voice", "Serial clip loop", "Verify voice", "Audio policy"]
-              : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
-  ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
-    .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = publicationBatchExecuteMode
-    ? "Verified Release Plan → Serial Private YouTube Execution"
-    : releaseMode
-    ? `${urlMode ? "URL" : "Folder"} Localization → Publication Batch Planning`
-    : templateId === "creator-batch-dub"
-    ? "Creator Profile → Serial Localization Batch"
-    : templateId === "youtube-connect"
-    ? "Connect YouTube Account"
-    : templateId === "publication-execute"
-    ? "Guarded Private YouTube Execution"
-    : templateId === "publication-plan"
-    ? "Guarded Publication Planning"
-    : templateId === "creator-profile"
-    ? "Creator Profile Discovery"
-    : templateId === "prepared-localization"
-    ? "Prepared Folder Localization"
-    : templateId === "folder-intake"
-      ? "Folder Source Intake"
-      : templateId === "url-intake"
-        ? "Social URL Intake"
-        : templateId === "folder-transcription"
-          ? "Folder Intake + Transcription"
-          : templateId === "url-transcription"
-            ? "URL Intake + Transcription"
-            : dubMode
-              ? `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation + Voice + Dub`
-            : voiceMode
-              ? `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation + Voice`
-              : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
-  $$(".source-preview").forEach((element) => { element.textContent = (youtubeConnectMode ? $("#youtube-client-config").value : publicationBatchExecuteMode ? $("#release-plan-run-id").value : publicationExecuteMode ? $("#publication-plan-run-id").value : publicationMode ? $("#publication-video").value : urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
-  resetRunProjection();
-  focusNode(state.selectedNode);
+  $("#workflow-goal").disabled = busy;
+  $$('input[name="source-kind"]').forEach((input) => { input.disabled = busy; });
 }
 
 async function pollRun(runId) {
@@ -676,10 +646,10 @@ async function pollRun(runId) {
     renderRun(run);
     await refreshRunList();
     if (TERMINAL_STATES.has(run.status)) {
-      $("#run-button").disabled = false;
+      state.busy = false;
       setRunControlsBusy(false);
-      $("#run-button").innerHTML = "<span>▶</span> Run graph";
-      await checkHealth();
+      $("#run-button").textContent = "Create & run Graph";
+      renderReadiness();
       return;
     }
     state.pollTimer = setTimeout(() => pollRun(runId), 900);
@@ -690,78 +660,58 @@ async function pollRun(runId) {
 }
 
 function renderRun(run) {
-  const byNode = Object.fromEntries(run.steps.map((step) => [step.nodeId, step]));
-  $$(".graph-node").forEach((node) => {
-    const step = byNode[node.dataset.stepId];
-    const fallbackStatus = node.dataset.stepId ? "WAITING" : "READY";
-    const status = (step?.status || fallbackStatus).toLowerCase();
-    node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
-    if (["running", "completed", "failed", "cancelled", "interrupted"].includes(status)) node.classList.add(status);
-    node.querySelector(".node-status").textContent = step?.status || fallbackStatus;
-  });
-  const complete = run.steps.filter((step) => step.status === "COMPLETED").length;
-  $("#run-progress").textContent = `${complete} / ${run.steps.length}`;
-  $("#progress-bar").style.width = `${Math.round(complete / run.steps.length * 100)}%`;
+  state.currentRun = run;
+  renderGraph();
+  const steps = run.steps || [];
+  const complete = steps.filter((step) => step.status === "COMPLETED").length;
+  $("#run-progress").textContent = `${complete} / ${steps.length}`;
+  $("#progress-bar").style.width = `${steps.length ? Math.round(complete / steps.length * 100) : 0}%`;
   $("#run-id").textContent = `${run.runId} · ${run.status}`;
-  $("#activity-summary").textContent = `${run.status} · ${run.logs.length} log entries`;
-  $("#log-output").textContent = run.logs.length
-    ? run.logs.map((row) => `${String(row.sequence).padStart(3, "0")}  ${row.message}`).join("\n")
+  $("#save-state").textContent = `${state.templateId} · ${run.status}`;
+  const logs = run.logs || [];
+  $("#activity-summary").textContent = `${run.status} · ${logs.length} log entries`;
+  $("#log-output").textContent = logs.length
+    ? logs.map((row) => `${String(row.sequence).padStart(3, "0")}  ${row.message}`).join("\n")
     : "Run admitted. Waiting for worker output…";
   $("#log-output").scrollTop = $("#log-output").scrollHeight;
-  focusNode(state.selectedNode);
 }
 
-function focusNode(nodeId) {
-  state.selectedNode = nodeId;
-  $$(".graph-node").forEach((node) => node.classList.toggle("selected", node.dataset.nodeId === nodeId));
-  const copy = TEMPLATE_NODE_COPY[state.templateId][nodeId];
-  $("#inspector-title").textContent = copy.title;
-  $("#inspector-description").textContent = copy.description;
-  const properties = $$(".property code");
-  properties[0].textContent = copy.owner;
-  properties[1].textContent = copy.relationship;
-  properties[2].textContent = copy.delivery;
-  const node = $(`.graph-node[data-node-id="${nodeId}"]`);
-  const step = state.currentRun?.steps.find((item) => item.nodeId === node?.dataset.stepId);
-  $("#inspector-state").textContent = step?.status || (node?.dataset.stepId ? "WAITING" : "READY");
+function toggleActivity() {
+  const collapsed = $("#activity-log").classList.toggle("collapsed");
+  $("#toggle-activity").textContent = collapsed ? "Show log" : "Hide log";
+  $("#toggle-activity").setAttribute("aria-expanded", String(!collapsed));
 }
 
 function bindEvents() {
   $("#run-form").addEventListener("submit", submitRun);
+  $("#workflow-goal").addEventListener("change", (event) => selectGoal(event.target.value));
+  $$('input[name="source-kind"]').forEach((input) => input.addEventListener("change", () => {
+    state.sourceKind = input.value;
+    applyWorkflow(resolveTemplate(state.catalog, state.goalId, state.sourceKind));
+  }));
+  $("#run-form").addEventListener("input", renderReadiness);
+  $("#run-form").addEventListener("change", renderReadiness);
+  $("#reconnect-button").addEventListener("click", reconnect);
+  $("#graph-track").addEventListener("click", handleGraphNodeClick);
+  $("#zoom-in").addEventListener("click", () => setZoom(nextZoom(state.zoom, "in")));
+  $("#zoom-out").addEventListener("click", () => setZoom(nextZoom(state.zoom, "out")));
+  $("#fit-graph").addEventListener("click", fitGraph);
   $("#browse-folder").addEventListener("click", openFolderBrowser);
   $("#folder-up").addEventListener("click", () => state.folder?.parent && loadFolder(state.folder.parent));
   $("#choose-folder").addEventListener("click", selectFolder);
-  $("#toggle-activity").addEventListener("click", () => $("#activity-log").classList.toggle("collapsed"));
+  $("#toggle-activity").addEventListener("click", toggleActivity);
   $("#clear-view").addEventListener("click", () => { $("#log-output").textContent = "View cleared. Durable logs remain stored."; });
   $("#access-button").addEventListener("click", () => $("#access-dialog").showModal());
   $("#access-form").addEventListener("submit", saveAccess);
   $("#clear-access").addEventListener("click", clearAccess);
-  $$(".graph-node").forEach((node) => node.addEventListener("click", () => focusNode(node.dataset.nodeId)));
-  $$('[data-focus-node]').forEach((button) => button.addEventListener("click", () => focusNode(button.dataset.focusNode)));
-  $("#source-root").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
-  $("#source-url").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
-  $("#publication-video").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
-  $("#publication-plan-run-id").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
-  $("#youtube-client-config").addEventListener("input", (event) => $$(".source-preview").forEach((element) => { element.textContent = event.target.value || "Not selected"; }));
-  $$('input[name="template"]').forEach((input) => input.addEventListener("change", () => selectTemplate(input.value)));
 }
 
 async function bootstrap() {
   bootstrapAccess();
   bindEvents();
-  focusNode("localize");
-  selectTemplate("prepared-localization");
-  $("#run-button").disabled = true;
-  try {
-    await loadContracts();
-    $("#run-button").disabled = false;
-    await checkHealth();
-  } catch (error) {
-    $("#run-button").disabled = true;
-    $("#health-pill").classList.remove("ready");
-    $("#health-pill").lastChild.textContent = " Contract unavailable";
-    toast(error.message || "Contract unavailable", true);
-  }
+  renderGraph();
+  renderReadiness();
+  await reconnect();
 }
 
 bootstrap();

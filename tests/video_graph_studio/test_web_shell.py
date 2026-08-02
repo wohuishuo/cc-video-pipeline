@@ -98,72 +98,56 @@ def test_client_uses_versioned_run_contracts_and_stops_terminal_polling():
     assert "Contract unavailable" in script
     assert "crypto.randomUUID()" in script
     assert 'TERMINAL_STATES.has(run.status)' in script
-    assert "templateId" in script
-    assert 'sourceUrl' in script
-    assert 'folder-intake' in script
-    assert 'url-intake' in script
-    assert 'folder-transcription' in script
-    assert 'url-transcription' in script
-    assert 'folder-translation' in script
-    assert 'url-translation' in script
-    assert 'folder-voice' in script
-    assert 'url-voice' in script
-    assert 'folder-dub' in script
-    assert 'url-dub' in script
-    assert 'folder-release' in script
-    assert 'url-release' in script
-    assert 'releaseMode' in script
-    assert 'metadataTemplatePath' in script
-    assert 'targetAccounts' in script
-    assert 'input[name="release-target"]:checked' in script
-    assert 'state.templateId.endsWith("-release") ? "0 / 12"' in script
+    assert "function buildPayload(values)" in script
+    assert 'sourceUrl' in script and 'sourceRoot' in script
+    assert 'metadataTemplatePath' in script and 'targetAccounts' in script
+    assert 'checkedValues("release-target")' in script
     assert 'sourceVolume' in script
-    assert 'creator-profile' in script
-    assert 'creator-batch-dub' in script
-    assert 'creatorBatchMode' in script
-    assert 'maxItems' in script
-    assert 'authenticationFile' in script
-    assert 'publication-plan' in script
-    assert 'publication-execute' in script
-    assert 'publication-batch-execute' in script
-    assert 'youtube-connect' in script
+    assert 'creator-profile' in script and 'creator-batch-dub' in script
+    assert 'maxItems' in script and 'authenticationFile' in script
+    assert 'publication-plan' in script and 'publication-execute' in script
+    assert 'publication-batch-execute' in script and 'youtube-connect' in script
     assert 'planRunId' in script and 'confirmation' in script and 'credentialVaultPath' in script
     assert 'clientConfigPath' in script and 'credentialId' in script and 'label' in script
     assert 'credentialIds' in script
     assert 'function populateLatestPublicationPlan()' in script
     assert 'function populateLatestPublicationBatchPlan()' in script
-    assert 'releasePlanRunId' in script
-    assert 'fact.manifestSha256' in script
+    assert 'releasePlanRunId' in script and 'fact.manifestSha256' in script
     assert 'videoPath' in script and 'metadataPath' in script and 'targetPlatforms' in script
-    assert 'targetVoices' in script
-    assert 'sourceLanguage' in script
-    assert 'asrModel' in script
-    assert 'asrDevice' in script
-    assert 'targetLanguages' in script
-    assert 'translationDevice' in script
+    assert 'targetVoices' in script and 'sourceLanguage' in script
+    assert 'asrModel' in script and 'asrDevice' in script
+    assert 'targetLanguages' in script and 'translationDevice' in script
     assert 'translationBatchSize' in script
-    assert '"JSON · SRT"' in script
-    assert '"Source Manifest"' in script
-    styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    assert ".studio-shell {" in styles
-    assert "grid-template-columns: 340px minmax(0,1fr) 300px" in styles
-    assert ".graph-track { --graph-zoom:1" in styles
-    assert ".graph-node {" in styles
-    assert '$("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode)' in script
-    assert '$("#run-form").classList.toggle("release-mode", releaseMode)' in script
-    assert '$("#release-controls").hidden = !releaseMode' in script
-    assert '$("#publication-batch-execution-controls").hidden = !publicationBatchExecuteMode' in script
-    assert 'sourceRoot.required = !urlMode' in script
-    assert 'sourceUrl.required = urlMode' in script
-    assert 'node.dataset.stepId' in script
-    assert 'dataset.stepId = stepIds[index]' in script
-    assert 'TEMPLATE_NODE_COPY' in script
-    assert 'const copy = TEMPLATE_NODE_COPY[state.templateId][nodeId]' in script
-    assert 'input.disabled = busy' in script
-    assert 'function resetRunProjection()' in script
+    assert 'CONFIG_BY_REQUIREMENT' in script
     assert 'state.currentRun = null' in script
     assert 'sessionStorage.getItem("videoGraph.accessToken")' in script
     assert 'sessionStorage.setItem("videoGraph.accessToken", token)' in script
     assert 'history.replaceState(null, "", `${location.pathname}${location.search}`)' in script
     assert 'Authorization: `Bearer ${token}`' in script
     assert '"X-Workspace-Id": workspaceId' in script
+
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+    assert ".studio-shell {" in styles
+    assert "grid-template-columns: 340px minmax(0,1fr) 300px" in styles
+    assert ".graph-track { --graph-zoom:1" in styles
+    assert ".graph-node {" in styles
+
+
+def test_client_composes_catalog_readiness_and_exact_dynamic_graph():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert 'from "./workflow-model.mjs"' in script
+    assert 'api("/api/v1/capabilities")' in script
+    assert "async function reconnect()" in script
+    assert "function renderReadiness()" in script
+    assert "function renderGraph()" in script
+    assert "function handleGraphNodeClick" in script
+    assert '$("#graph-track").addEventListener("click", handleGraphNodeClick)' in script
+    assert "groupWorkflowGoals" in script
+    assert "resolveTemplate" in script
+    assert "evaluateReadiness" in script
+    assert "projectGraph" in script
+    assert "nextZoom" in script
+    assert "TEMPLATE_NODE_COPY" not in script
+    assert 'input[name="template"]' not in script
+    assert "data-focus-node" not in script
