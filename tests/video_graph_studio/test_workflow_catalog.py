@@ -90,6 +90,12 @@ def test_catalog_explains_url_translation_as_six_real_steps_and_loops(tmp_path):
     assert workflow["group"] == "Create"
     assert workflow["sourceKind"] == "url"
     assert workflow["effect"] == "downloads-source"
+    assert workflow["requirements"] == [
+        "source-url",
+        "asr",
+        "languages",
+        "translation",
+    ]
     assert [node["id"] for node in workflow["nodes"]] == [
         "intake",
         "verify-source",

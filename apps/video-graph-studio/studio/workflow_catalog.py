@@ -62,6 +62,29 @@ NODE_METADATA: dict[str, dict[str, str]] = {
 }
 
 
+WORKFLOW_REQUIREMENTS: dict[str, list[str]] = {
+    "prepared-localization": ["source-folder", "languages", "voice", "platforms"],
+    "folder-intake": ["source-folder"],
+    "url-intake": ["source-url"],
+    "folder-transcription": ["source-folder", "asr"],
+    "url-transcription": ["source-url", "asr"],
+    "folder-translation": ["source-folder", "asr", "languages", "translation"],
+    "url-translation": ["source-url", "asr", "languages", "translation"],
+    "folder-voice": ["source-folder", "asr", "languages", "translation", "voices"],
+    "url-voice": ["source-url", "asr", "languages", "translation", "voices"],
+    "folder-dub": ["source-folder", "asr", "languages", "translation", "voices", "source-volume"],
+    "url-dub": ["source-url", "asr", "languages", "translation", "voices", "source-volume"],
+    "folder-release": ["source-folder", "asr", "languages", "translation", "voices", "source-volume", "metadata-template", "release-account", "release-targets"],
+    "url-release": ["source-url", "asr", "languages", "translation", "voices", "source-volume", "metadata-template", "release-account", "release-targets"],
+    "publication-batch-execute": ["release-run", "confirmation", "vault"],
+    "creator-profile": ["source-url", "creator-options"],
+    "creator-batch-dub": ["source-url", "creator-options", "asr", "languages", "translation", "voices", "source-volume"],
+    "publication-plan": ["video", "metadata", "publication-targets", "account"],
+    "publication-execute": ["plan-run", "confirmation", "vault"],
+    "youtube-connect": ["client-config", "vault-destination", "credential", "label"],
+}
+
+
 def build_workflow_catalog(
     graphs: Mapping[str, GraphDefinition],
 ) -> list[dict[str, Any]]:
@@ -94,6 +117,7 @@ def build_workflow_catalog(
             {
                 "templateId": template_id,
                 **WORKFLOW_METADATA[template_id],
+                "requirements": list(WORKFLOW_REQUIREMENTS[template_id]),
                 "revision": value["revision"],
                 "nodes": projected_nodes,
                 "edges": [
