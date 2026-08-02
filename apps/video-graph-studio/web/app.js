@@ -60,6 +60,11 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Enumerate profile", description: "Page serially, canonicalize URLs, deduplicate IDs and checkpoint the cursor.", owner: "creator-discovery", relationship: "Command", delivery: "PLATFORM_INTEGRATED" },
     verify: { title: "Verify creator manifest", description: "Require ordered unique URLs and a matching manifest fingerprint.", owner: "creator-discovery", relationship: "Policy", delivery: "PLATFORM_INTEGRATED" },
   },
+  "creator-batch-dub": {
+    source: { title: "Creator profile", description: "Enumerate one supported creator profile into an ordered canonical URL fact.", owner: "creator-discovery", relationship: "Fact", delivery: "PLATFORM_INTEGRATED" },
+    localize: { title: "Serial creator loop", description: "Run Intake, ASR, Translation, Voice and Localization for exactly one creator item at a time.", owner: "creator-batch", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify batch coverage", description: "Require every creator item, language and localized derivative fingerprint.", owner: "creator-batch", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
   "publication-plan": {
     source: { title: "Finished video", description: "Select one local derivative plus editable metadata and target accounts.", owner: "publication", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
     localize: { title: "Build publication plan", description: "Fingerprint inputs and create private/draft target jobs without contacting platforms.", owner: "publication", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
@@ -289,7 +294,9 @@ async function submitRun(event) {
   const languages = $$('input[name="language"]:checked').map((item) => item.value);
   const platforms = $$('input[name="platform"]:checked').map((item) => item.value);
   const voice = $("#voice").value;
-  const creatorMode = state.templateId === "creator-profile";
+  const creatorProfileMode = state.templateId === "creator-profile";
+  const creatorBatchMode = state.templateId === "creator-batch-dub";
+  const creatorMode = creatorProfileMode || creatorBatchMode;
   const publicationMode = state.templateId === "publication-plan";
   const publicationExecuteMode = state.templateId === "publication-execute";
   const youtubeConnectMode = state.templateId === "youtube-connect";
@@ -356,7 +363,9 @@ async function submitRun(event) {
       ? { templateId: state.templateId, videoPath: $("#publication-video").value.trim(), metadataPath: $("#publication-metadata").value.trim(), targetPlatforms: publicationTargets, account: $("#publication-account").value.trim(), credentialIds: youtubeCredentialId && publicationTargets.includes("youtube") ? { youtube: youtubeCredentialId } : {}, public: false }
       : publicationExecuteMode
       ? { templateId: state.templateId, planRunId: $("#publication-plan-run-id").value.trim(), confirmation: $("#publication-confirmation").value.trim(), credentialVaultPath: $("#credential-vault-path").value.trim() }
-      : creatorMode
+      : creatorBatchMode
+      ? { ...voicePayload, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined, sourceVolume: 0.12 }
+      : creatorProfileMode
       ? { templateId: state.templateId, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined }
       : dubMode
       ? { ...voicePayload, sourceVolume: 0.12 }
@@ -407,7 +416,7 @@ function resetRunProjection() {
     node.classList.remove("running", "completed", "failed", "cancelled", "interrupted");
     node.querySelector(".node-status").textContent = node.dataset.stepId ? "WAITING" : "READY";
   });
-  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId.endsWith("-dub") ? "0 / 10" : state.templateId.endsWith("-voice") ? "0 / 8" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
+  $("#run-progress").textContent = state.templateId === "prepared-localization" ? "0 / 3" : state.templateId === "creator-batch-dub" ? "0 / 4" : state.templateId.endsWith("-dub") ? "0 / 10" : state.templateId.endsWith("-voice") ? "0 / 8" : state.templateId.endsWith("-translation") ? "0 / 6" : state.templateId.endsWith("-transcription") ? "0 / 4" : "0 / 2";
   $("#progress-bar").style.width = "0%";
   $("#run-id").textContent = "No active run";
   $("#activity-summary").textContent = "Waiting for a run";
@@ -416,7 +425,9 @@ function resetRunProjection() {
 
 function selectTemplate(templateId) {
   state.templateId = templateId;
-  const creatorMode = templateId === "creator-profile";
+  const creatorProfileMode = templateId === "creator-profile";
+  const creatorBatchMode = templateId === "creator-batch-dub";
+  const creatorMode = creatorProfileMode || creatorBatchMode;
   const publicationMode = templateId === "publication-plan";
   const publicationExecuteMode = templateId === "publication-execute";
   const youtubeConnectMode = templateId === "youtube-connect";
@@ -428,6 +439,7 @@ function selectTemplate(templateId) {
   const voiceMode = templateId.endsWith("-voice");
   const dubMode = templateId.endsWith("-dub");
   const needsAsr = transcriptionMode || translationMode || voiceMode || dubMode;
+  $("#run-form").classList.toggle("creator-batch-mode", creatorBatchMode);
   const sourceRoot = $("#source-root");
   const sourceUrl = $("#source-url");
   $("#url-source-field").hidden = !urlMode;
@@ -454,7 +466,9 @@ function selectTemplate(templateId) {
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
-  const copy = templateId === "youtube-connect"
+  const copy = templateId === "creator-batch-dub"
+    ? ["Creator profile", "Canonical URL discovery · optional cookies", "Serial creator loop", "Intake · ASR · translation · voice · dub", "Verify batch coverage", "Items · languages · derivative fingerprints"]
+    : templateId === "youtube-connect"
     ? ["Google desktop client", "Local config · secret stays out of Studio", "Connect YouTube", "System browser · state · PKCE · Vault", "Verify credential", "Provider · ACTIVE · upload scope"]
     : templateId === "publication-execute"
     ? ["Verified plan run", "Same workspace · exact SHA-256", "Execute private YouTube upload", "Credential Vault · Platform I/O", "Verify publication receipt", "External ID · manifest fingerprint"]
@@ -479,7 +493,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = templateId === "youtube-connect"
+  const outputDetails = templateId === "creator-batch-dub"
+    ? ["Localized MP4 batch", "Creator Batch Manifest"]
+    : templateId === "youtube-connect"
     ? ["Vault credential", "Redacted OAuth receipt"]
     : templateId === "publication-execute"
     ? ["Publication Manifest", "External platform ID"]
@@ -498,7 +514,9 @@ function selectTemplate(templateId) {
       : ["Source Manifest", "SHA-256 receipt"];
   $("#output-format").textContent = outputDetails[0];
   $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = templateId === "youtube-connect"
+  const stepIds = templateId === "creator-batch-dub"
+    ? ["discover-creator", "localize-creator-batch", "verify-creator-batch"]
+    : templateId === "youtube-connect"
     ? ["", "connect-youtube", "verify-youtube-credential"]
     : templateId === "publication-execute"
     ? ["", "execute-publication", "verify-publication-execution"]
@@ -518,7 +536,9 @@ function selectTemplate(templateId) {
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = templateId === "youtube-connect"
+  const paletteCopy = templateId === "creator-batch-dub"
+    ? ["Creator Manifest", "Committed discovery fact", "Localize every item", "Durable serial item loop", "Verify batch manifest", "Exact coverage policy"]
+    : templateId === "youtube-connect"
     ? ["Desktop OAuth client", "Local input", "Connect YouTube", "System-browser consent", "Verify Vault credential", "Provider/status policy"]
     : templateId === "publication-execute"
     ? ["Verified plan run", "Committed fact", "Execute publication", "Guarded command", "Verify receipt", "External identity policy"]
@@ -543,7 +563,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = templateId === "youtube-connect"
+  $(".workspace-label").textContent = templateId === "creator-batch-dub"
+    ? "Creator Profile → Serial Localization Batch"
+    : templateId === "youtube-connect"
     ? "Connect YouTube Account"
     : templateId === "publication-execute"
     ? "Guarded Private YouTube Execution"

@@ -70,6 +70,7 @@ Choose one of the workflow templates:
 - `Folder+Voice` or `URL+Voice` continues through verified per-segment Edge MP3 clips.
 - `Folder+Dub` or `URL+Dub` runs all ten owner steps and produces verified subtitle-burned H.264/AAC derivatives.
 - `Creator` enumerates a YouTube/Bilibili/Douyin/TikTok profile into a verified Creator Manifest without downloading media.
+- `Creator+Dub` enumerates the profile, then uses the independent Creator Batch owner to download, transcribe, translate, synthesize and localize exactly one video at a time with resumable item checkpoints.
 - `Publish Plan` fingerprints one finished video and metadata file into private/draft jobs for selected platforms. It never uploads.
 - `Publish Execute` resolves one completed private YouTube plan from the same workspace and requires its exact SHA-256 plus a Credential Vault path before invoking guarded execution. It is a separate explicit Graph.
 - `Connect YouTube` opens the system browser for desktop OAuth, stores the refresh credential through Credential Vault and independently verifies the active provider-bound fact. OAuth secrets never enter Studio state.
@@ -108,6 +109,7 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Source Intake, Transcription, Translation and Voice Rendering manifest workflows are domain verified; one public YouTube download and local Faster Whisper/NLLB/Edge runs have live evidence.
 - Localization is platform integrated through a browser-admitted ten-step RU+KK run with real FFmpeg/FFprobe outputs. Edge TTS remains a replaceable online adapter and may return retryable service failures.
 - Creator Discovery is platform integrated through a browser-admitted, cookie-assisted Douyin profile run with three canonical URLs and no media download.
+- Creator Batch is domain verified through strict-serial, continue-after-failure, partial-resume, stale-repair and real Discovery-fact composition tests. A live multi-item browser batch is not yet claimed.
 - Publication planning is domain verified through a browser-admitted four-target plan. Upload execution remains outside the ordinary Run Graph action and requires an exact plan-hash confirmation.
 - Guarded private YouTube execution is now browser-operable as a separate confirmed Graph and is domain verified through real Publication/Vault composition with a fake platform boundary. No real authenticated upload is claimed.
 - YouTube account connection is browser-operable through the independent OAuth Bootstrap and Vault public CLIs with state/PKCE and redaction tests. No real Google consent was performed by the automated evidence.

@@ -4,8 +4,8 @@
 
 **A Windows-first toolbox for researching, producing, localizing, rendering, and publishing video — one independent program at a time.**
 
-[![Tests](https://img.shields.io/badge/tests-316%20passing-22c55e)](scripts/test-all.ps1)
-[![MVPs](https://img.shields.io/badge/independent%20MVPs-22-8b5cf6)](apps/README.md)
+[![Tests](https://img.shields.io/badge/tests-337%20passing-22c55e)](scripts/test-all.ps1)
+[![MVPs](https://img.shields.io/badge/independent%20MVPs-23-8b5cf6)](apps/README.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-2563eb)](docs/ARCHITECTURE.md)
 
 [Quick start](#five-minute-start) · [Applications](#choose-one-result) · [Workflows](docs/WORKFLOWS.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](docs/CONTRIBUTING.md)
@@ -14,7 +14,7 @@
 
 ---
 
-## One repository, twenty-two focused programs
+## One repository, twenty-three focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
 
@@ -39,13 +39,15 @@ flowchart LR
     vault[Credential Vault] -. credential reference .-> publish
     publish --> youtubePublisher[YouTube Publisher]
     youtubeOAuth[YouTube OAuth Bootstrap] --> vault
+    creatorDiscovery[Creator Discovery] --> creatorBatch[Creator Batch]
+    creatorBatch --> master
 
     classDef source fill:#eff6ff,stroke:#2563eb,color:#172554;
     classDef app fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
     classDef artifact fill:#ecfdf5,stroke:#16a34a,color:#052e16;
     classDef external fill:#fff7ed,stroke:#ea580c,color:#431407;
     class idea source;
-    class research,download,intake,transcribe,translate,renderVoice,signals,frames,edit,studio,localize,voice,vault,youtubePublisher,youtubeOAuth app;
+    class research,download,intake,transcribe,translate,renderVoice,signals,frames,edit,studio,localize,voice,vault,youtubePublisher,youtubeOAuth,creatorDiscovery,creatorBatch app;
     class master artifact;
     class publish external;
 ```
@@ -61,6 +63,7 @@ The arrows describe useful composition, not mandatory coupling.
 | **YouTube OAuth Bootstrap** | Google desktop client JSON + explicit consent | Active provider-bound Vault credential + redacted receipt | `DOMAIN_VERIFIED` | [Open](apps/youtube-oauth-bootstrap/README.md) |
 | **Source Intake** | Local folder or supported social URL | Deterministic source manifest + receipt | `DOMAIN_VERIFIED` | [Open](apps/source-intake/README.md) |
 | **Creator Discovery** | YouTube/Bilibili/Douyin/TikTok creator URL | Ordered canonical video manifest | `PLATFORM_INTEGRATED` | [Open](apps/creator-discovery/README.md) |
+| **Creator Batch** | Creator Manifest + languages and voices | Durable serial localization receipt + complete derivative manifest | `DOMAIN_VERIFIED` | [Open](apps/creator-batch/README.md) |
 | **Channel Research** | Platform source reference | Reproducible research dossier | `DOMAIN_VERIFIED` | [Open](apps/channel-research/README.md) |
 | **Transcription** | Source manifest + ASR policy | Verified transcript manifest + JSON/SRT | `DOMAIN_VERIFIED` | [Open](apps/transcription/README.md) |
 | **Translation** | Transcript manifest + target languages | Editable translation manifest + JSON/SRT | `DOMAIN_VERIFIED` | [Open](apps/translation/README.md) |
@@ -104,6 +107,7 @@ flowchart TB
       Q[apps/resource-budget]
       R[apps/youtube-publisher]
       S[apps/youtube-oauth-bootstrap]
+      T[apps/creator-batch]
     end
     contracts[(Versioned files and receipts)]
     projects[(Project-owned scripts and assets)]
@@ -116,7 +120,7 @@ flowchart TB
 
     classDef boundary fill:#f5f3ff,stroke:#7c3aed,color:#2e1065;
     classDef data fill:#f8fafc,stroke:#64748b,color:#0f172a;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S boundary;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T boundary;
     class contracts,projects,outputs data;
 ```
 
@@ -177,6 +181,7 @@ Every program has a `docs/mvp/<name>/` brief, capability DAG, evidence record, a
 - [Studio guarded-publication tutorial](docs/training/10-studio-guarded-publication.md)
 - [Private YouTube publisher tutorial](docs/training/11-youtube-private-publisher.md)
 - [Connect a YouTube account tutorial](docs/training/12-youtube-oauth-bootstrap.md)
+- [Creator batch localization tutorial](docs/training/13-creator-batch-loop.md)
 - [Creator workflows](docs/WORKFLOWS.md)
 - [Contributing a new MVP](docs/CONTRIBUTING.md)
 - [Repository map](docs/PROJECT_MAP.md)

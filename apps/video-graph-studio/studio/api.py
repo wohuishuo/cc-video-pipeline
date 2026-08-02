@@ -170,6 +170,27 @@ CREATOR_GRAPHS = {
     )
 }
 
+CREATOR_BATCH_GRAPHS = {
+    "creator-batch-dub": GraphDefinition.from_dict(
+        {
+            "schemaVersion": 1,
+            "graphId": "creator-batch-dub",
+            "revision": 1,
+            "nodes": [
+                {"id": "discover-creator", "type": "discover-creator", "config": {}},
+                {"id": "verify-creator", "type": "verify-creator", "config": {}},
+                {"id": "localize-creator-batch", "type": "localize-creator-batch", "config": {}},
+                {"id": "verify-creator-batch", "type": "verify-creator-batch", "config": {}},
+            ],
+            "edges": [
+                {"source": "discover-creator", "target": "verify-creator", "relationship": "Fact"},
+                {"source": "verify-creator", "target": "localize-creator-batch", "relationship": "Fact"},
+                {"source": "localize-creator-batch", "target": "verify-creator-batch", "relationship": "Fact"},
+            ],
+        }
+    )
+}
+
 PUBLICATION_GRAPHS = {
     "publication-plan": GraphDefinition.from_dict(
         {
@@ -215,7 +236,7 @@ YOUTUBE_CONNECT_GRAPHS = {
     )
 }
 
-SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **CREATOR_GRAPHS}
+SOURCE_GRAPHS = {**INTAKE_GRAPHS, **TRANSCRIPTION_GRAPHS, **TRANSLATION_GRAPHS, **VOICE_GRAPHS, **LOCALIZATION_GRAPHS, **CREATOR_GRAPHS, **CREATOR_BATCH_GRAPHS}
 
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"})
 
@@ -407,6 +428,7 @@ class StudioApplication:
         self, envelope: dict[str, Any], payload: dict[str, Any], template_id: str
     ) -> tuple[int, dict[str, Any]]:
         folder_mode = template_id.startswith("folder-")
+        creator_batch_mode = template_id in CREATOR_BATCH_GRAPHS
         if folder_mode:
             source = Path(str(payload.get("sourceRoot", ""))).resolve()
             self._require_allowed(source)
@@ -432,7 +454,7 @@ class StudioApplication:
                 "sourceUrl": value,
                 "maxHeight": int(payload.get("maxHeight", 1080)),
             }
-        if template_id in CREATOR_GRAPHS:
+        if template_id in CREATOR_GRAPHS or creator_batch_mode:
             try:
                 max_items = int(payload.get("maxItems", 0))
             except (TypeError, ValueError) as error:
@@ -453,7 +475,7 @@ class StudioApplication:
                 "maxItems": max_items,
                 "authenticationFile": str(authentication_path) if authentication_path else None,
             }
-        if template_id in TRANSCRIPTION_GRAPHS or template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS:
+        if template_id in TRANSCRIPTION_GRAPHS or template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS or creator_batch_mode:
             source_language = str(payload.get("sourceLanguage", "auto")).strip()
             model = str(payload.get("asrModel", "small")).strip()
             device = str(payload.get("asrDevice", "auto")).strip()
@@ -470,7 +492,7 @@ class StudioApplication:
                     "asrComputeType": compute_type,
                 }
             )
-        if template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS:
+        if template_id in TRANSLATION_GRAPHS or template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS or creator_batch_mode:
             languages = payload.get("targetLanguages")
             supported = {"ru-RU", "en-US", "kk-KZ"}
             if (
@@ -495,12 +517,12 @@ class StudioApplication:
                     "translationBatchSize": translation_batch_size,
                 }
             )
-        if template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS:
+        if template_id in VOICE_GRAPHS or template_id in LOCALIZATION_GRAPHS or creator_batch_mode:
             voices = payload.get("targetVoices")
             if not isinstance(voices, dict) or set(voices) != set(parameters["targetLanguages"]) or any(not isinstance(value, str) or not value.strip() for value in voices.values()):
                 raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
             parameters["targetVoices"] = dict(voices)
-        if template_id in LOCALIZATION_GRAPHS:
+        if template_id in LOCALIZATION_GRAPHS or creator_batch_mode:
             try:
                 source_volume = float(payload.get("sourceVolume", 0.12))
             except (TypeError, ValueError) as error:

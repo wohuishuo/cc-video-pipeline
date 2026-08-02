@@ -23,6 +23,8 @@ flowchart LR
     MVP -->|"credential reference only"| Vault["Credential Vault"]
     Vault -->|"one child environment"| Platform["Platform I/O"]
     OAuth["YouTube OAuth Bootstrap"] -->|"encrypted credential fact"| Vault
+    Discovery["Creator Discovery"] -->|"ordered URL fact"| Batch["Creator Batch continuation"]
+    Batch -->|"verified localization batch fact"| Process
     MVP -->|"artifact + receipt + fingerprint"| Process
     Run -->|"read-only run projection"| Client
 ```
@@ -55,6 +57,7 @@ Several runs may be queued. Every workspace has its own durable FIFO. Queued run
 - Unknown external publication outcome is quarantined for reconciliation; it is never inferred as success.
 - Browser publication execution resolves a completed plan from the same RunStore, requires its committed SHA-256, permits only credential-backed private YouTube jobs and rejects adapter success without an external ID.
 - Browser YouTube connection stores only local path references and credential metadata; ephemeral state, PKCE verifier, authorization code and tokens remain inside OAuth Bootstrap and Credential Vault boundaries.
+- Creator Batch owns ordered per-item continuation only: it checkpoints one active item, consumes child MVP facts, retains completed hashes across retries and cannot mutate child artifacts.
 - Process loss does not make the browser the recovery authority.
 - Startup releases any active reservation belonging to an already terminal run. Interrupted work reacquires the same stable reservation identity; an expired same-fingerprint reservation advances generation instead of changing run identity.
 
