@@ -9,6 +9,9 @@ flowchart LR
     N1["N01 Workspace Namespace"] --> N2["N02 Path Confinement"]
     N1 --> N3["N03 Capacity Projection"]
     N2 -. "routed roots" .-> G2
+    K1["K01 Encrypted Credential Custody"] --> K2["K02 Credential Lifecycle"]
+    K2 --> K3["K03 One-child Injection"]
+    K3 -. "credential reference" .-> P2["P02 Platform Upload Adapter"]
     G1["G01 Graph Definition"] --> G3["G03 Workflow Process"]
     G2["G02 Workflow Run Owner"] --> G3
     S1["S01 Source Classification"] --> S2["S02 Folder Discovery"]
@@ -29,7 +32,7 @@ flowchart LR
     C1 --> C3["C03 Video Composition"]
     C2 --> C3
     C3 --> P1["P01 Publication Plan"]
-    P1 --> P2["P02 Platform Upload Adapter"]
+    P1 --> P2
     G3 -. "commands only" .-> S4
     G3 -. "commands only" .-> T1
     G3 -. "commands only" .-> L1
@@ -44,6 +47,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | A01-A02 | Workspace Access | `DOMAIN_VERIFIED`; digest-only credentials, scope, expiry, revocation, secure Studio admission and redacted CLI evidence | hosted identity provider and security review |
 | N01-N03 | Workspace Storage | `DOMAIN_VERIFIED`; deterministic disjoint roots, confined resolution, capacity projection and real two-workspace Studio routing | hard reservations, hosted storage, backup and production isolation evidence |
+| K01-K03 | Credential Vault | `DOMAIN_VERIFIED`; env-only intake, CurrentUser DPAPI, redacted lifecycle, explicit rotation/revocation and real one-child injection | platform-auth composition, renewal, remote KMS and production security evidence |
 | G01-G03 | Graph definition, run, queue and process ownership | `DOMAIN_VERIFIED`; durable FIFO plus real process-loss recovery | power-loss, load, security and hosted operations |
 | S01-S04 | Source Intake | `DOMAIN_VERIFIED`; live YouTube evidence | Creator Manifest batch composition and three remaining download platforms |
 | D01-D02 | Creator Discovery | `PLATFORM_INTEGRATED`; durable page loop and real bounded Douyin profile manifest | full-profile scale and live YouTube/Bilibili/TikTok evidence |

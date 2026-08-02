@@ -12,6 +12,7 @@ EXPECTED_APPS = {
     "publication",
     "workspace-access",
     "workspace-storage",
+    "credential-vault",
 }
 
 

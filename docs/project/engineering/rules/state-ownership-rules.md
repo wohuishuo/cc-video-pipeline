@@ -7,7 +7,7 @@
 5. Projections and UI state are disposable readers and cannot authorize mutation.
 6. Cross-owner communication uses a versioned command, query or committed fact.
 7. A committed fact names an inspectable artifact and its upstream fingerprint.
-8. Credentials terminate at the platform adapter that needs them.
+8. Credential Vault owns encrypted local custody; decrypted values terminate only in the selected child platform adapter.
 9. Retry reuses the same operation identity; changed canonical input conflicts.
 10. Unknown external outcomes are quarantined until reconciled.
 11. A new client or storage adapter must not move domain truth into transport code.
