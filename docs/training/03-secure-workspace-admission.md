@@ -66,7 +66,7 @@ sequenceDiagram
     end
 ```
 
-`runs:read` protects run queries, `artifacts:read` protects folder browsing and `runs:write` protects mutations. Health and static assets remain public so a fresh browser can load the UI and discover that access is required.
+`runs:read` protects run queries, `artifacts:read` protects folder browsing and `runs:write` protects mutations. Health, Client Contracts discovery and static assets remain public so a fresh client can negotiate the API and learn that workspace access is required.
 
 ## 5. Revoke without changing Studio
 

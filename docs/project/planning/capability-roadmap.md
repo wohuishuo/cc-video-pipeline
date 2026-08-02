@@ -20,7 +20,7 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 14 | Local credential custody | env-only input, CurrentUser protection, redaction, rotation/revocation, child injection | Domain complete; guarded-publication composition complete |
 | 15 | Credential-aware guarded publication | credential reference, provider match, exact confirmation, redacted serial child receipt | Domain complete; real authenticated platform proof pending |
 | 16 | Authenticated real-platform adapters | accepted private/draft upload, external ID reconciliation, renewal and rate-limit evidence | Pending |
-| 17 | Transport-neutral client contracts | canonical bundle, strict command envelopes, scoped endpoints, semantic compatibility | Domain complete; Studio HTTP discovery pending |
+| 17 | Transport-neutral client contracts | canonical bundle, strict command envelopes, scoped endpoints, semantic compatibility | Domain complete; Studio HTTP discovery and browser consumption complete |
 | 18 | Durable local resource budget | byte/slot leases, cross-process no-oversubscription, generation/TTL lifecycle, Storage capacity composition | Domain complete; Studio composition complete |
 | 19 | Resource-aware Studio admission | reserve before start, renew during run, release on every terminal path, recovery reconciliation | Domain complete; production load and power-loss evidence pending |
 | 20 | Hosted/mobile admission | remote identity, HTTP contract discovery, remote secret custody, distributed budgets, attack review and security evidence | Pending |

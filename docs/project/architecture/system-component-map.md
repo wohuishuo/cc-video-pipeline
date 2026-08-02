@@ -4,7 +4,8 @@ Every mutable artifact family has one authoritative writer. Coordinators own con
 
 ```mermaid
 flowchart TB
-    Client["Browser / future mobile client"] -->|"credential + versioned command"| Admission["Admission adapter"]
+    Contracts["Client Contracts"] -->|"public discovery bundle"| Client["Browser / future mobile client"]
+    Client -->|"credential + discovered-version command"| Admission["Admission adapter"]
     Access["Workspace Access"] -->|"redacted scope decision"| Admission
     Storage["Workspace Storage"] -->|"state/artifact namespace"| Router["Workspace Runtime Router"]
     Storage -. "capacity fact" .-> Budget["Resource Budget"]
@@ -65,7 +66,7 @@ flowchart LR
     Admission --> Runs["Same Run and Process owners"]
 ```
 
-Desktop defaults to anonymous loopback admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Optional Resource Budget composition reserves and renews local byte/slot capacity for only the active workflow while queued work remains lease-free. Guarded Publication passes credential references through Credential Vault's provider-bound public child boundary into Platform I/O; real authenticated platform proof remains pending. Commercial hosting still needs a real identity provider, remote secret custody, distributed resource enforcement and production security evidence; it must not move workflow truth into the UI.
+Desktop defaults to anonymous loopback admission and discovers Client Contracts before enabling mutations. Contract discovery and health are public; scoped requests still pass admission. Optional fixed secure mode binds one process to one workspace. Optional multi-workspace mode composes Workspace Access and Workspace Storage through public CLIs, authorizes the header workspace and lazily creates isolated state/artifact runtimes. All runtime engines share one process-wide execution gate. Optional Resource Budget composition reserves and renews local byte/slot capacity for only the active workflow while queued work remains lease-free. Guarded Publication passes credential references through Credential Vault's provider-bound public child boundary into Platform I/O; real authenticated platform proof remains pending. Commercial hosting still needs a real identity provider, remote secret custody, distributed resource enforcement and production security evidence; it must not move workflow truth into the UI.
 
 ## Cross-boundary rules
 

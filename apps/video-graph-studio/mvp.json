@@ -7,6 +7,6 @@
   "test": "python -m pytest tests/video_graph_studio -q",
   "inputs": ["prepared media folder", "target languages", "voice", "target platforms"],
   "outputs": ["durable run projection", "step receipts", "localized media references"],
-  "dependencies": ["python>=3.12", "sqlite3", "ffmpeg", "edge-tts", "localization MVP", "optional workspace-access MVP", "optional workspace-storage MVP", "optional resource-budget MVP"],
+  "dependencies": ["python>=3.12", "sqlite3", "ffmpeg", "edge-tts", "client-contracts MVP", "localization MVP", "optional workspace-access MVP", "optional workspace-storage MVP", "optional resource-budget MVP"],
   "delivery_level": "DOMAIN_VERIFIED"
 }

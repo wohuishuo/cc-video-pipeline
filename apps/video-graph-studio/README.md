@@ -8,7 +8,7 @@ Video Graph Studio is a local browser control plane for reusable video MVPs. It 
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1
 ```
 
-The launcher opens `http://127.0.0.1:8765`. It never binds to the LAN. To run without opening a browser:
+The launcher opens `http://127.0.0.1:8765`. It never binds to the LAN. The browser first loads the canonical Client Contracts bundle from `GET /api/v1/contracts`, then uses that discovered version for every command. To run without opening a browser:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1 -NoBrowser -Port 8765
@@ -24,7 +24,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.
   -WorkspaceId local
 ```
 
-Use the **Access** button to enter the workspace ID and bearer credential. The browser keeps them in `sessionStorage`, attaches them to versioned API requests, and removes bootstrap credentials from the URL fragment immediately. Static assets and health remain public; run queries require `runs:read`, folder browsing requires `artifacts:read`, and mutations require `runs:write`. The server also limits browsing to that workspace's configured roots.
+Use the **Access** button to enter the workspace ID and bearer credential. The browser keeps them in `sessionStorage`, attaches them to versioned API requests, and removes bootstrap credentials from the URL fragment immediately. Static assets, health and contract discovery remain public; run queries require `runs:read`, folder browsing requires `artifacts:read`, and mutations require `runs:write`. The server also limits browsing to that workspace's configured roots.
 
 This protects the local HTTP boundary but is not multi-tenant hosting: each secure Studio process serves exactly one workspace and one data root. Tenant-scoped storage, remote identity, vault custody and audit export remain later owners.
 
@@ -110,5 +110,6 @@ Creator discovery accepts an optional Netscape authentication file inside the cu
 - Optional Workspace Access admission is domain verified through its public CLI boundary with real scope separation, wrong-workspace denial and secret-redaction evidence.
 - Multi-workspace routing is domain verified with two credentials, two SQLite state roots, isolated run projections, cross-workspace denial and one shared global execution gate.
 - Optional Resource Budget composition is domain verified with reserve-before-run, renewable generation fencing, durable wait/requeue, terminal release and a real CLI-to-Studio child-process drill.
+- Client Contracts discovery is domain verified through its public CLI and an unauthenticated loopback HTTP endpoint; the browser fails closed before mutation when discovery is unavailable.
 - Authenticated upload execution remains a later independent slice.
 - No cloud account, billing, remote access or production platform claim is made.

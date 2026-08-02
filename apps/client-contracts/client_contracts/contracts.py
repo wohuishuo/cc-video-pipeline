@@ -38,6 +38,7 @@ class ClientContracts:
             "commands":{command:{**envelope,"contractId":command} for command in COMMANDS},
             "endpoints":{
                 "GET /api/v1/health":{"scope":None,"projection":"health"},
+                "GET /api/v1/contracts":{"scope":None,"projection":"client-contracts"},
                 "GET /api/v1/capabilities":{"scope":"runs:read","projection":"capabilities"},
                 "GET /api/v1/queue":{"scope":"runs:read","projection":"queue"},
                 "GET /api/v1/runs":{"scope":"runs:read","projection":"run-list"},
@@ -50,8 +51,12 @@ class ClientContracts:
             "ownership":{"runState":"Video Graph Studio","workspaceAdmission":"Workspace Access","clientProjection":"disposable"},
         }
 
+    def show(self)->ContractResult:
+        bundle=self.bundle(); data=self._encoded(bundle)
+        return ContractResult("COMPLETED",{"bundle":bundle,"sha256":hashlib.sha256(data).hexdigest()})
+
     def export(self,path:Path)->ContractResult:
-        target=Path(path).resolve(); data=(json.dumps(self.bundle(),ensure_ascii=False,indent=2)+"\n").encode("utf-8"); digest=hashlib.sha256(data).hexdigest()
+        target=Path(path).resolve(); data=self._encoded(self.bundle()); digest=hashlib.sha256(data).hexdigest()
         if target.is_file() and target.read_bytes()==data: return ContractResult("DUPLICATE_COMPLETED",{"path":str(target),"sha256":digest,"contractVersion":CONTRACT_VERSION})
         target.parent.mkdir(parents=True,exist_ok=True); descriptor,name=tempfile.mkstemp(prefix=f".{target.name}.",suffix=".tmp",dir=target.parent); temporary=Path(name)
         try:
@@ -59,6 +64,10 @@ class ClientContracts:
             os.replace(temporary,target)
         finally: temporary.unlink(missing_ok=True)
         return ContractResult("COMPLETED",{"path":str(target),"sha256":digest,"contractVersion":CONTRACT_VERSION})
+
+    @staticmethod
+    def _encoded(bundle:dict[str,Any])->bytes:
+        return (json.dumps(bundle,ensure_ascii=False,indent=2)+"\n").encode("utf-8")
 
     def validate_command(self,value:Any,expected_contract:str)->ContractResult:
         if expected_contract not in COMMANDS: raise ContractError("REJECTED_MALFORMED","unknown expected contract")

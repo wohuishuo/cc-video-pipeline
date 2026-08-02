@@ -21,6 +21,7 @@ Evidence is organized by capability owner. Every ledger records supported comple
 - [Credential Vault](credential-vault/delivery-ledger.md)
 - [Credential-aware publication drill](publication/credential-aware-publication-drill.md)
 - [Client Contracts](client-contracts/delivery-ledger.md)
+- [Client Contracts Studio HTTP discovery drill](client-contracts/studio-http-discovery-drill.md)
 - [Resource Budget](resource-budget/delivery-ledger.md)
 
 Fresh executable evidence controls promotion. A design document, commit or green unit test alone cannot prove a live platform or production operation.

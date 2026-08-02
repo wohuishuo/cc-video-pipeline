@@ -67,7 +67,7 @@ const TEMPLATE_NODE_COPY = {
   },
 };
 
-const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization", accessRequired: false, workspaceId: sessionStorage.getItem("videoGraph.workspaceId") || "" };
+const state = { currentRun: null, pollTimer: null, folder: null, selectedNode: "localize", templateId: "prepared-localization", accessRequired: false, workspaceId: sessionStorage.getItem("videoGraph.workspaceId") || "", contracts: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -93,13 +93,24 @@ async function api(path, options = {}) {
 }
 
 function envelope(contractId, correlationId, payload = {}) {
+  if (!state.contracts?.commands?.[contractId]) throw new Error(`Unsupported command: ${contractId}`);
   return {
     contractId,
-    contractVersion: "1.0",
+    contractVersion: state.contracts.contractVersion,
     operationId: crypto.randomUUID(),
     correlationId,
     payload,
   };
+}
+
+async function loadContracts() {
+  const response = await api("/api/v1/contracts");
+  const bundle = response.value?.bundle;
+  const required = ["CMD-RUN-CREATE", "CMD-RUN-START", "CMD-RUN-CANCEL"];
+  if (!bundle || bundle.schemaVersion !== 1 || !bundle.contractVersion || !required.every((key) => bundle.commands?.[key]) || !bundle.endpoints?.["GET /api/v1/contracts"]) {
+    throw new Error("Contract unavailable");
+  }
+  state.contracts = bundle;
 }
 
 function toast(message, error = false) {
@@ -574,8 +585,22 @@ function bindEvents() {
   $$('input[name="template"]').forEach((input) => input.addEventListener("change", () => selectTemplate(input.value)));
 }
 
-bootstrapAccess();
-bindEvents();
-checkHealth();
-focusNode("localize");
-selectTemplate("prepared-localization");
+async function bootstrap() {
+  bootstrapAccess();
+  bindEvents();
+  focusNode("localize");
+  selectTemplate("prepared-localization");
+  $("#run-button").disabled = true;
+  try {
+    await loadContracts();
+    $("#run-button").disabled = false;
+    await checkHealth();
+  } catch (error) {
+    $("#run-button").disabled = true;
+    $("#health-pill").classList.remove("ready");
+    $("#health-pill").lastChild.textContent = " Contract unavailable";
+    toast(error.message || "Contract unavailable", true);
+  }
+}
+
+bootstrap();
