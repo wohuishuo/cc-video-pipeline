@@ -8,6 +8,47 @@ import subprocess
 import sys
 
 
+QWEN3_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
+QWEN3_LANGUAGE_NAMES = {
+    "zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean",
+    "ru": "Russian", "de": "German", "fr": "French", "pt": "Portuguese",
+    "es": "Spanish", "it": "Italian",
+}
+
+
+class _QwenPresetEngine:
+    def __init__(self, device):
+        self.device = device
+        self.model = None
+
+    def load(self):
+        import torch
+        from qwen_tts import Qwen3TTSModel
+
+        device = self.device
+        if device == "xpu":
+            device = "cpu"
+        elif device == "cuda" and not torch.cuda.is_available():
+            device = "cpu"
+        dtype = torch.float32 if device == "cpu" else torch.bfloat16
+        self.model = Qwen3TTSModel.from_pretrained(
+            QWEN3_MODEL_ID, device_map=device, dtype=dtype, attn_implementation="sdpa"
+        )
+
+    def synth_preset(self, text, language, speaker):
+        if self.model is None:
+            raise RuntimeError("Qwen3-TTS model is not loaded")
+        resolved = QWEN3_LANGUAGE_NAMES.get(str(language).lower())
+        if resolved is None:
+            raise RuntimeError(f"Qwen3-TTS locale is unsupported: {language}")
+        wavs, sample_rate = self.model.generate_custom_voice(
+            text=text, language=resolved, speaker=speaker, instruct=""
+        )
+        if not isinstance(wavs, list) or len(wavs) != 1:
+            raise RuntimeError("Qwen3-TTS must return exactly one waveform")
+        return wavs[0], sample_rate
+
+
 class EdgeTtsAdapter:
     identity = "edge-tts@1"
     output_suffix = ".mp3"
@@ -87,9 +128,7 @@ class Qwen3TtsAdapter:
             self.active -= 1
 
     def _engine(self):
-        from ttslib.registry import get_engine
-
-        return get_engine("qwen", device=self.device)
+        return _QwenPresetEngine(self.device)
 
     @staticmethod
     def _write_wav(path, audio, sample_rate):

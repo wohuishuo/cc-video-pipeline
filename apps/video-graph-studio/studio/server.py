@@ -346,6 +346,7 @@ def build_runtime(
         store,
         engine,
         allowed_roots=allowed_roots if allowed_roots is not None else _allowed_roots(repository),
+        repository=repository,
     )
     return application, engine
 

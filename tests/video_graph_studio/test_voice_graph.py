@@ -27,13 +27,29 @@ def test_folder_voice_graph_has_eight_owner_steps(tmp_path):
     app = StudioApplication(store, WorkflowEngine(store, {key:Noop() for key in types}), allowed_roots=(tmp_path,))
     source=tmp_path/"media"; source.mkdir()
     status,response=app.handle("POST","/api/v1/runs",{},envelope({
-        "templateId":"folder-voice","sourceRoot":str(source),"targetLanguages":["ru-RU","kk-KZ"],
-        "targetVoices":{"ru-RU":"ru-RU-DmitryNeural","kk-KZ":"kk-KZ-DauletNeural"},
+        "templateId":"folder-voice","sourceRoot":str(source),"targetLanguages":["ru-RU","en-US"],
+        "voiceProvider":"qwen3","targetVoices":{"ru-RU":"Ryan","en-US":"Aiden"},
     }))
     run=store.get_run(response["value"]["runId"])
     assert status==201
     assert [node["type"] for node in run["graph"]["nodes"]]==types
-    assert run["parameters"]["targetVoices"]["kk-KZ"]=="kk-KZ-DauletNeural"
+    assert run["parameters"]["targetVoices"]["en-US"]=="Aiden"
+    assert run["parameters"]["voiceProvider"]=="qwen3"
+
+
+def test_folder_voice_graph_rejects_unsupported_qwen_locale(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))
+    source = tmp_path / "media"; source.mkdir()
+
+    status, response = app.handle("POST", "/api/v1/runs", {}, envelope({
+        "templateId": "folder-voice", "sourceRoot": str(source),
+        "targetLanguages": ["kk-KZ"], "voiceProvider": "qwen3",
+        "targetVoices": {"kk-KZ": "Ryan"},
+    }))
+
+    assert status == 400
+    assert "Qwen3-TTS" in response["detail"]
 
 
 def test_verify_voice_checks_clip_hashes_and_exact_count(tmp_path):

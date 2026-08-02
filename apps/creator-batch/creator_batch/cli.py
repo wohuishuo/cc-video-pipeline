@@ -32,6 +32,7 @@ def parser() -> argparse.ArgumentParser:
     localize.add_argument("creator_manifest", type=Path)
     localize.add_argument("--target-language", action="append", required=True)
     localize.add_argument("--voice", action="append", required=True)
+    localize.add_argument("--voice-provider", default="edge", choices=("edge", "qwen3", "original"))
     localize.add_argument("--cookies", type=Path)
     localize.add_argument("--output-dir", type=Path, required=True)
     localize.add_argument("--operation-id", required=True)
@@ -80,6 +81,7 @@ def main(
         policy = BatchPolicy.create(
             args.target_language,
             _voices(args.voice),
+            voice_provider=args.voice_provider,
             source_language=args.source_language,
             asr_model=args.asr_model,
             asr_device=args.asr_device,

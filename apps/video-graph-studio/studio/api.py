@@ -14,6 +14,12 @@ from .contracts import ContractError, GraphDefinition
 from .creator_catalog import project_creator_catalog
 from .engine import WorkflowEngine
 from .language_catalog import SUPPORTED_LANGUAGE_LOCALES, language_rows
+from .voice_provider_catalog import voice_provider_rows
+
+
+QWEN3_SUPPORTED_LANGUAGE_LOCALES = frozenset(
+    {"ru-RU", "en-US", "zh-CN", "es-ES", "fr-FR", "de-DE", "it-IT", "pt-BR", "ja-JP", "ko-KR"}
+)
 from .store import CreateRun, RunStore
 from .workflow_catalog import build_workflow_catalog
 
@@ -318,10 +324,12 @@ class StudioApplication:
         engine: WorkflowEngine,
         *,
         allowed_roots: tuple[Path, ...],
+        repository: Path | None = None,
     ) -> None:
         self.store = store
         self.engine = engine
         self.allowed_roots = tuple(Path(root).resolve() for root in allowed_roots if Path(root).exists())
+        self.repository = Path(repository).resolve() if repository is not None else None
 
     def handle(
         self,
@@ -352,6 +360,11 @@ class StudioApplication:
                         {"id": "nllb", "name": "NLLB (local)", "ready": True, "defaultModel": "facebook/nllb-200-distilled-600M"},
                         {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()), "defaultModel": "deepseek-v4-flash", "credentialEnvironment": "DEEPSEEK_API_KEY"},
                     ],
+                }
+            if method == "GET" and path == "/api/v1/voice-providers":
+                return 200, {
+                    "contractVersion": "1.0",
+                    "providers": voice_provider_rows(self.repository),
                 }
             if method == "GET" and path == "/api/v1/folders":
                 return self._folders(query)
@@ -486,6 +499,11 @@ class StudioApplication:
             or any(not isinstance(value, str) or not value.strip() for value in voices.values())
         ):
             raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
+        voice_provider = str(payload.get("voiceProvider", "edge")).strip().lower()
+        if voice_provider not in {"edge", "qwen3", "original"}:
+            raise ContractError("REJECTED_MALFORMED", "unsupported voice provider")
+        if voice_provider == "qwen3" and not set(languages).issubset(QWEN3_SUPPORTED_LANGUAGE_LOCALES):
+            raise ContractError("REJECTED_MALFORMED", "Qwen3-TTS does not support every selected language")
         source_language = str(payload.get("sourceLanguage", "auto")).strip()
         asr_model = str(payload.get("asrModel", "small")).strip()
         asr_device = str(payload.get("asrDevice", "auto")).strip()
@@ -565,6 +583,7 @@ class StudioApplication:
             "translationBatchSize": translation_batch_size,
             "targetLanguages": list(languages),
             "targetVoices": {language: voices[language].strip() for language in languages},
+            "voiceProvider": voice_provider,
             "sourceVolume": source_volume,
             "destinationPlans": destination_plans,
             "authenticationFile": creator_run.get("parameters", {}).get("authenticationFile"),
@@ -843,7 +862,13 @@ class StudioApplication:
             voices = payload.get("targetVoices")
             if not isinstance(voices, dict) or set(voices) != set(parameters["targetLanguages"]) or any(not isinstance(value, str) or not value.strip() for value in voices.values()):
                 raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
+            voice_provider = str(payload.get("voiceProvider", "edge")).strip().lower()
+            if voice_provider not in {"edge", "qwen3", "original"}:
+                raise ContractError("REJECTED_MALFORMED", "unsupported voice provider")
+            if voice_provider == "qwen3" and not set(parameters["targetLanguages"]).issubset(QWEN3_SUPPORTED_LANGUAGE_LOCALES):
+                raise ContractError("REJECTED_MALFORMED", "Qwen3-TTS does not support every selected language")
             parameters["targetVoices"] = dict(voices)
+            parameters["voiceProvider"] = voice_provider
         if template_id in LOCALIZATION_GRAPHS or release_mode or creator_batch_mode:
             try:
                 source_volume = float(payload.get("sourceVolume", 0.12))

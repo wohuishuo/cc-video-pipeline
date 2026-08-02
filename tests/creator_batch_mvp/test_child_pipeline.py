@@ -10,7 +10,7 @@ from creator_batch.child_pipeline import ProcessResult, PublicMvpItemProcessor
 from creator_batch.contracts import BatchPolicy, CreatorItem
 
 
-def policy():
+def policy(voice_provider="qwen3"):
     return BatchPolicy.create(
         ["ru-RU", "en-US"],
         {"ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural"},
@@ -22,6 +22,7 @@ def policy():
         translation_provider="deepseek",
         translation_batch_size=4,
         source_volume=0.08,
+        voice_provider=voice_provider,
     )
 
 
@@ -80,6 +81,7 @@ def test_public_processor_calls_each_owner_in_order_with_committed_predecessor_f
     assert calls[2].count("--target-language") == 2
     assert calls[2][calls[2].index("--provider") + 1] == "deepseek"
     assert calls[3].count("--voice") == 2
+    assert calls[3][calls[3].index("--provider") + 1] == "qwen3"
 
 
 def test_public_processor_stops_before_successor_when_owner_does_not_commit_manifest(tmp_path):

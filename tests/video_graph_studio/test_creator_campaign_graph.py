@@ -91,6 +91,7 @@ def _payload(creator_run_id):
         "translationModel": "facebook/nllb-200-distilled-600M",
         "translationDevice": "cpu",
         "translationBatchSize": 4,
+        "voiceProvider": "edge",
         "targetVoices": {"ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural"},
         "sourceVolume": 0.08,
         "destinationPlans": [
@@ -116,6 +117,7 @@ def test_creator_campaign_resolves_server_fact_and_creates_four_steps(tmp_path):
     assert run["parameters"]["creatorManifestPath"] == str(manifest.resolve())
     assert run["parameters"]["creatorManifestSha256"] == _sha(manifest)
     assert run["parameters"]["selectedVideoIds"] == ["v3", "v1"]
+    assert run["parameters"]["voiceProvider"] == "edge"
     assert run["parameters"]["destinationPlans"][0]["targets"][1] == {"platform": "tiktok", "account": "ru-short", "executionStatus": "PLAN_ONLY"}
     assert run["parameters"]["destinationPlans"][1]["targets"][0]["executionStatus"] == "READY_PRIVATE"
 
