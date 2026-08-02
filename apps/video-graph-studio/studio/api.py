@@ -508,6 +508,42 @@ class StudioApplication:
             raise ContractError("REJECTED_MALFORMED", "campaign processing policy is invalid")
         if translation_provider == "deepseek" and not os.environ.get("DEEPSEEK_API_KEY", "").strip():
             raise ContractError("REJECTED_MALFORMED", "DeepSeek translation requires DEEPSEEK_API_KEY")
+        raw_destination_plans = payload.get("destinationPlans")
+        if (
+            not isinstance(raw_destination_plans, list)
+            or [row.get("locale") if isinstance(row, dict) else None for row in raw_destination_plans] != list(languages)
+        ):
+            raise ContractError("REJECTED_MALFORMED", "destinationPlans must exactly cover selected languages in order")
+        destination_plans: list[dict[str, Any]] = []
+        supported_platforms = {"youtube", "bilibili", "douyin", "tiktok"}
+        for row in raw_destination_plans:
+            targets = row.get("targets")
+            if (
+                not isinstance(targets, list)
+                or not targets
+                or any(not isinstance(target, dict) for target in targets)
+            ):
+                raise ContractError("REJECTED_MALFORMED", "every language requires at least one destination")
+            platforms = [target.get("platform") for target in targets]
+            if (
+                len(set(platforms)) != len(platforms)
+                or not all(platform in supported_platforms for platform in platforms)
+                or any(not isinstance(target.get("account"), str) or not target["account"].strip() or len(target["account"].strip()) > 128 for target in targets)
+            ):
+                raise ContractError("REJECTED_MALFORMED", "destination platform and account policy is invalid")
+            destination_plans.append(
+                {
+                    "locale": row["locale"],
+                    "targets": [
+                        {
+                            "platform": target["platform"],
+                            "account": target["account"].strip(),
+                            "executionStatus": "READY_PRIVATE" if target["platform"] == "youtube" else "PLAN_ONLY",
+                        }
+                        for target in targets
+                    ],
+                }
+            )
         parameters = {
             "templateId": template_id,
             "creatorRunId": creator_run_id,
@@ -525,6 +561,7 @@ class StudioApplication:
             "targetLanguages": list(languages),
             "targetVoices": {language: voices[language].strip() for language in languages},
             "sourceVolume": source_volume,
+            "destinationPlans": destination_plans,
             "authenticationFile": creator_run.get("parameters", {}).get("authenticationFile"),
         }
         result = self.store.create_run(

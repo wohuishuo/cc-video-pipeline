@@ -93,6 +93,10 @@ def _payload(creator_run_id):
         "translationBatchSize": 4,
         "targetVoices": {"ru-RU": "ru-RU-DmitryNeural", "en-US": "en-US-GuyNeural"},
         "sourceVolume": 0.08,
+        "destinationPlans": [
+            {"locale": "ru-RU", "targets": [{"platform": "youtube", "account": "ru-main"}, {"platform": "tiktok", "account": "ru-short"}]},
+            {"locale": "en-US", "targets": [{"platform": "youtube", "account": "en-main"}]},
+        ],
     }
 
 
@@ -112,6 +116,8 @@ def test_creator_campaign_resolves_server_fact_and_creates_four_steps(tmp_path):
     assert run["parameters"]["creatorManifestPath"] == str(manifest.resolve())
     assert run["parameters"]["creatorManifestSha256"] == _sha(manifest)
     assert run["parameters"]["selectedVideoIds"] == ["v3", "v1"]
+    assert run["parameters"]["destinationPlans"][0]["targets"][1] == {"platform": "tiktok", "account": "ru-short", "executionStatus": "PLAN_ONLY"}
+    assert run["parameters"]["destinationPlans"][1]["targets"][0]["executionStatus"] == "READY_PRIVATE"
 
 
 def test_creator_campaign_rejects_browser_artifact_paths_and_unknown_ids(tmp_path):

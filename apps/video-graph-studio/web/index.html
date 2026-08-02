@@ -4,287 +4,102 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Video Graph Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=5">
+  <title>Creator Campaign Studio</title>
+  <link rel="stylesheet" href="/styles.css?v=10">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Video Graph Studio home">
+    <a class="brand" href="/" aria-label="Creator Campaign Studio home">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span><strong>Video Graph</strong><small>STUDIO</small></span>
+      <span><strong>Creator Campaign</strong><small>VIDEO GRAPH STUDIO</small></span>
     </a>
-    <div class="topbar-center">
-      <strong class="workspace-label">Build one durable Graph</strong>
-      <span id="save-state" class="save-state">Draft · not started</span>
+    <div class="project-state">
+      <span id="project-name">New creator campaign</span>
+      <small id="save-state">Local workspace · not started</small>
     </div>
-    <div class="topbar-actions">
-      <button id="access-button" class="access-button" type="button" hidden>Access</button>
+    <div class="top-actions">
+      <button id="access-button" class="ghost" type="button" hidden>Access</button>
       <span id="health-pill" class="health-pill"><i></i><span>Connecting</span></span>
-      <button id="toggle-activity" class="text-button" type="button" aria-expanded="true">Hide log</button>
     </div>
   </header>
 
-  <main class="studio-shell">
-    <aside id="graph-builder" class="builder-panel">
-    <form id="run-form" aria-label="Build a Graph">
-      <header class="builder-heading">
-        <p class="eyebrow">NEW GRAPH</p>
-        <h1>What should this Graph produce?</h1>
-        <p>Choose an outcome. Studio will assemble the approved sequential Loops and show every real step before it starts.</p>
-      </header>
+  <main class="workspace-shell">
+    <nav class="stage-rail" aria-label="Campaign stages">
+      <div class="rail-heading"><span>WORKFLOW</span><strong id="rail-progress">1 of 6</strong></div>
+      <button class="stage-link active" data-stage="creator" type="button"><b>01</b><span>Creator<small>Find the account</small></span><i></i></button>
+      <button class="stage-link" data-stage="videos" type="button"><b>02</b><span>Videos<small>Select the exact batch</small></span><i></i></button>
+      <button class="stage-link" data-stage="languages" type="button"><b>03</b><span>Languages<small>Translation and voices</small></span><i></i></button>
+      <button class="stage-link" data-stage="destinations" type="button"><b>04</b><span>Destinations<small>Route every language</small></span><i></i></button>
+      <button class="stage-link" data-stage="review" type="button"><b>05</b><span>Review<small>Preflight exact work</small></span><i></i></button>
+      <button class="stage-link" data-stage="activity" type="button"><b>06</b><span>Activity<small>Watch durable steps</small></span><i></i></button>
+      <div class="rail-foot"><span class="worker-dot"></span><div><strong>One active worker</strong><small>Items run serially and resume safely</small></div></div>
+    </nav>
 
-      <section class="builder-section">
-        <label for="workflow-goal">Outcome</label>
-        <select id="workflow-goal" name="workflowGoal" aria-describedby="workflow-summary">
-          <option value="">Loading workflows…</option>
-        </select>
-        <div id="workflow-summary" class="workflow-summary">
-          <strong>Loading the Workflow Catalog</strong>
-          <span>The canvas will show the exact admitted Graph.</span>
+    <section class="stage-content">
+      <section id="stage-creator" class="stage-panel active" data-stage="creator" aria-labelledby="creator-title">
+        <header class="stage-header">
+          <div><p class="eyebrow">01 · CREATOR</p><h1 id="creator-title">Start with an account, not a single video.</h1><p>Paste a YouTube, Bilibili, Douyin or TikTok creator URL. Discovery lists videos first and downloads nothing.</p></div>
+          <span class="effect-badge safe">READ-ONLY DISCOVERY</span>
+        </header>
+        <div class="form-card hero-form">
+          <label for="creator-url">Creator account URL</label>
+          <div class="url-row"><input id="creator-url" type="url" autocomplete="off" placeholder="https://www.douyin.com/user/…"><button id="discover-creator" class="primary" type="button">Discover videos</button></div>
+          <div class="three-fields">
+            <label><span>Maximum videos</span><input id="creator-max-items" type="number" min="0" max="10000" value="0"><small>0 means all available videos</small></label>
+            <label><span>Spoken language</span><select id="source-language"><option value="auto">Auto detect</option><option value="zh">Chinese</option><option value="en">English</option><option value="ru">Russian</option></select></label>
+            <label><span>Speech model</span><select id="asr-model"><option value="small">Small · balanced</option><option value="large-v3">Large v3 · quality</option><option value="tiny">Tiny · fast</option></select></label>
+          </div>
+          <details><summary>Authentication and advanced download access</summary><label for="authentication-file">Optional Netscape cookie file</label><input id="authentication-file" autocomplete="off" placeholder="C:\Users\…\cookies.txt"><p>Only the path is stored. Cookie contents are never copied into task records.</p></details>
         </div>
+        <div id="creator-result" class="empty-card"><span class="empty-icon">◎</span><div><strong>No creator loaded</strong><p>Discovery creates a verified catalog before any media is downloaded.</p></div></div>
       </section>
 
-      <fieldset id="source-kind-controls" class="builder-section source-kinds" aria-label="Source kind" hidden>
-        <legend>Source</legend>
-        <label><input type="radio" name="source-kind" value="folder"> <span>Folder</span></label>
-        <label><input type="radio" name="source-kind" value="url"> <span>Video URL</span></label>
-      </fieldset>
-
-      <section id="configuration-panel" class="builder-section configuration-panel" aria-label="Graph configuration">
-        <div id="folder-source-field" class="field source-field">
-          <label for="source-root">Source folder</label>
-          <div class="input-action">
-            <input id="source-root" name="sourceRoot" autocomplete="off" placeholder="Choose a folder containing videos">
-            <button id="browse-folder" type="button">Browse</button>
-          </div>
-        </div>
-
-        <div id="url-source-field" class="field source-field" hidden>
-          <label for="source-url">Social video or creator URL</label>
-          <input id="source-url" name="sourceUrl" type="url" autocomplete="off" placeholder="https://youtube.com/… or https://v.douyin.com/…">
-        </div>
-
-        <div id="asr-controls" class="control-grid" hidden>
-          <div class="field">
-            <label for="source-language">Spoken language</label>
-            <select id="source-language" name="sourceLanguage">
-              <option value="auto">Auto detect</option>
-              <option value="zh">Chinese</option>
-              <option value="en">English</option>
-              <option value="ru">Russian</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="asr-model">Speech model</label>
-            <select id="asr-model" name="asrModel">
-              <option value="tiny">Tiny · fast</option>
-              <option value="small" selected>Small · balanced</option>
-              <option value="large-v3">Large v3 · quality</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="asr-device">Speech device</label>
-            <select id="asr-device" name="asrDevice">
-              <option value="auto">Auto</option>
-              <option value="cpu">CPU</option>
-              <option value="cuda">CUDA</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="translation-controls" class="control-grid" hidden>
-          <div class="field">
-            <label for="translation-device">Translation device</label>
-            <select id="translation-device" name="translationDevice">
-              <option value="auto">Auto</option>
-              <option value="cpu">CPU</option>
-              <option value="cuda">CUDA</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="translation-batch-size">Translation batch</label>
-            <select id="translation-batch-size" name="translationBatchSize">
-              <option value="4">4</option>
-              <option value="8" selected>8 · balanced</option>
-              <option value="16">16</option>
-            </select>
-          </div>
-        </div>
-
-        <fieldset id="target-language-controls" class="check-group" aria-label="Target languages" hidden>
-          <legend>Target languages</legend>
-          <label><input type="checkbox" name="language" value="ru-RU" checked> Russian</label>
-          <label><input type="checkbox" name="language" value="en-US"> English</label>
-          <label><input type="checkbox" name="language" value="kk-KZ"> Kazakh</label>
-        </fieldset>
-
-        <div id="prepared-controls" hidden>
-          <div class="field voice-field prepared-only">
-            <label for="voice">Russian voice</label>
-            <select id="voice" name="voice">
-              <option value="ru-RU-DmitryNeural">Dmitry · Neural</option>
-              <option value="ru-RU-SvetlanaNeural">Svetlana · Neural</option>
-            </select>
-          </div>
-          <fieldset class="check-group platforms prepared-only" aria-label="Target platforms">
-            <legend>Output targets</legend>
-            <label><input type="checkbox" name="platform" value="local" checked> Local files</label>
-          </fieldset>
-        </div>
-
-        <div id="creator-controls" class="control-grid" hidden>
-          <div class="field">
-            <label for="creator-max-items">Maximum videos</label>
-            <input id="creator-max-items" name="maxItems" type="number" min="0" max="10000" value="20">
-          </div>
-          <div class="field span-two">
-            <label for="authentication-file">Optional authentication file</label>
-            <input id="authentication-file" name="authenticationFile" autocomplete="off" placeholder="Netscape cookies.txt inside your user folder">
-          </div>
-        </div>
-
-        <div id="publication-controls" class="control-stack" hidden>
-          <div class="field"><label for="publication-video">Finished video</label><input id="publication-video" name="videoPath" autocomplete="off" placeholder="Absolute path to the finished MP4"></div>
-          <div class="field"><label for="publication-metadata">Metadata JSON</label><input id="publication-metadata" name="metadataPath" autocomplete="off" placeholder="Absolute path to metadata.json"></div>
-          <div class="field"><label for="publication-account">Account label</label><input id="publication-account" name="account" value="primary" autocomplete="off"></div>
-          <div class="field"><label for="publication-credential-id">YouTube credential ID</label><input id="publication-credential-id" name="credentialId" value="youtube-main" autocomplete="off"></div>
-          <fieldset class="check-group" aria-label="Publication targets">
-            <legend>Publication targets</legend>
-            <label><input type="checkbox" name="publication-target" value="youtube" checked> YouTube</label>
-            <label><input type="checkbox" name="publication-target" value="bilibili"> Bilibili</label>
-            <label><input type="checkbox" name="publication-target" value="douyin"> Douyin</label>
-            <label><input type="checkbox" name="publication-target" value="tiktok"> TikTok</label>
-          </fieldset>
-        </div>
-
-        <div id="release-controls" class="control-stack" hidden>
-          <div class="field"><label for="release-metadata-template">Metadata template JSON</label><input id="release-metadata-template" name="metadataTemplatePath" autocomplete="off" placeholder="Absolute path to metadata-template.json"></div>
-          <div class="field"><label for="release-account">Account label</label><input id="release-account" name="releaseAccount" value="primary" autocomplete="off"></div>
-          <div class="field"><label for="release-credential-id">YouTube credential ID</label><input id="release-credential-id" name="releaseCredentialId" value="youtube-main" autocomplete="off"></div>
-          <fieldset class="check-group" aria-label="Release targets">
-            <legend>Release targets</legend>
-            <label><input type="checkbox" name="release-target" value="youtube" checked> YouTube</label>
-            <label><input type="checkbox" name="release-target" value="bilibili"> Bilibili</label>
-            <label><input type="checkbox" name="release-target" value="douyin"> Douyin</label>
-            <label><input type="checkbox" name="release-target" value="tiktok"> TikTok</label>
-          </fieldset>
-        </div>
-
-        <div id="publication-execution-controls" class="control-stack" hidden>
-          <div class="field"><label for="publication-plan-run-id">Completed Publish Plan run</label><input id="publication-plan-run-id" name="planRunId" autocomplete="off" placeholder="Automatically selects the latest eligible run"></div>
-          <div class="field"><label for="publication-confirmation">Exact plan SHA-256</label><input id="publication-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64"></div>
-          <div class="field"><label for="credential-vault-path">Credential Vault path</label><input id="credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json"></div>
-        </div>
-
-        <div id="publication-batch-execution-controls" class="control-stack" hidden>
-          <div class="field"><label for="release-plan-run-id">Completed Release Plan run</label><input id="release-plan-run-id" name="releasePlanRunId" autocomplete="off" placeholder="Automatically selects the latest eligible run"></div>
-          <div class="field"><label for="release-execution-confirmation">Exact batch-plan SHA-256</label><input id="release-execution-confirmation" name="confirmation" autocomplete="off" minlength="64" maxlength="64"></div>
-          <div class="field"><label for="release-credential-vault-path">Credential Vault path</label><input id="release-credential-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json"></div>
-        </div>
-
-        <div id="youtube-connect-controls" class="control-stack" hidden>
-          <div class="field"><label for="youtube-client-config">Google desktop client JSON</label><input id="youtube-client-config" name="clientConfigPath" autocomplete="off" placeholder="%USERPROFILE%\Downloads\client_secret.json"></div>
-          <div class="field"><label for="youtube-vault-path">Credential Vault path</label><input id="youtube-vault-path" name="credentialVaultPath" autocomplete="off" placeholder="%LOCALAPPDATA%\VideoGraphStudio\credential-vault.json"></div>
-          <div class="field"><label for="youtube-credential-id">Credential ID</label><input id="youtube-credential-id" name="credentialId" value="youtube-main" autocomplete="off"></div>
-          <div class="field"><label for="youtube-credential-label">Account label</label><input id="youtube-credential-label" name="label" value="Main YouTube" autocomplete="off"></div>
-        </div>
+      <section id="stage-videos" class="stage-panel" data-stage="videos" aria-labelledby="videos-title" hidden>
+        <header class="stage-header"><div><p class="eyebrow">02 · VIDEOS</p><h1 id="videos-title">Choose exactly what enters the campaign.</h1><p>Search, select all visible results, or pick individual videos. Source order is preserved.</p></div><div class="selection-total"><strong id="selected-video-count">0</strong><span>selected</span></div></header>
+        <div class="toolbar"><label class="search"><span>⌕</span><input id="video-search" placeholder="Search titles or video IDs"></label><button id="select-all-videos" type="button">Select visible</button><button id="clear-videos" type="button">Clear</button><span id="catalog-count">0 videos</span></div>
+        <div id="subtitle-status" class="status-legend"><span><i class="source"></i>Source subtitles</span><span><i class="asr"></i>ASR required</span><span><i class="unknown"></i>Checked after download</span></div>
+        <div id="video-catalog" class="catalog-grid"><div class="empty-card"><span class="empty-icon">□</span><div><strong>Discover a creator first</strong><p>The verified video catalog will appear here.</p></div></div></div>
       </section>
 
-      <section class="readiness-panel" aria-labelledby="readiness-heading">
-        <div class="readiness-heading">
-          <div><p class="eyebrow">PREFLIGHT</p><h2 id="readiness-heading">Ready to run?</h2></div>
-          <button id="reconnect-button" class="secondary-button" type="button">Reconnect</button>
-        </div>
-        <ul id="readiness-list" aria-live="polite"><li class="checking">Checking Studio services…</li></ul>
-        <p id="connection-error" class="connection-error" hidden></p>
-        <div id="effect-summary" class="effect-summary">No platform action selected.</div>
+      <section id="stage-languages" class="stage-panel" data-stage="languages" aria-labelledby="languages-title" hidden>
+        <header class="stage-header"><div><p class="eyebrow">03 · LANGUAGES</p><h1 id="languages-title">Choose translation quality and voices.</h1><p>Select any combination from the language catalog. Every language becomes its own reusable output variant.</p></div><div class="selection-total"><strong id="selected-language-count">0</strong><span>languages</span></div></header>
+        <div class="provider-card"><div><label for="translation-provider">Translation engine</label><select id="translation-provider"><option>Loading providers…</option></select></div><div id="provider-detail"><strong>Checking translation engines</strong><p>Local and cloud readiness will appear here.</p></div></div>
+        <div class="toolbar"><label class="search"><span>⌕</span><input id="language-search" placeholder="Search 20 languages"></label><button id="select-common-languages" type="button">Select RU + EN</button><button id="clear-languages" type="button">Clear</button></div>
+        <div id="language-list" class="language-grid"></div>
       </section>
 
-      <button id="run-button" class="run-button" type="submit" disabled>Create &amp; run Graph</button>
-      <p class="serial-note"><span></span>One Graph runs at a time. Every Loop checkpoints its own progress.</p>
-    </form>
-    </aside>
+      <section id="stage-destinations" class="stage-panel" data-stage="destinations" aria-labelledby="destinations-title" hidden>
+        <header class="stage-header"><div><p class="eyebrow">04 · DESTINATIONS</p><h1 id="destinations-title">Route each language to one or many platforms.</h1><p>A Russian version can go to YouTube and TikTok while English goes to a different YouTube account. Each route is counted explicitly.</p></div></header>
+        <div class="notice"><strong>Publication boundary</strong><span>YouTube private upload is executable after credential confirmation. Bilibili, Douyin and TikTok remain plan-only until their upload adapters are verified.</span></div>
+        <div id="destination-matrix" class="destination-grid"><div class="empty-card"><span class="empty-icon">↗</span><div><strong>Select languages first</strong><p>One destination row will be created for each selected language.</p></div></div></div>
+      </section>
 
-    <section id="workflow-canvas" class="workflow-canvas" aria-label="Workflow graph">
-      <header class="canvas-heading">
-        <div>
-          <p class="eyebrow">EXECUTION MAP</p>
-          <h2 id="canvas-title">Choose an outcome</h2>
-          <p id="canvas-description">The exact Graph and its sequential Loops will appear here.</p>
-        </div>
-        <div class="canvas-stats"><span id="node-count">0 steps</span><span id="loop-count">0 loops</span></div>
-      </header>
-      <div class="canvas-toolbar" aria-label="Graph view controls">
-        <button type="button" id="fit-graph" aria-label="Fit graph">Fit</button>
-        <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
-        <strong id="zoom-level">100%</strong>
-        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
-      </div>
-      <div id="graph-grid" class="graph-viewport">
-        <div id="graph-track" class="graph-track"></div>
-        <div id="graph-empty-state" class="graph-empty-state">
-          <span>01</span>
-          <h3>Select a result on the left</h3>
-          <p>This is a fixed, verified Graph builder. It will never show insert or connection controls unless editable Graph execution is actually implemented.</p>
-        </div>
-      </div>
-      <footer class="canvas-note"><strong>Graph Engineering</strong><span>coordinates committed facts. Each Loop remains an independent, replaceable MVP.</span></footer>
+      <section id="stage-review" class="stage-panel" data-stage="review" aria-labelledby="review-title" hidden>
+        <header class="stage-header"><div><p class="eyebrow">05 · REVIEW</p><h1 id="review-title">Know the exact work before it starts.</h1><p>Preflight turns the selections into deterministic counts and one durable Campaign Graph.</p></div></header>
+        <div id="campaign-review" class="review-grid"><article><span>Source videos</span><strong id="review-videos">0</strong></article><article><span>Localized videos</span><strong id="review-localized">0</strong></article><article><span>Publication routes</span><strong id="review-publications">0</strong></article></div>
+        <div class="review-layout"><div id="review-summary" class="summary-card"></div><div class="launch-card"><p class="eyebrow">PREFLIGHT</p><ul id="readiness-list"></ul><button id="start-campaign" class="primary large" type="button" disabled>Start campaign</button><small>Runs one video at a time. Completed items are checkpointed.</small></div></div>
+      </section>
+
+      <section id="stage-activity" class="stage-panel" data-stage="activity" aria-labelledby="activity-title" hidden>
+        <header class="stage-header"><div><p class="eyebrow">06 · ACTIVITY</p><h1 id="activity-title">One timeline for the whole campaign.</h1><p>See which owner is working, what fact it committed, and where a failure occurred.</p></div><span id="run-status" class="effect-badge">NOT STARTED</span></header>
+        <div class="activity-layout"><div><div class="run-heading"><strong id="active-run-title">No active campaign</strong><code id="active-run-id">—</code></div><div id="activity-timeline" class="timeline"></div></div><aside class="log-panel"><header><strong>Durable log</strong><button id="clear-log" type="button">Clear view</button></header><pre id="log-output">Choose a creator and start a campaign. Exact step logs will appear here.</pre></aside></div>
+      </section>
+
+      <footer class="stage-footer"><button id="previous-stage" type="button" disabled>← Back</button><div><span id="footer-hint">Discover a creator account to continue.</span><button id="next-stage" class="primary" type="button">Continue →</button></div></footer>
     </section>
-
-    <aside id="node-inspector" class="inspector" aria-label="Node inspector">
-      <header class="panel-heading"><span>Step details</span></header>
-      <div class="inspector-content">
-        <div class="inspector-step" id="inspector-step">—</div>
-        <p class="eyebrow">SELECTED STEP</p>
-        <h2 id="inspector-title">Nothing selected</h2>
-        <p id="inspector-description" class="muted">Choose a workflow, then select any real execution step.</p>
-        <hr>
-        <h3>Responsibility</h3>
-        <div class="property"><span>Status</span><b id="inspector-state" class="state waiting">DRAFT</b></div>
-        <div class="property"><span>Loop</span><code id="inspector-loop">—</code></div>
-        <div class="property"><span>Owner</span><code id="inspector-owner">—</code></div>
-        <div class="property"><span>Relationship</span><code id="inspector-relationship">—</code></div>
-        <div class="property"><span>Retry</span><code id="inspector-retry">—</code></div>
-        <div class="property"><span>Output fact</span><code id="inspector-output">—</code></div>
-        <hr>
-        <h3>Current run</h3>
-        <div class="metric"><span>Progress</span><strong id="run-progress">0 / 0</strong></div>
-        <div class="progress-track"><i id="progress-bar"></i></div>
-        <p id="run-id" class="run-id">No active run</p>
-        <hr>
-        <div class="run-list-heading"><h3>Queue &amp; recent</h3><small id="queue-count">0 waiting</small></div>
-        <div id="run-list" class="run-list"><p class="muted">No runs yet.</p></div>
-      </div>
-    </aside>
   </main>
 
-  <section id="activity-log" class="activity" aria-label="Activity log">
-    <header><div><span class="live-dot"></span><strong>Activity</strong><small id="activity-summary">Waiting for a Graph</small></div><button id="clear-view" type="button">Clear view</button></header>
-    <pre id="log-output"><span class="log-muted">Configure a Graph. Durable Loop logs will appear here after it starts.</span></pre>
-  </section>
-
-  <dialog id="folder-dialog">
-    <form method="dialog" class="dialog-card">
-      <header><div><p class="eyebrow">LOCAL FILESYSTEM</p><h2>Choose source folder</h2></div><button value="cancel" aria-label="Close">×</button></header>
-      <div class="folder-path"><button id="folder-up" type="button" aria-label="Parent folder">↑</button><code id="current-folder">Loading…</code></div>
-      <div id="folder-list" class="folder-list"></div>
-      <footer><span id="folder-media-count">0 videos in this folder</span><button id="choose-folder" value="default" class="primary">Use this folder</button></footer>
-    </form>
-  </dialog>
-
   <dialog id="access-dialog">
-    <form id="access-form" method="dialog" class="dialog-card access-card">
-      <header><div><p class="eyebrow">WORKSPACE ADMISSION</p><h2>Connect this browser session</h2></div><button value="cancel" aria-label="Close">×</button></header>
-      <div class="access-fields">
-        <label><span>Workspace</span><input id="access-workspace" autocomplete="username" required></label>
-        <label><span>Bearer credential</span><input id="access-token" type="password" autocomplete="off" required></label>
-        <p class="muted">Stored in sessionStorage only. Closing this browser session removes it.</p>
-      </div>
+    <form id="access-form" method="dialog" class="dialog-card">
+      <header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>Connect this browser session</h2></div><button value="cancel" aria-label="Close">×</button></header>
+      <label><span>Workspace</span><input id="access-workspace" autocomplete="username" required></label>
+      <label><span>Bearer credential</span><input id="access-token" type="password" autocomplete="off" required></label>
+      <p>Stored in sessionStorage only and removed when the browser session closes.</p>
       <footer><button id="clear-access" type="button">Clear session</button><button value="default" class="primary">Connect</button></footer>
     </form>
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=9"></script>
+  <script type="module" src="/app.js?v=10"></script>
 </body>
 </html>
