@@ -25,8 +25,8 @@ The product is not a magic monolith. It is a visual control plane over independe
 
 ## Current accepted slice
 
-Folder and single-video URL intake are browser-operable. Anonymous YouTube intake has real platform evidence. The supplied Douyin author-profile URL demonstrated a separate missing capability: creator-profile enumeration and batch discovery.
+Folder and single-video URL intake, source transcription, multilingual translation, Edge voice rendering, localized-video composition, creator-profile discovery and guarded publication planning are browser-operable. Anonymous YouTube intake and authenticated Douyin creator enumeration have named real-platform evidence. A killed local Studio process can fence and resume the same durable run after restart.
 
 ## Explicit non-goals for the current slice
 
-Automatic public posting, commercial tenancy, billing, remote credential custody, production recovery, translation-quality certification and every-platform live proof are not yet claimed.
+Automatic public posting, commercial tenancy, billing, remote credential custody, power-loss or hosted recovery, translation-quality certification and every-platform live proof are not yet claimed.
