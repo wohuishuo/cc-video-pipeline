@@ -57,4 +57,3 @@ powershell -ExecutionPolicy Bypass -File .\apps\publication-batch-execution\run.
 ```
 
 Exit code `0` means completed or verified duplicate, `2` means a known rejection/failure and `3` means an uncertain result that must not be retried automatically.
-

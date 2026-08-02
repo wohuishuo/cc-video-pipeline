@@ -8,4 +8,3 @@
 | Protected invariants | exact batch-plan SHA confirmation, immutable operation fingerprint, credential-backed private YouTube only, stable item and child operation IDs, maximum concurrency one, hash-verified reuse, no automatic retry after uncertainty, and no aggregate success after partial failure. |
 | Decision gates | real account execution, additional platform adapters, public visibility, scheduling, rate-limit policy, reconciliation UI, hosted secrets and commercial tenancy remain unapproved. |
 | Non-goals | translation, media generation, plan creation, credential storage, direct platform adapter ownership, automatic public posting, distributed execution and production-scale verification. |
-

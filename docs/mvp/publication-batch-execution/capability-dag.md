@@ -20,4 +20,3 @@ flowchart LR
 | browser execution projection | Video Graph Studio | `DOMAIN_VERIFIED` | same-workspace completed Release fact | downstream Projection |
 
 The coordinator does not import a child implementation or read Vault secrets. Removing Publication would make it counterfeit per-video execution state; moving continuation into Studio would make a UI own business recovery. Additional platforms are separate adapter capabilities, not branches hidden inside this owner.
-

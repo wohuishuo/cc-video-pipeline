@@ -7,4 +7,3 @@
 - `decision-gates`: live-account consent, additional platform adapters, public visibility, scheduling, reconciliation UX, retention, distributed workers and commercial tenancy.
 - `supported-claims`: the independent private YouTube batch-execution contract and its Studio composition are domain verified, resumable for known failures and strictly serial.
 - `forbidden-claims`: a verified local run is not evidence of a real upload; `UNKNOWN` is not failure and must not be automatically retried; domain tests do not prove production durability or platform acceptance.
-

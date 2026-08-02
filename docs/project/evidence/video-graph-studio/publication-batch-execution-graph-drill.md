@@ -24,4 +24,3 @@ Prove that the local browser can select a completed Release fact, bind the exact
 ## Safety boundary
 
 The admitted run was deliberately not started. No credential was injected and no YouTube, Bilibili, Douyin or TikTok endpoint was contacted. This is browser and Graph-composition evidence, not authenticated publication evidence.
-

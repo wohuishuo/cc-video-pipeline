@@ -10,4 +10,3 @@
 | Forbidden claims | local composition is not social upload completion; an uncertain platform outcome is not safe to retry; no production or multi-platform execution claim |
 
 Executable commands, RED observations and the failure matrix are recorded in the [capability evidence](../../../mvp/publication-batch-execution/capability-evidence.md).
-

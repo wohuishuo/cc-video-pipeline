@@ -41,4 +41,3 @@ Preflight rejects a batch-plan SHA mismatch, malformed or reordered items, missi
 ## Non-goals
 
 The fake final platform boundary does not prove a YouTube account, network acceptance, rate-limit recovery or real publication. The browser drill proves admission and rendering only because starting it would contact a platform. Production power-loss, representative scale, additional platforms and hosted/mobile operation remain unverified.
-
