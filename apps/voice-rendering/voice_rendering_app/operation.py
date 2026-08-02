@@ -35,8 +35,12 @@ def _atomic_json(path: Path, value: dict[str, Any]) -> None:
 
 class VoiceAdapter(Protocol):
     identity: str
+    output_suffix: str
 
-    def synthesize(self, text: str, voice: str, output: Path, on_log: Callable[[str], None]) -> float: ...
+    def synthesize(
+        self, text: str, language: str, voice: str, output: Path,
+        on_log: Callable[[str], None], *, target_duration: float | None = None,
+    ) -> float: ...
 
 
 @dataclass(frozen=True)
@@ -146,11 +150,17 @@ class VoiceRenderingLoop:
             log(f"[{index}/{len(work)}] rendering {row['targetLanguage']}/{row['mediaId']}/{row['segmentId']}")
             try:
                 item_key = hashlib.sha256(f"{key}".encode()).hexdigest()[:20]
-                final = output / "clips" / f"{item_key}.mp3"
+                suffix = str(getattr(adapter, "output_suffix", ".mp3"))
+                if not suffix.startswith(".") or any(value in suffix for value in ("/", "\\")):
+                    raise VoiceRenderingError("adapter output suffix is invalid")
+                final = output / "clips" / f"{item_key}{suffix}"
                 partial = final.with_name(f".{final.name}.partial")
                 partial.parent.mkdir(parents=True, exist_ok=True)
                 if partial.exists(): partial.unlink()
-                duration = float(adapter.synthesize(row["text"], voice, partial, log))
+                duration = float(adapter.synthesize(
+                    row["text"], row["targetLanguage"], voice, partial, log,
+                    target_duration=row["end"] - row["start"],
+                ))
                 maximum_active = max(maximum_active, int(getattr(adapter, "maximum_active", 1)))
                 if duration <= 0 or not partial.is_file() or partial.stat().st_size <= 0:
                     raise VoiceRenderingError("adapter returned invalid audio")

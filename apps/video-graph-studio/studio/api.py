@@ -14,6 +14,12 @@ from .contracts import ContractError, GraphDefinition
 from .creator_catalog import project_creator_catalog
 from .engine import WorkflowEngine
 from .language_catalog import SUPPORTED_LANGUAGE_LOCALES, language_rows
+from .voice_provider_catalog import voice_provider_rows
+
+
+QWEN3_SUPPORTED_LANGUAGE_LOCALES = frozenset(
+    {"ru-RU", "en-US", "zh-CN", "es-ES", "fr-FR", "de-DE", "it-IT", "pt-BR", "ja-JP", "ko-KR"}
+)
 from .store import CreateRun, RunStore
 from .workflow_catalog import build_workflow_catalog
 
@@ -318,10 +324,12 @@ class StudioApplication:
         engine: WorkflowEngine,
         *,
         allowed_roots: tuple[Path, ...],
+        repository: Path | None = None,
     ) -> None:
         self.store = store
         self.engine = engine
         self.allowed_roots = tuple(Path(root).resolve() for root in allowed_roots if Path(root).exists())
+        self.repository = Path(repository).resolve() if repository is not None else None
 
     def handle(
         self,
@@ -338,6 +346,7 @@ class StudioApplication:
                     "database": "ready",
                     "activeWorkers": 1 if self.engine.active_run_id else 0,
                     "queuedRuns": queue["queuedRuns"],
+                    "defaultOutputRoot": self._default_output_root(),
                 }
             if method == "GET" and path == "/api/v1/queue":
                 return 200, {"contractVersion": "1.0", **self.store.queue_snapshot()}
@@ -352,6 +361,11 @@ class StudioApplication:
                         {"id": "nllb", "name": "NLLB (local)", "ready": True, "defaultModel": "facebook/nllb-200-distilled-600M"},
                         {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()), "defaultModel": "deepseek-v4-flash", "credentialEnvironment": "DEEPSEEK_API_KEY"},
                     ],
+                }
+            if method == "GET" and path == "/api/v1/voice-providers":
+                return 200, {
+                    "contractVersion": "1.0",
+                    "providers": voice_provider_rows(self.repository),
                 }
             if method == "GET" and path == "/api/v1/folders":
                 return self._folders(query)
@@ -447,6 +461,11 @@ class StudioApplication:
         except KeyError as error:
             raise ContractError("REJECTED_NOT_FOUND", "creator discovery run does not exist") from error
         catalog = project_creator_catalog(creator_run)
+        if not catalog["complete"] or catalog["truncated"]:
+            raise ContractError(
+                "REJECTED_CONFLICT",
+                "creator campaign requires a complete creator catalog; discover all videos first",
+            )
         requested = payload.get("selectedVideoIds")
         if (
             not isinstance(requested, list)
@@ -481,6 +500,11 @@ class StudioApplication:
             or any(not isinstance(value, str) or not value.strip() for value in voices.values())
         ):
             raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
+        voice_provider = str(payload.get("voiceProvider", "edge")).strip().lower()
+        if voice_provider not in {"edge", "qwen3", "original"}:
+            raise ContractError("REJECTED_MALFORMED", "unsupported voice provider")
+        if voice_provider == "qwen3" and not set(languages).issubset(QWEN3_SUPPORTED_LANGUAGE_LOCALES):
+            raise ContractError("REJECTED_MALFORMED", "Qwen3-TTS does not support every selected language")
         source_language = str(payload.get("sourceLanguage", "auto")).strip()
         asr_model = str(payload.get("asrModel", "small")).strip()
         asr_device = str(payload.get("asrDevice", "auto")).strip()
@@ -520,10 +544,9 @@ class StudioApplication:
             targets = row.get("targets")
             if (
                 not isinstance(targets, list)
-                or not targets
                 or any(not isinstance(target, dict) for target in targets)
             ):
-                raise ContractError("REJECTED_MALFORMED", "every language requires at least one destination")
+                raise ContractError("REJECTED_MALFORMED", "destination targets must be a list")
             platforms = [target.get("platform") for target in targets]
             if (
                 len(set(platforms)) != len(platforms)
@@ -544,6 +567,11 @@ class StudioApplication:
                     ],
                 }
             )
+        local_output_root = str(payload.get("localOutputRoot", "")).strip()
+        local_output_path = None
+        if local_output_root:
+            local_output_path = Path(local_output_root).resolve()
+            self._require_allowed(local_output_path)
         parameters = {
             "templateId": template_id,
             "creatorRunId": creator_run_id,
@@ -560,8 +588,10 @@ class StudioApplication:
             "translationBatchSize": translation_batch_size,
             "targetLanguages": list(languages),
             "targetVoices": {language: voices[language].strip() for language in languages},
+            "voiceProvider": voice_provider,
             "sourceVolume": source_volume,
             "destinationPlans": destination_plans,
+            "localOutputRoot": str(local_output_path) if local_output_path else None,
             "authenticationFile": creator_run.get("parameters", {}).get("authenticationFile"),
         }
         result = self.store.create_run(
@@ -838,7 +868,13 @@ class StudioApplication:
             voices = payload.get("targetVoices")
             if not isinstance(voices, dict) or set(voices) != set(parameters["targetLanguages"]) or any(not isinstance(value, str) or not value.strip() for value in voices.values()):
                 raise ContractError("REJECTED_MALFORMED", "targetVoices must cover every selected language exactly")
+            voice_provider = str(payload.get("voiceProvider", "edge")).strip().lower()
+            if voice_provider not in {"edge", "qwen3", "original"}:
+                raise ContractError("REJECTED_MALFORMED", "unsupported voice provider")
+            if voice_provider == "qwen3" and not set(parameters["targetLanguages"]).issubset(QWEN3_SUPPORTED_LANGUAGE_LOCALES):
+                raise ContractError("REJECTED_MALFORMED", "Qwen3-TTS does not support every selected language")
             parameters["targetVoices"] = dict(voices)
+            parameters["voiceProvider"] = voice_provider
         if template_id in LOCALIZATION_GRAPHS or release_mode or creator_batch_mode:
             try:
                 source_volume = float(payload.get("sourceVolume", 0.12))
@@ -847,6 +883,11 @@ class StudioApplication:
             if not 0 <= source_volume <= 1:
                 raise ContractError("REJECTED_MALFORMED", "sourceVolume must be between 0 and 1")
             parameters["sourceVolume"] = source_volume
+            local_output_root = str(payload.get("localOutputRoot", "")).strip()
+            if local_output_root:
+                local_output_path = Path(local_output_root).resolve()
+                self._require_allowed(local_output_path)
+                parameters["localOutputRoot"] = str(local_output_path)
         if release_mode:
             metadata = Path(str(payload.get("metadataTemplatePath", ""))).resolve()
             self._require_allowed(metadata)
@@ -929,12 +970,18 @@ class StudioApplication:
         video_count = sum(
             1 for item in folder.iterdir() if item.is_file() and item.suffix.lower() in VIDEO_EXTENSIONS
         )
+        videos = [
+            {"name": item.name, "path": str(item), "size": item.stat().st_size}
+            for item in sorted(folder.iterdir(), key=lambda value: value.name.casefold())
+            if item.is_file() and item.suffix.lower() in VIDEO_EXTENSIONS
+        ]
         parent = folder.parent if folder != folder.parent and self._is_allowed(folder.parent) else None
         return 200, {
             "path": str(folder),
             "parent": str(parent) if parent else None,
             "directories": directories,
             "videoCount": video_count,
+            "videos": videos,
         }
 
     def _require_allowed(self, path: Path) -> None:
@@ -943,6 +990,15 @@ class StudioApplication:
 
     def _is_allowed(self, path: Path) -> bool:
         return any(path == root or path.is_relative_to(root) for root in self.allowed_roots)
+
+    def _default_output_root(self) -> str:
+        if not self.allowed_roots:
+            return ""
+        videos_root = next(
+            (root for root in self.allowed_roots if root.name.casefold() == "videos"),
+            None,
+        )
+        return str(videos_root or self.allowed_roots[0])
 
     @staticmethod
     def _command_response(

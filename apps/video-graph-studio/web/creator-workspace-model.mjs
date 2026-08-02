@@ -26,14 +26,28 @@ export function campaignCounts(selectedVideoIds, selectedLanguages, destinations
 
 export function campaignReadiness(state) {
   const missing = [];
-  if (!state.creatorRunId || !state.catalog?.items?.length) missing.push("Discover a creator account");
-  if (!state.selectedVideoIds?.length) missing.push("Select at least one video");
+  const sourceMode = state.sourceMode || "creator";
+  if (sourceMode === "folder") {
+    if (!String(state.localFolder || "").trim() || !state.localVideos?.length) {
+      missing.push("Choose a local folder with videos");
+    }
+  } else {
+    if (!state.creatorRunId || !state.catalog?.items?.length) missing.push("Discover a creator account");
+    if (state.catalog && (!state.catalog.complete || state.catalog.truncated)) {
+      missing.push("Load the complete creator catalog");
+    }
+    if (!state.selectedVideoIds?.length) missing.push("Select at least one video");
+  }
   if (!state.selectedLanguages?.length) missing.push("Select at least one language");
   if (!state.translationProvider?.ready) missing.push("Configure the selected translation provider");
+  if (!state.voiceProvider?.ready) missing.push("Configure the selected voice provider");
+  if (!String(state.localOutputRoot || "").trim()) missing.push("Choose a local output folder");
   for (const locale of state.selectedLanguages || []) {
+    if (state.voiceProvider?.supportedLocales?.length && !state.voiceProvider.supportedLocales.includes(locale)) {
+      missing.push(`Selected voice provider does not support ${locale}`);
+    }
     if (!String(state.voices?.[locale] || "").trim()) missing.push(`Choose a voice for ${locale}`);
     const targets = state.destinations?.[locale] || [];
-    if (!targets.length) missing.push(`Choose a destination for ${locale}`);
     if (targets.some((target) => !target.platform || !String(target.account || "").trim())) {
       missing.push(`Complete destination accounts for ${locale}`);
     }
@@ -43,10 +57,7 @@ export function campaignReadiness(state) {
 
 export function buildCampaignPayload(state) {
   const locales = [...new Set(state.selectedLanguages || [])];
-  return {
-    templateId: "creator-campaign",
-    creatorRunId: state.creatorRunId,
-    selectedVideoIds: [...new Set(state.selectedVideoIds || [])],
+  const common = {
     sourceLanguage: state.sourceLanguage || "auto",
     asrModel: state.asrModel || "small",
     asrDevice: state.asrDevice || "auto",
@@ -56,8 +67,23 @@ export function buildCampaignPayload(state) {
     translationModel: state.translationProvider.defaultModel,
     translationDevice: "auto",
     translationBatchSize: 8,
+    voiceProvider: state.voiceProvider?.id || "edge",
     targetVoices: Object.fromEntries(locales.map((locale) => [locale, state.voices[locale]])),
-    sourceVolume: Number(state.sourceVolume ?? 0.12),
+    sourceVolume: state.voiceProvider?.id === "original" ? 1 : Number(state.sourceVolume ?? 0.12),
+    localOutputRoot: String(state.localOutputRoot || ""),
+  };
+  if ((state.sourceMode || "creator") === "folder") {
+    return {
+      templateId: "folder-dub",
+      sourceRoot: state.localFolder,
+      ...common,
+    };
+  }
+  return {
+    templateId: "creator-campaign",
+    creatorRunId: state.creatorRunId,
+    selectedVideoIds: [...new Set(state.selectedVideoIds || [])],
+    ...common,
     destinationPlans: locales.map((locale) => ({
       locale,
       targets: (state.destinations?.[locale] || []).map(({platform, account}) => ({platform, account})),

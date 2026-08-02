@@ -20,14 +20,16 @@ class Noop:
 def envelope(payload): return {"contractId":"CMD-RUN-CREATE","contractVersion":"1.0","operationId":"dub-op","correlationId":"dub-corr","payload":payload}
 
 
-def test_folder_dub_graph_has_ten_owner_steps_and_audio_policy(tmp_path):
+def test_folder_dub_graph_has_ten_owner_steps_and_local_output_policy(tmp_path):
     types=["source-intake","verify-source","transcribe-source","verify-transcript","translate-transcript","verify-translation","render-voice","verify-voice","localize-video","verify-localization"]
     store=RunStore(tmp_path/"studio.db"); app=StudioApplication(store,WorkflowEngine(store,{value:Noop() for value in types}),allowed_roots=(tmp_path,))
     source=tmp_path/"media"; source.mkdir()
-    status,response=app.handle("POST","/api/v1/runs",{},envelope({"templateId":"folder-dub","sourceRoot":str(source),"targetLanguages":["ru-RU"],"targetVoices":{"ru-RU":"ru-RU-DmitryNeural"},"sourceVolume":0.12}))
+    target=tmp_path/"exports"
+    status,response=app.handle("POST","/api/v1/runs",{},envelope({"templateId":"folder-dub","sourceRoot":str(source),"targetLanguages":["ru-RU"],"targetVoices":{"ru-RU":"ru-RU-DmitryNeural"},"sourceVolume":0.12,"localOutputRoot":str(target)}))
     run=store.get_run(response["value"]["runId"])
     assert status==201 and [node["type"] for node in run["graph"]["nodes"]]==types
     assert run["parameters"]["sourceVolume"]==0.12
+    assert run["parameters"]["localOutputRoot"]==str(target.resolve())
 
 
 def test_dub_graph_rejects_out_of_range_source_volume(tmp_path):

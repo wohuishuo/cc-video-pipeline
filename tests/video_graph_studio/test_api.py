@@ -14,7 +14,7 @@ sys.path.insert(0, str(APP))
 from studio.adapters import AdapterResult  # noqa: E402
 from studio.api import StudioApplication  # noqa: E402
 from studio.engine import WorkflowEngine  # noqa: E402
-from studio.server import create_server  # noqa: E402
+from studio.server import _allowed_roots, create_server  # noqa: E402
 from studio.store import RunStore  # noqa: E402
 
 
@@ -57,6 +57,21 @@ def running_server(tmp_path):
     return server, thread, f"http://127.0.0.1:{server.server_port}"
 
 
+def test_default_roots_include_existing_onedrive_media_folders(tmp_path):
+    repository = tmp_path / "OneDrive" / "Documents" / "video"
+    repository.mkdir(parents=True)
+    onedrive_desktop = tmp_path / "OneDrive" / "Desktop"
+    onedrive_videos = tmp_path / "OneDrive" / "Videos"
+    onedrive_desktop.mkdir(parents=True)
+    onedrive_videos.mkdir(parents=True)
+
+    roots = _allowed_roots(repository, home=tmp_path)
+
+    assert repository.resolve() in roots
+    assert onedrive_desktop.resolve() in roots
+    assert onedrive_videos.resolve() in roots
+
+
 def test_health_is_served_over_real_loopback_http(tmp_path):
     server, thread, base = running_server(tmp_path)
     try:
@@ -67,6 +82,7 @@ def test_health_is_served_over_real_loopback_http(tmp_path):
             "database": "ready",
             "activeWorkers": 0,
             "queuedRuns": 0,
+            "defaultOutputRoot": str(tmp_path.resolve()),
         }
         queue_status, queue = request_json(base, "/api/v1/queue")
         assert queue_status == 200
@@ -85,12 +101,26 @@ def test_folder_browser_rejects_escape_and_lists_supported_media(tmp_path):
     source = tmp_path / "source"
     (source / "child").mkdir(parents=True)
     (source / "clip.mp4").write_bytes(b"video")
+    (source / "Another.MOV").write_bytes(b"second")
+    (source / "notes.txt").write_text("ignore", encoding="utf-8")
     server, thread, base = running_server(tmp_path)
     try:
         status, body = request_json(base, "/api/v1/folders?" + urlencode({"path": str(source)}))
         assert status == 200
-        assert body["videoCount"] == 1
+        assert body["videoCount"] == 2
         assert body["directories"][0]["name"] == "child"
+        assert body["videos"] == [
+            {
+                "name": "Another.MOV",
+                "path": str((source / "Another.MOV").resolve()),
+                "size": 6,
+            },
+            {
+                "name": "clip.mp4",
+                "path": str((source / "clip.mp4").resolve()),
+                "size": 5,
+            },
+        ]
         status, body = request_json(base, "/api/v1/folders?" + urlencode({"path": str(tmp_path.parent)}))
         assert status == 403
         assert body["resultClass"] == "REJECTED_UNAUTHORIZED"

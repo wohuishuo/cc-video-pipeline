@@ -80,6 +80,26 @@ def test_batch_policy_requires_exact_language_voice_coverage_and_safe_ranges():
 
     assert policy.target_languages == ("ru-RU", "en-US")
     assert policy.to_public_dict()["targetVoices"]["ru-RU"] == "ru-RU-DmitryNeural"
+    assert policy.voice_provider == "edge"
+
+    qwen = BatchPolicy.create(
+        ["ru-RU", "en-US"], {"ru-RU": "Ryan", "en-US": "Aiden"},
+        voice_provider="qwen3",
+    )
+    original = BatchPolicy.create(
+        ["kk-KZ"], {"kk-KZ": "original-audio"}, voice_provider="original",
+    )
+    assert qwen.to_public_dict()["voiceProvider"] == "qwen3"
+    assert original.to_public_dict()["voiceProvider"] == "original"
+
+    with pytest.raises(BatchContractError, match="Qwen3-TTS"):
+        BatchPolicy.create(
+            ["kk-KZ"], {"kk-KZ": "Ryan"}, voice_provider="qwen3"
+        )
+    with pytest.raises(BatchContractError, match="voice provider"):
+        BatchPolicy.create(
+            ["ru-RU"], {"ru-RU": "voice"}, voice_provider="unknown"
+        )
 
     invalid = [
         ([], {}, 0.12, 8, 1080),

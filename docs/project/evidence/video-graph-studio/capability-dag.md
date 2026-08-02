@@ -12,6 +12,12 @@ flowchart LR
     F["G07 Filesystem Browser"] -->|Query| D
     E["Existing Localization MVP"] -. Adapter .-> W
     P -->|Lease lifecycle| B["G09 Resource Budget"]
+    C["G10 Complete Creator Catalog"] -->|Verified fact| S["G11 Exact Selection"]
+    S -->|Command| P
+    T["G12 Translation Provider Policy"] -->|Policy| P
+    V["G13 Voice Provider Policy"] -->|Policy| P
+    P -->|Verified local artifacts| O["G14 Local Delivery"]
+    O -. Optional .-> U["G15 Publication Execution"]
 ```
 
 | Node | Result and owner | Status | Direct dependencies | Classification |
@@ -25,6 +31,11 @@ flowchart LR
 | G07 | allowed-root folder evidence | verified | fixed configured roots | substitute: local filesystem only |
 | G08 | real successful Edge media result | verified | external Edge service and localization MVP | named platform integration |
 | G09 | reserve/renew/release local capacity | verified | Resource Budget public CLI | optional hard admission gate |
-| G10 | authenticated private/draft upload receipt | unproven | Credential Vault, Publication and Platform I/O | hard platform gate |
+| G10 | complete, non-truncated creator catalog | verified | Creator Discovery manifest | hard campaign gate |
+| G11 | exact creator subset | verified | G10 Fact | hard campaign gate |
+| G12 | explicit NLLB/DeepSeek translation policy | verified | provider readiness projection | substitutable provider |
+| G13 | explicit Edge/Qwen3/original voice policy | verified | locale compatibility and provider readiness | substitutable provider |
+| G14 | verified local MP4 delivery | verified contract/domain boundary | G03 and localization facts | hard completion boundary |
+| G15 | authenticated private/draft upload receipt | unproven | Credential Vault, Publication and Platform I/O | optional platform gate |
 
-The lowest unproven platform node is G10. It does not block domain verification of the control plane, but it blocks any claim that Studio completed a real authenticated upload.
+The lowest unproven platform node is G15. It is optional and therefore does not block local campaign completion, but it blocks any claim that Studio completed a real authenticated upload.

@@ -191,9 +191,14 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _allowed_roots(repository: Path) -> tuple[Path, ...]:
-    home = Path.home()
-    candidates = [repository, home / "Videos", home / "Documents", home / "Downloads", home / "Desktop"]
+def _allowed_roots(repository: Path, *, home: Path | None = None) -> tuple[Path, ...]:
+    home = Path.home() if home is None else Path(home)
+    media_names = ("Videos", "Documents", "Downloads", "Desktop")
+    candidates = [
+        repository,
+        *(home / name for name in media_names),
+        *(home / "OneDrive" / name for name in media_names),
+    ]
     result: list[Path] = []
     for candidate in candidates:
         if candidate.exists():
@@ -346,6 +351,7 @@ def build_runtime(
         store,
         engine,
         allowed_roots=allowed_roots if allowed_roots is not None else _allowed_roots(repository),
+        repository=repository,
     )
     return application, engine
 
