@@ -85,6 +85,11 @@ const TEMPLATE_NODE_COPY = {
     localize: { title: "Execute guarded publication", description: "Require the exact plan SHA and ask Publication to compose Vault and Platform I/O.", owner: "publication", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
     verify: { title: "Verify platform receipt", description: "Require a fingerprinted manifest and non-empty external publication identity.", owner: "publication", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
   },
+  "publication-batch-execute": {
+    source: { title: "Verified Release plan", description: "Resolve one completed Folder+Release or URL+Release batch fact from this workspace.", owner: "video-graph-studio", relationship: "Fact", delivery: "DOMAIN_VERIFIED" },
+    localize: { title: "Execute serial release", description: "Run one private YouTube publication at a time with durable child checkpoints and safe resume.", owner: "publication-batch-execution", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
+    verify: { title: "Verify release receipts", description: "Independently check every child plan, receipt, manifest, external ID and aggregate fingerprint.", owner: "video-graph-studio", relationship: "Policy", delivery: "DOMAIN_VERIFIED" },
+  },
   "youtube-connect": {
     source: { title: "Google desktop client", description: "Select one local Google desktop OAuth client JSON without copying its secret into Studio.", owner: "youtube-oauth-bootstrap", relationship: "Input", delivery: "DOMAIN_VERIFIED" },
     localize: { title: "Connect YouTube", description: "Open the system browser, validate loopback state and PKCE, then store refresh credentials through Vault.", owner: "youtube-oauth-bootstrap", relationship: "Command", delivery: "DOMAIN_VERIFIED" },
@@ -217,6 +222,7 @@ async function refreshRunList() {
   const [runsResponse, queue] = await Promise.all([api("/api/v1/runs"), api("/api/v1/queue")]);
   state.recentRuns = runsResponse.runs;
   if (state.templateId === "publication-execute") populateLatestPublicationPlan();
+  if (state.templateId === "publication-batch-execute") populateLatestPublicationBatchPlan();
   $("#queue-count").textContent = `${queue.queuedRuns} waiting`;
   const list = $("#run-list");
   list.replaceChildren();
@@ -255,6 +261,14 @@ function populateLatestPublicationPlan() {
   if (!planRun || !fact?.manifestSha256) return;
   if (!$("#publication-plan-run-id").value) $("#publication-plan-run-id").value = planRun.runId;
   if (!$("#publication-confirmation").value) $("#publication-confirmation").value = fact.manifestSha256;
+}
+
+function populateLatestPublicationBatchPlan() {
+  const releaseRun = state.recentRuns.find((run) => run.status === "COMPLETED" && ["folder-release", "url-release"].includes(run.graph?.graphId) && run.parameters?.targetPlatforms?.length === 1 && run.parameters.targetPlatforms[0] === "youtube" && run.parameters?.credentialIds?.youtube);
+  const fact = releaseRun?.steps?.find((step) => step.nodeId === "plan-publication-batch" && step.status === "COMPLETED")?.result;
+  if (!releaseRun || !fact?.manifestSha256) return;
+  if (!$("#release-plan-run-id").value) $("#release-plan-run-id").value = releaseRun.runId;
+  if (!$("#release-execution-confirmation").value) $("#release-execution-confirmation").value = fact.manifestSha256;
 }
 
 async function openFolderBrowser() {
@@ -309,6 +323,7 @@ async function submitRun(event) {
   const creatorMode = creatorProfileMode || creatorBatchMode;
   const publicationMode = state.templateId === "publication-plan";
   const publicationExecuteMode = state.templateId === "publication-execute";
+  const publicationBatchExecuteMode = state.templateId === "publication-batch-execute";
   const youtubeConnectMode = state.templateId === "youtube-connect";
   const releaseMode = state.templateId.endsWith("-release");
   const urlMode = state.templateId.startsWith("url-") || creatorMode;
@@ -316,8 +331,8 @@ async function submitRun(event) {
   const translationMode = state.templateId.endsWith("-translation");
   const voiceMode = state.templateId.endsWith("-voice");
   const dubMode = state.templateId.endsWith("-dub");
-  const needsFolder = !urlMode && !publicationMode && !publicationExecuteMode && !youtubeConnectMode;
-  if (!publicationMode && !publicationExecuteMode && !youtubeConnectMode && ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl))) {
+  const needsFolder = !urlMode && !publicationMode && !publicationExecuteMode && !publicationBatchExecuteMode && !youtubeConnectMode;
+  if (!publicationMode && !publicationExecuteMode && !publicationBatchExecuteMode && !youtubeConnectMode && ((needsFolder && !sourceRoot) || (!needsFolder && !sourceUrl))) {
     toast("Choose a source folder or supported social URL.", true);
     return;
   }
@@ -341,6 +356,10 @@ async function submitRun(event) {
   }
   if (publicationExecuteMode && (!$("#publication-plan-run-id").value.trim() || !$("#publication-confirmation").value.trim() || !$("#credential-vault-path").value.trim())) {
     toast("Choose a completed plan run, its exact SHA-256 and Credential Vault.", true);
+    return;
+  }
+  if (publicationBatchExecuteMode && (!$("#release-plan-run-id").value.trim() || !$("#release-execution-confirmation").value.trim() || !$("#release-credential-vault-path").value.trim())) {
+    toast("Choose a completed Release plan run, its exact batch SHA-256 and Credential Vault.", true);
     return;
   }
   if (youtubeConnectMode && (!$("#youtube-client-config").value.trim() || !$("#youtube-vault-path").value.trim() || !$("#youtube-credential-id").value.trim() || !$("#youtube-credential-label").value.trim())) {
@@ -381,6 +400,8 @@ async function submitRun(event) {
       ? { templateId: state.templateId, videoPath: $("#publication-video").value.trim(), metadataPath: $("#publication-metadata").value.trim(), targetPlatforms: publicationTargets, account: $("#publication-account").value.trim(), credentialIds: youtubeCredentialId && publicationTargets.includes("youtube") ? { youtube: youtubeCredentialId } : {}, public: false }
       : publicationExecuteMode
       ? { templateId: state.templateId, planRunId: $("#publication-plan-run-id").value.trim(), confirmation: $("#publication-confirmation").value.trim(), credentialVaultPath: $("#credential-vault-path").value.trim() }
+      : publicationBatchExecuteMode
+      ? { templateId: state.templateId, releasePlanRunId: $("#release-plan-run-id").value.trim(), confirmation: $("#release-execution-confirmation").value.trim(), credentialVaultPath: $("#release-credential-vault-path").value.trim() }
       : creatorBatchMode
       ? { ...voicePayload, sourceUrl, maxItems: Number($("#creator-max-items").value), authenticationFile: $("#authentication-file").value.trim() || undefined, sourceVolume: 0.12 }
       : creatorProfileMode
@@ -458,9 +479,10 @@ function selectTemplate(templateId) {
   const creatorMode = creatorProfileMode || creatorBatchMode;
   const publicationMode = templateId === "publication-plan";
   const publicationExecuteMode = templateId === "publication-execute";
+  const publicationBatchExecuteMode = templateId === "publication-batch-execute";
   const youtubeConnectMode = templateId === "youtube-connect";
   const releaseMode = templateId.endsWith("-release");
-  const publicationAnyMode = publicationMode || publicationExecuteMode;
+  const publicationAnyMode = publicationMode || publicationExecuteMode || publicationBatchExecuteMode;
   const standaloneMode = publicationAnyMode || youtubeConnectMode;
   const urlMode = templateId.startsWith("url-") || creatorMode;
   const transcriptionMode = templateId.endsWith("-transcription");
@@ -492,12 +514,16 @@ function selectTemplate(templateId) {
   $("#publication-controls").hidden = !publicationMode;
   $("#release-controls").hidden = !releaseMode;
   $("#publication-execution-controls").hidden = !publicationExecuteMode;
+  $("#publication-batch-execution-controls").hidden = !publicationBatchExecuteMode;
   $("#youtube-connect-controls").hidden = !youtubeConnectMode;
   if (publicationExecuteMode) populateLatestPublicationPlan();
+  if (publicationBatchExecuteMode) populateLatestPublicationBatchPlan();
   $$('.template-field .choice').forEach((label) => {
     label.classList.toggle("active", label.querySelector("input").value === templateId);
   });
-  const copy = releaseMode
+  const copy = publicationBatchExecuteMode
+    ? ["Verified Release plan", "Same workspace · exact batch SHA-256", "Execute serial private release", "Durable child checkpoints · maximum one active", "Verify every publication", "Plans · receipts · external IDs · aggregate fingerprint"]
+    : releaseMode
     ? [urlMode ? "URL localization" : "Folder localization", "Intake · ASR · translation · voice · dub", "Plan release batch", "One derivative · one Publication child", "Verify release coverage", "Derivatives · metadata · platforms · fingerprints"]
     : templateId === "creator-batch-dub"
     ? ["Creator profile", "Canonical URL discovery · optional cookies", "Serial creator loop", "Intake · ASR · translation · voice · dub", "Verify batch coverage", "Items · languages · derivative fingerprints"]
@@ -526,7 +552,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Intake · ASR · verified facts", "Serial translation", "NLLB · multilingual · checkpointed", "Verify translations", "Editable JSON · SRT · fingerprints"];
   ["source-node-title", "source-node-description", "process-node-title", "process-node-description", "output-node-title", "output-node-description"]
     .forEach((id, index) => { $(`#${id}`).textContent = copy[index]; });
-  const outputDetails = releaseMode
+  const outputDetails = publicationBatchExecuteMode
+    ? ["Publication Batch Manifest", "Per-item external platform IDs"]
+    : releaseMode
     ? ["Private/draft plans", "Publication Batch Plan"]
     : templateId === "creator-batch-dub"
     ? ["Localized MP4 batch", "Creator Batch Manifest"]
@@ -549,7 +577,9 @@ function selectTemplate(templateId) {
       : ["Source Manifest", "SHA-256 receipt"];
   $("#output-format").textContent = outputDetails[0];
   $("#output-evidence").textContent = outputDetails[1];
-  const stepIds = releaseMode
+  const stepIds = publicationBatchExecuteMode
+    ? ["", "execute-publication-batch", "verify-publication-batch-execution"]
+    : releaseMode
     ? ["intake", "plan-publication-batch", "verify-publication-batch"]
     : templateId === "creator-batch-dub"
     ? ["discover-creator", "localize-creator-batch", "verify-creator-batch"]
@@ -573,7 +603,9 @@ function selectTemplate(templateId) {
       ? ["intake", "transcribe", "verify-transcript"]
       : ["", "intake", "verify"];
   $$(".graph-node").forEach((node, index) => { node.dataset.stepId = stepIds[index]; });
-  const paletteCopy = releaseMode
+  const paletteCopy = publicationBatchExecuteMode
+    ? ["Verified Release plan", "Committed batch fact", "Execute serial release", "Durable continuation owner", "Verify aggregate", "Per-child evidence policy"]
+    : releaseMode
     ? [urlMode ? "URL localization" : "Folder localization", "Committed Localization fact", "Plan derivative batch", "Durable serial Publication loop", "Verify release plans", "Exact target coverage"]
     : templateId === "creator-batch-dub"
     ? ["Creator Manifest", "Committed discovery fact", "Localize every item", "Durable serial item loop", "Verify batch manifest", "Exact coverage policy"]
@@ -602,7 +634,9 @@ function selectTemplate(templateId) {
               : [urlMode ? "URL intake" : "Folder intake", "Source owner", "Translate", "Serial language loop", "Verify translation", "Coverage policy"];
   ["palette-source-title", "palette-source-detail", "palette-process-title", "palette-process-detail", "palette-output-title", "palette-output-detail"]
     .forEach((id, index) => { $(`#${id}`).textContent = paletteCopy[index]; });
-  $(".workspace-label").textContent = releaseMode
+  $(".workspace-label").textContent = publicationBatchExecuteMode
+    ? "Verified Release Plan → Serial Private YouTube Execution"
+    : releaseMode
     ? `${urlMode ? "URL" : "Folder"} Localization → Publication Batch Planning`
     : templateId === "creator-batch-dub"
     ? "Creator Profile → Serial Localization Batch"
@@ -629,7 +663,7 @@ function selectTemplate(templateId) {
             : voiceMode
               ? `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation + Voice`
               : `${urlMode ? "URL" : "Folder"} Intake + ASR + Translation`;
-  $$(".source-preview").forEach((element) => { element.textContent = (youtubeConnectMode ? $("#youtube-client-config").value : publicationExecuteMode ? $("#publication-plan-run-id").value : publicationMode ? $("#publication-video").value : urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
+  $$(".source-preview").forEach((element) => { element.textContent = (youtubeConnectMode ? $("#youtube-client-config").value : publicationBatchExecuteMode ? $("#release-plan-run-id").value : publicationExecuteMode ? $("#publication-plan-run-id").value : publicationMode ? $("#publication-video").value : urlMode ? sourceUrl.value : sourceRoot.value) || "Not selected"; });
   resetRunProjection();
   focusNode(state.selectedNode);
 }

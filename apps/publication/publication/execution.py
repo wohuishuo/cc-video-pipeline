@@ -19,7 +19,7 @@ PRIVATE_GUARANTEED={"youtube"}
 
 @dataclass(frozen=True)
 class ExecutionOutcome:
-    completed:bool; external_id:str|None; facts:dict[str,Any]; error:str|None=None
+    completed:bool; external_id:str|None; facts:dict[str,Any]; error:str|None=None; result_class:str|None=None
 
 
 @dataclass(frozen=True)
@@ -37,16 +37,17 @@ class PlatformIOExecutionAdapter:
         credential_id=job.get("credentialId")
         if credential_id:
             if self.vault_launcher is None or self.vault_path is None: return ExecutionOutcome(False,None,{"credentialReferenceUsed":False},"credential vault is required for referenced credential")
-            argv.extend(["--credential-env","VIDEO_PLATFORM_CREDENTIAL"])
+            argv.extend(["--credential-env","VIDEO_PLATFORM_CREDENTIAL","--execution-scope",credential_id])
             child=argv; argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.vault_launcher),"run","--vault",str(self.vault_path),"--credential-id",credential_id,"--expected-provider",job["platform"],"--target-env","VIDEO_PLATFORM_CREDENTIAL","--executable",child[0]]
             argv.extend(f"--argument={argument}" for argument in child[1:])
         self.maximum_active=1; result=subprocess.run(argv,text=True,capture_output=True,encoding="utf-8",errors="replace")
         try: payload=json.loads(result.stdout)
         except json.JSONDecodeError: payload={}
+        child_result_class=str(payload.get("childResultClass") or "") or None
         if result.returncode!=0 or payload.get("status")!="ok":
             error="credential-backed platform upload failed" if credential_id else str(payload.get("error") or result.stderr[-4000:] or "platform upload failed")
-            return ExecutionOutcome(False,None,{"exitCode":result.returncode,"credentialReferenceUsed":bool(credential_id)},error)
-        return ExecutionOutcome(True,str(payload.get("external_id") or "") or None,{"exitCode":result.returncode,"executed":True,"visibility":job["visibility"],"credentialReferenceUsed":bool(credential_id)})
+            return ExecutionOutcome(False,None,{"exitCode":result.returncode,"credentialReferenceUsed":bool(credential_id)},error,child_result_class)
+        return ExecutionOutcome(True,str(payload.get("external_id") or "") or None,{"exitCode":result.returncode,"executed":True,"visibility":job["visibility"],"credentialReferenceUsed":bool(credential_id)},result_class=child_result_class)
 
 
 class PublicationExecution:
@@ -63,15 +64,19 @@ class PublicationExecution:
         fingerprint=hashlib.sha256(canonical({"planSha256":plan_sha,"adapter":adapter.identity}).encode()).hexdigest(); prior=self._read(receipt)
         if prior and (prior.get("operationId")!=operation_id or prior.get("inputFingerprint")!=fingerprint):return ExecutionResult("REJECTED_CONFLICT",receipt,None,"operation input conflict")
         if prior and prior.get("resultClass")=="COMPLETED" and manifest_path.is_file() and sha256_file(manifest_path)==prior.get("manifestSha256"):return ExecutionResult("DUPLICATE_COMPLETED",receipt,manifest_path)
-        reusable={item["jobId"]:item for item in (prior or {}).get("items",[]) if item.get("status")=="COMPLETED"}; items=[]; failures=[]; maximum=0; log=on_log or (lambda _:None)
+        if prior and prior.get("resultClass")=="UNKNOWN":return ExecutionResult("REJECTED_UNKNOWN",receipt,None,"previous publication outcome is unknown; automatic replay is fenced")
+        reusable={item["jobId"]:item for item in (prior or {}).get("items",[]) if item.get("status")=="COMPLETED"}; items=[]; failures=[]; unknowns=[]; maximum=0; log=on_log or (lambda _:None)
         for index,job in enumerate(jobs,1):
             if job["id"] in reusable: items.append({**reusable[job["id"]],"reused":True}); continue
             request={**job,"videoPath":video["path"],"metadataPath":metadata["path"]}; log(f"[{index}/{len(jobs)}] publishing {job['platform']}")
             outcome=adapter.execute(request,log); maximum=max(maximum,int(getattr(adapter,"maximum_active",1)))
             if outcome.completed and outcome.external_id: items.append({"jobId":job["id"],"platform":job["platform"],"status":"COMPLETED","externalId":outcome.external_id,"facts":outcome.facts,"reused":False})
+            elif outcome.result_class in {"UNKNOWN","REJECTED_UNKNOWN"}: unknowns.append(job["id"]); items.append({"jobId":job["id"],"platform":job["platform"],"status":"UNKNOWN","error":"publication outcome is unknown"})
             elif outcome.completed: failures.append(job["id"]); items.append({"jobId":job["id"],"platform":job["platform"],"status":"FAILED","error":"platform success omitted external identity"})
             else: failures.append(job["id"]); items.append({"jobId":job["id"],"platform":job["platform"],"status":"FAILED","error":outcome.error})
             self._checkpoint(receipt,operation_id,fingerprint,plan_path,plan_sha,items,maximum)
+        if unknowns:
+            self._checkpoint(receipt,operation_id,fingerprint,plan_path,plan_sha,items,maximum,result_class="UNKNOWN",error=f"{len(unknowns)} publication outcome(s) unknown"); return ExecutionResult("UNKNOWN",receipt,None,"publication outcome is unknown")
         if failures:
             self._checkpoint(receipt,operation_id,fingerprint,plan_path,plan_sha,items,maximum,result_class="FAILED",error=f"{len(failures)} publication(s) failed"); return ExecutionResult("FAILED",receipt,None,"publication failed")
         manifest={"schemaVersion":1,"plan":str(plan_path),"planSha256":plan_sha,"public":bool(plan.get("public")),"publications":items}; atomic(manifest_path,manifest); manifest_sha=sha256_file(manifest_path)

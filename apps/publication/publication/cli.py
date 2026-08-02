@@ -44,7 +44,7 @@ def main(argv=None):
         else:
             result=PublicationExecution().execute(args.plan,args.output_dir,args.operation_id,confirmation=args.confirmation,adapter=PlatformIOExecutionAdapter(args.platform_io_launcher or repository/"apps"/"platform-io"/"run.ps1",vault_launcher=repository/"apps"/"credential-vault"/"run.ps1" if args.credential_vault else None,vault_path=args.credential_vault),on_log=lambda line:print(line,flush=True) if not args.json else None); artifact=result.manifest_path
         payload={"resultClass":result.result_class,"receipt":str(result.receipt_path),"artifact":str(artifact) if artifact else None,"error":result.error}; print(json.dumps(payload,ensure_ascii=True) if args.json else payload)
-        return 0 if result.result_class in {"COMPLETED","DUPLICATE_COMPLETED"} else 2 if result.result_class.startswith("REJECTED") else 1
+        return 0 if result.result_class in {"COMPLETED","DUPLICATE_COMPLETED"} else 3 if result.result_class in {"UNKNOWN","REJECTED_UNKNOWN"} else 2 if result.result_class.startswith("REJECTED") else 1
     except (PublicationError,OSError,ValueError) as error:
         print(json.dumps({"resultClass":"REJECTED_MALFORMED","error":str(error)},ensure_ascii=True)); return 2
 

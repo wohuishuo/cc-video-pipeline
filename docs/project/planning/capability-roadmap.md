@@ -25,6 +25,7 @@ Work-in-progress is limited to the lowest unproven dependency needed by the crea
 | 19 | Transport-neutral client contracts | canonical bundle, strict command envelopes, scoped endpoints, semantic compatibility | Domain complete; Studio HTTP discovery and browser consumption complete |
 | 20 | Durable local resource budget | byte/slot leases, cross-process no-oversubscription, generation/TTL lifecycle, Storage capacity composition | Domain complete; Studio composition complete |
 | 21 | Resource-aware Studio admission | reserve before start, renew during run, release on every terminal path, recovery reconciliation | Domain complete; production load and power-loss evidence pending |
-| 22 | Hosted/mobile admission | remote identity, HTTP contract discovery, remote secret custody, distributed budgets, attack review and security evidence | Pending |
+| 22 | Publication Batch Plan execution | exact batch confirmation, whole-batch preflight, strict-serial children, resumable known failure, uncertain-outcome fence, aggregate verification | Domain complete; Studio browser composition complete; authenticated batch and power-loss evidence pending |
+| 23 | Hosted/mobile admission | remote identity, HTTP contract discovery, remote secret custody, distributed budgets, attack review and security evidence | Pending |
 
 No later slice may move upstream ownership into Graph Studio for convenience.

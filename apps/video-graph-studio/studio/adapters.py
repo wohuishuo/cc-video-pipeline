@@ -1064,6 +1064,219 @@ class VerifyPublicationExecutionAdapter:
         on_log(f"Verified {len(publications)} private publication receipt(s)");return AdapterResult(True,{"manifest":str(path),"publicationCount":len(publications)})
 
 
+class PublicationBatchExecuteAdapter(CommandAdapter):
+    """Invoke the independent serial batch owner through its public launcher."""
+
+    def __init__(self, launcher: Path, output_root: Path):
+        super().__init__()
+        self.launcher = Path(launcher).resolve()
+        self.output_root = Path(output_root).resolve()
+
+    def execute(self, node, context, on_log, cancel_event):
+        parameters = context["parameters"]
+        output = self.output_root / str(context["runId"])
+        operation_id = f"{context['runId']}:step:{node.id}"
+        argv = [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.launcher),
+            "execute", str(parameters["batchPlanPath"]),
+            "--confirmation", str(parameters["confirmation"]),
+            "--credential-vault", str(parameters["credentialVaultPath"]),
+            "--output-dir", str(output),
+            "--operation-id", operation_id,
+            "--json",
+        ]
+        result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
+        receipt_path = output / "publication-batch-execution-receipt.json"
+        if not result.completed or not receipt_path.is_file():
+            return AdapterResult(False, result.details, result.error or "publication batch execution receipt missing")
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+            manifest = Path(str(receipt["manifest"])).resolve()
+            manifest_sha = str(receipt["manifestSha256"])
+            item_count = int(receipt["itemCount"])
+            completed_count = int(receipt["completedCount"])
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            return AdapterResult(False, result.details, f"invalid publication batch execution receipt: {error}")
+        valid = (
+            receipt.get("schemaVersion") == 1
+            and receipt.get("operationId") == operation_id
+            and receipt.get("batchPlanSha256") == parameters["confirmation"]
+            and receipt.get("resultClass") == "COMPLETED"
+            and receipt.get("maximumActiveItems") == 1
+            and completed_count == item_count
+            and receipt.get("failedCount") == 0
+            and receipt.get("unknownCount") == 0
+            and manifest.is_file()
+            and hashlib.sha256(manifest.read_bytes()).hexdigest() == manifest_sha
+        )
+        if not valid:
+            return AdapterResult(False, result.details, "batch executor did not commit a verified aggregate manifest")
+        return AdapterResult(
+            True,
+            {
+                **result.details,
+                "receipt": str(receipt_path),
+                "receiptSha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+                "manifest": str(manifest),
+                "manifestSha256": manifest_sha,
+                "itemCount": item_count,
+                "publicationCount": completed_count,
+            },
+        )
+
+
+class VerifyPublicationBatchExecutionAdapter:
+    """Independently verify aggregate and per-child publication evidence."""
+
+    @staticmethod
+    def _json(path: Path) -> dict[str, Any]:
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(value, dict):
+            raise ValueError("JSON object required")
+        return value
+
+    @staticmethod
+    def _sha(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def execute(self, node, context, on_log, cancel_event):
+        committed = next(
+            (
+                step.get("result")
+                for step in context.get("steps", [])
+                if step.get("nodeId") == "execute-publication-batch" and step.get("status") == "COMPLETED"
+            ),
+            None,
+        )
+        if not isinstance(committed, dict):
+            return AdapterResult(False, {}, "committed publication batch execution is missing")
+        parameters = context.get("parameters", {})
+        batch_plan = Path(str(parameters.get("batchPlanPath", ""))).resolve()
+        confirmation = str(parameters.get("confirmation", ""))
+        manifest_path = Path(str(committed.get("manifest", ""))).resolve()
+        receipt_path = Path(str(committed.get("receipt", ""))).resolve()
+        try:
+            if (
+                not batch_plan.is_file()
+                or self._sha(batch_plan) != confirmation
+                or not manifest_path.is_file()
+                or self._sha(manifest_path) != committed.get("manifestSha256")
+                or not receipt_path.is_file()
+                or self._sha(receipt_path) != committed.get("receiptSha256")
+            ):
+                raise ValueError("top-level fingerprint conflict")
+            plan = self._json(batch_plan)
+            manifest = self._json(manifest_path)
+            receipt = self._json(receipt_path)
+            plan_items = plan["items"]
+            rows = manifest["items"]
+            languages = plan["targetLanguages"]
+            media_ids = plan["expectedMediaIds"]
+            expected_keys = [f"{language}:{media_id}" for language in languages for media_id in media_ids]
+            top_level_valid = (
+                receipt.get("schemaVersion") == 1
+                and receipt.get("resultClass") == "COMPLETED"
+                and receipt.get("batchPlanSha256") == confirmation
+                and receipt.get("maximumActiveItems") == 1
+                and receipt.get("itemCount") == len(plan_items)
+                and receipt.get("completedCount") == len(plan_items)
+                and receipt.get("failedCount") == 0
+                and receipt.get("unknownCount") == 0
+                and Path(str(receipt.get("manifest", ""))).resolve() == manifest_path
+                and receipt.get("manifestSha256") == committed.get("manifestSha256")
+                and plan.get("schemaVersion") == 1
+                and plan.get("public") is False
+                and plan.get("maximumActiveItems") == 1
+                and plan.get("expectedDerivativeKeys") == expected_keys
+                and plan.get("totalJobCount") == len(plan_items)
+                and manifest.get("schemaVersion") == 1
+                and Path(str(manifest.get("batchPlan", ""))).resolve() == batch_plan
+                and manifest.get("batchPlanSha256") == confirmation
+                and manifest.get("targetLanguages") == languages
+                and manifest.get("expectedMediaIds") == media_ids
+                and manifest.get("expectedDerivativeKeys") == expected_keys
+                and manifest.get("maximumActiveItems") == 1
+                and manifest.get("totalPublicationCount") == len(plan_items)
+                and isinstance(rows, list)
+                and len(rows) == len(plan_items)
+            )
+            if not top_level_valid:
+                raise ValueError("aggregate schema conflict")
+            parent_operation_id = f"{context['runId']}:step:execute-publication-batch"
+            external_ids: set[str] = set()
+            for ordinal, (planned, row, expected_key) in enumerate(zip(plan_items, rows, expected_keys), 1):
+                if not isinstance(planned, dict) or not isinstance(row, dict):
+                    raise ValueError("item object required")
+                plan_path = Path(str(planned["publicationPlan"])).resolve()
+                child_receipt_path = Path(str(row["publicationReceipt"])).resolve()
+                child_manifest_path = Path(str(row["executionManifest"])).resolve()
+                derivative_path = Path(str(row["derivativePath"])).resolve()
+                metadata_path = Path(str(row["metadataPath"])).resolve()
+                for file, expected_sha in (
+                    (plan_path, planned["publicationPlanSha256"]),
+                    (derivative_path, planned["derivativeSha256"]),
+                    (metadata_path, planned["metadataSha256"]),
+                    (child_receipt_path, row["publicationReceiptSha256"]),
+                    (child_manifest_path, row["executionManifestSha256"]),
+                ):
+                    if not file.is_file() or self._sha(file) != expected_sha:
+                        raise ValueError("child fingerprint conflict")
+                child_plan = self._json(plan_path)
+                child_receipt = self._json(child_receipt_path)
+                child_manifest = self._json(child_manifest_path)
+                suffix = hashlib.sha256(
+                    f"{parent_operation_id}\0{ordinal}\0{planned['publicationPlanSha256']}".encode("utf-8")
+                ).hexdigest()[:16]
+                child_operation_id = f"{parent_operation_id}:item:{ordinal:04d}:{suffix}"
+                publications = child_manifest.get("publications")
+                jobs = child_plan.get("jobs")
+                external_id = row.get("externalId")
+                item_valid = (
+                    planned.get("ordinal") == ordinal
+                    and row.get("ordinal") == ordinal
+                    and f"{planned.get('targetLanguage')}:{planned.get('mediaId')}" == expected_key
+                    and row.get("identity") == expected_key
+                    and row.get("targetLanguage") == planned.get("targetLanguage")
+                    and row.get("mediaId") == planned.get("mediaId")
+                    and Path(str(planned.get("derivativePath", ""))).resolve() == derivative_path
+                    and Path(str(planned.get("metadataPath", ""))).resolve() == metadata_path
+                    and row.get("derivativeSha256") == planned.get("derivativeSha256")
+                    and row.get("metadataSha256") == planned.get("metadataSha256")
+                    and Path(str(row.get("publicationPlan", ""))).resolve() == plan_path
+                    and row.get("publicationPlanSha256") == planned.get("publicationPlanSha256")
+                    and row.get("platform") == "youtube"
+                    and child_receipt.get("schemaVersion") == 1
+                    and child_receipt.get("operationId") == child_operation_id
+                    and child_receipt.get("planSha256") == planned.get("publicationPlanSha256")
+                    and child_receipt.get("resultClass") == "COMPLETED"
+                    and Path(str(child_receipt.get("manifest", ""))).resolve() == child_manifest_path
+                    and child_receipt.get("manifestSha256") == row.get("executionManifestSha256")
+                    and child_manifest.get("schemaVersion") == 1
+                    and child_manifest.get("public") is False
+                    and Path(str(child_manifest.get("plan", ""))).resolve() == plan_path
+                    and child_manifest.get("planSha256") == planned.get("publicationPlanSha256")
+                    and isinstance(jobs, list) and len(jobs) == 1
+                    and jobs[0].get("platform") == "youtube"
+                    and jobs[0].get("visibility") == "private-or-draft"
+                    and isinstance(publications, list) and len(publications) == 1
+                    and publications[0].get("jobId") == jobs[0].get("id")
+                    and publications[0].get("platform") == "youtube"
+                    and publications[0].get("status") == "COMPLETED"
+                    and isinstance(external_id, str) and bool(external_id.strip())
+                    and publications[0].get("externalId") == external_id
+                )
+                if not item_valid or external_id in external_ids:
+                    raise ValueError("child publication evidence conflict")
+                external_ids.add(external_id)
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return AdapterResult(False, {}, "publication batch execution validation failed")
+        on_log(f"Verified {len(rows)} serial private publication receipt(s)")
+        return AdapterResult(
+            True,
+            {"manifest": str(manifest_path), "itemCount": len(rows), "publicationCount": len(rows), "maximumActiveItems": 1},
+        )
+
+
 class YouTubeConnectAdapter(CommandAdapter):
     def __init__(self, launcher: Path, output_root: Path):
         super().__init__(); self.launcher = Path(launcher).resolve(); self.output_root = Path(output_root).resolve()

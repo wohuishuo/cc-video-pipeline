@@ -224,6 +224,7 @@ def build_runtime(
         PublicationBatchPlanAdapter,
         PublicationPlanAdapter,
         PublicationExecuteAdapter,
+        PublicationBatchExecuteAdapter,
         SourceIntakeAdapter,
         TranscriptSourceAdapter,
         TranslateTranscriptAdapter,
@@ -239,6 +240,7 @@ def build_runtime(
         VerifyPublicationBatchPlanAdapter,
         VerifyPublicationPlanAdapter,
         VerifyPublicationExecutionAdapter,
+        VerifyPublicationBatchExecutionAdapter,
         YouTubeConnectAdapter,
         VerifyYouTubeCredentialAdapter,
     )
@@ -264,6 +266,7 @@ def build_runtime(
     creator_batch_launcher = repository / "apps" / "creator-batch" / "run.ps1"
     publication_batch_launcher = repository / "apps" / "publication-batch" / "run.ps1"
     publication_launcher = repository / "apps" / "publication" / "run.ps1"
+    publication_batch_execution_launcher = repository / "apps" / "publication-batch-execution" / "run.ps1"
     youtube_oauth_launcher = repository / "apps" / "youtube-oauth-bootstrap" / "run.ps1"
     credential_vault_launcher = repository / "apps" / "credential-vault" / "run.ps1"
     lease_coordinator = None
@@ -317,6 +320,10 @@ def build_runtime(
                 publication_launcher, artifact_root / "publication-executions"
             ),
             "verify-publication-execution": VerifyPublicationExecutionAdapter(),
+            "execute-publication-batch": PublicationBatchExecuteAdapter(
+                publication_batch_execution_launcher, artifact_root / "publication-batch-executions"
+            ),
+            "verify-publication-batch-execution": VerifyPublicationBatchExecutionAdapter(),
             "connect-youtube": YouTubeConnectAdapter(
                 youtube_oauth_launcher, artifact_root / "youtube-connections"
             ),

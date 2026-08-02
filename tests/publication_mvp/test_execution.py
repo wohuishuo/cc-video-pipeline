@@ -160,3 +160,57 @@ def test_credential_backed_failure_does_not_persist_untrusted_child_output(tmp_p
     assert not outcome.completed
     assert outcome.error=="credential-backed platform upload failed"
     assert secret not in json.dumps(outcome.facts)+str(outcome.error)
+
+
+def test_credential_id_scopes_the_platform_child_and_unknown_is_preserved(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import publication.execution as execution
+
+    seen = {}
+    adapter = PlatformIOExecutionAdapter(
+        tmp_path / "platform.ps1",
+        vault_launcher=tmp_path / "vault.ps1",
+        vault_path=tmp_path / "vault.json",
+    )
+
+    def run(argv, **kwargs):
+        seen["argv"] = list(argv)
+        return SimpleNamespace(
+            returncode=3,
+            stdout=json.dumps({"status":"unknown","childResultClass":"UNKNOWN","external_id":None}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(execution.subprocess, "run", run)
+    outcome = adapter.execute(
+        {
+            "platform":"youtube", "videoPath":"v.mp4", "metadataPath":"m.json",
+            "account":"main", "visibility":"private-or-draft", "credentialId":"youtube-main",
+        },
+        lambda _: None,
+    )
+
+    assert not outcome.completed
+    assert outcome.result_class == "UNKNOWN"
+    assert "--argument=--execution-scope" in seen["argv"]
+    assert "--argument=youtube-main" in seen["argv"]
+
+
+def test_unknown_publication_is_quarantined_from_automatic_replay(tmp_path):
+    class UnknownPlatform(FakePlatform):
+        def execute(self, job, on_log):
+            self.calls.append(job["platform"])
+            return ExecutionOutcome(False, None, {}, "upload outcome unknown", "UNKNOWN")
+
+    path, digest = plan(tmp_path, {"youtube":"main"})
+    operation = PublicationExecution(); output = tmp_path / "run"; adapter = UnknownPlatform()
+
+    first = operation.execute(path, output, "unknown-op", confirmation=digest, adapter=adapter)
+    replay = operation.execute(path, output, "unknown-op", confirmation=digest, adapter=adapter)
+    receipt = json.loads(first.receipt_path.read_text(encoding="utf-8"))
+
+    assert first.result_class == "UNKNOWN"
+    assert replay.result_class == "REJECTED_UNKNOWN"
+    assert adapter.calls == ["youtube"]
+    assert receipt["resultClass"] == "UNKNOWN"
+    assert receipt["items"][0]["status"] == "UNKNOWN"

@@ -51,6 +51,27 @@ flowchart LR
 
 Choose `Folder+Release` or `URL+Release` in Video Graph Studio. Publication Batch renders metadata tokens for each derivative and invokes Publication through its public launcher. It owns continuation and aggregate coverage only; it does not upload, publish, own media or hold credential values.
 
+## Execute a confirmed release batch
+
+```mermaid
+flowchart LR
+    RUN["Completed Release run"] --> PLAN[("Publication Batch Plan")]
+    PLAN --> HASH{"Exact batch SHA confirmed?"}
+    HASH -- no --> REJECT[("Reject before contact")]
+    HASH -- yes --> PREFLIGHT{"Every target is credential-backed private YouTube?"}
+    PREFLIGHT -- no --> REJECT
+    PREFLIGHT -- yes --> LOOP["Publication Batch Execution"]
+    VAULT["Credential Vault"] -. "one-child injection" .-> LOOP
+    LOOP -->|"one plan at a time"| CHILD["Publication"]
+    CHILD --> OUTCOME{"Completed / failed / unknown"}
+    OUTCOME -- completed --> LOOP
+    OUTCOME -- failed --> RETRY[("Durable retry checkpoint")]
+    OUTCOME -- unknown --> FENCE[("Manual reconciliation fence")]
+    LOOP -->|"all verified"| AGG[("Batch Execution Manifest")]
+```
+
+Choose `Release Execute` only after reviewing a completed Release plan. It is a separate two-node Graph with a separate exact-SHA confirmation. Publication Batch Execution owns serial continuation, reuses hash-verified completed children, retries known failures and refuses to retry an `UNKNOWN` platform outcome. Current policy rejects Bilibili, Douyin, TikTok, public jobs and uncredentialed jobs before platform contact.
+
 ## Research a reference video
 
 ```mermaid

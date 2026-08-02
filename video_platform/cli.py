@@ -23,7 +23,12 @@ def _json_text(payload: object) -> str:
     return json.dumps(payload, ensure_ascii=True, indent=2)
 
 
-def _upload_digest(video: Path, metadata: Path, account: str | None = None) -> str:
+def _upload_digest(
+    video: Path,
+    metadata: Path,
+    account: str | None = None,
+    execution_scope: str | None = None,
+) -> str:
     digest = hashlib.sha256()
     for path in (video.resolve(), metadata.resolve()):
         with path.open("rb") as source:
@@ -31,6 +36,8 @@ def _upload_digest(video: Path, metadata: Path, account: str | None = None) -> s
                 digest.update(chunk)
     if account is not None:
         digest.update(account.encode("utf-8"))
+    if execution_scope is not None:
+        digest.update(b"\0scope\0" + execution_scope.encode("utf-8"))
     return digest.hexdigest()
 
 
@@ -98,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     upload.add_argument("--execute", action="store_true", help="Run the upstream uploader; without this flag only prepares the command")
     upload.add_argument("--public", action="store_true", help="Allow public visibility where supported; default is private/draft")
     upload.add_argument("--credential-env", help="Require credential material in this environment variable for the child adapter")
+    upload.add_argument("--execution-scope", help="Bounded non-secret identity for credential-backed child idempotency")
     upload.add_argument("--json", action="store_true")
     login = subparsers.add_parser("login")
     login.add_argument("platform", choices=[item.value for item in Platform])
@@ -126,10 +134,20 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("invalid credential environment name")
                 if not os.environ.get(args.credential_env):
                     raise ValueError("credential environment variable is missing or empty")
+            if args.execution_scope:
+                if not args.credential_env:
+                    raise ValueError("execution scope requires a credential environment")
+                if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", args.execution_scope):
+                    raise ValueError("invalid execution scope")
             platform = Platform(args.platform)
             request = UploadRequest(platform, args.video, args.metadata, args.account, draft=not args.public)
             internal_youtube = platform is Platform.YOUTUBE and bool(args.credential_env)
-            digest = _upload_digest(request.video, request.metadata, request.account if internal_youtube else None) if internal_youtube or args.execute else ""
+            digest = _upload_digest(
+                request.video,
+                request.metadata,
+                request.account if internal_youtube else None,
+                args.execution_scope if internal_youtube else None,
+            ) if internal_youtube or args.execute else ""
             if internal_youtube:
                 adapter = YouTubeApiUploadAdapter(project_root)
                 prepared = adapter.prepare(request, args.credential_env, digest)
@@ -156,7 +174,8 @@ def main(argv: list[str] | None = None) -> int:
                     external_id = value.get("externalId") if isinstance(value, dict) else None
                     child_class = child.get("resultClass") if isinstance(child, dict) else None
                     completed = result.exit_code == 0 and child_class in {"COMPLETED", "DUPLICATE_COMPLETED"} and isinstance(external_id, str) and bool(external_id.strip())
-                    payload.update({"status": "ok" if completed else "failed", "executed": True, "exit_code": result.exit_code, "external_id": external_id.strip() if completed else None, "visibility": "private", "publisher": "youtube-publisher@1"})
+                    uncertain = child_class in {"UNKNOWN", "REJECTED_UNKNOWN"}
+                    payload.update({"status": "ok" if completed else "unknown" if uncertain else "failed", "executed": True, "exit_code": result.exit_code, "external_id": external_id.strip() if completed else None, "visibility": "private", "publisher": "youtube-publisher@1", "childResultClass": child_class})
                     if not completed:
                         payload["error"] = "internal YouTube publisher failed or omitted external identity"
                     _print(payload, args.json)
