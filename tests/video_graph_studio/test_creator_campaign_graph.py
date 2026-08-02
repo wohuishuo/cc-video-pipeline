@@ -29,7 +29,7 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _creator_manifest(tmp_path: Path) -> Path:
+def _creator_manifest(tmp_path: Path, *, complete: bool = True, truncated: bool = False) -> Path:
     path = tmp_path / "creator-manifest.json"
     path.write_text(
         json.dumps(
@@ -40,8 +40,8 @@ def _creator_manifest(tmp_path: Path) -> Path:
                 "creator": {"id": "creator", "name": "Creator"},
                 "adapter": "fixture@1",
                 "maxItems": 3,
-                "complete": True,
-                "truncated": False,
+                "complete": complete,
+                "truncated": truncated,
                 "items": [
                     {"ordinal": 1, "id": "v3", "url": "https://www.douyin.com/video/3", "title": "Three", "publishedAt": 3},
                     {"ordinal": 2, "id": "v2", "url": "https://www.douyin.com/video/2", "title": "Two", "publishedAt": 2},
@@ -135,6 +135,22 @@ def test_creator_campaign_rejects_browser_artifact_paths_and_unknown_ids(tmp_pat
 
     assert status == 400
     assert status_unknown == 400
+    assert len(store.list_runs()) == 1
+
+
+def test_creator_campaign_rejects_an_incomplete_restored_catalog(tmp_path):
+    manifest = _creator_manifest(tmp_path, complete=False, truncated=True)
+    store = RunStore(tmp_path / "studio.db")
+    creator_run_id = _completed_creator_run(store, manifest)
+    app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))
+
+    status, response = app.handle(
+        "POST", "/api/v1/runs", {}, _envelope(_payload(creator_run_id))
+    )
+
+    assert status == 400
+    assert response["resultClass"] == "REJECTED_CONFLICT"
+    assert "complete creator catalog" in response["detail"]
     assert len(store.list_runs()) == 1
 
 

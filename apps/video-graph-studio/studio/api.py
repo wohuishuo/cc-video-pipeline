@@ -447,6 +447,11 @@ class StudioApplication:
         except KeyError as error:
             raise ContractError("REJECTED_NOT_FOUND", "creator discovery run does not exist") from error
         catalog = project_creator_catalog(creator_run)
+        if not catalog["complete"] or catalog["truncated"]:
+            raise ContractError(
+                "REJECTED_CONFLICT",
+                "creator campaign requires a complete creator catalog; discover all videos first",
+            )
         requested = payload.get("selectedVideoIds")
         if (
             not isinstance(requested, list)
@@ -929,12 +934,18 @@ class StudioApplication:
         video_count = sum(
             1 for item in folder.iterdir() if item.is_file() and item.suffix.lower() in VIDEO_EXTENSIONS
         )
+        videos = [
+            {"name": item.name, "path": str(item), "size": item.stat().st_size}
+            for item in sorted(folder.iterdir(), key=lambda value: value.name.casefold())
+            if item.is_file() and item.suffix.lower() in VIDEO_EXTENSIONS
+        ]
         parent = folder.parent if folder != folder.parent and self._is_allowed(folder.parent) else None
         return 200, {
             "path": str(folder),
             "parent": str(parent) if parent else None,
             "directories": directories,
             "videoCount": video_count,
+            "videos": videos,
         }
 
     def _require_allowed(self, path: Path) -> None:

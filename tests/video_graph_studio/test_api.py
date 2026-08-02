@@ -85,12 +85,26 @@ def test_folder_browser_rejects_escape_and_lists_supported_media(tmp_path):
     source = tmp_path / "source"
     (source / "child").mkdir(parents=True)
     (source / "clip.mp4").write_bytes(b"video")
+    (source / "Another.MOV").write_bytes(b"second")
+    (source / "notes.txt").write_text("ignore", encoding="utf-8")
     server, thread, base = running_server(tmp_path)
     try:
         status, body = request_json(base, "/api/v1/folders?" + urlencode({"path": str(source)}))
         assert status == 200
-        assert body["videoCount"] == 1
+        assert body["videoCount"] == 2
         assert body["directories"][0]["name"] == "child"
+        assert body["videos"] == [
+            {
+                "name": "Another.MOV",
+                "path": str((source / "Another.MOV").resolve()),
+                "size": 6,
+            },
+            {
+                "name": "clip.mp4",
+                "path": str((source / "clip.mp4").resolve()),
+                "size": 5,
+            },
+        ]
         status, body = request_json(base, "/api/v1/folders?" + urlencode({"path": str(tmp_path.parent)}))
         assert status == 403
         assert body["resultClass"] == "REJECTED_UNAUTHORIZED"
