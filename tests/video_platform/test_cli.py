@@ -123,3 +123,39 @@ def test_legacy_upload_digest_remains_compatible_without_account(tmp_path):
     metadata = tmp_path / "metadata.json"; metadata.write_bytes(b"metadata")
 
     assert _upload_digest(video, metadata) == hashlib.sha256(b"videometadata").hexdigest()
+
+
+def test_credential_execution_scope_isolates_youtube_child_identity(tmp_path):
+    video = tmp_path / "video.mp4"; video.write_bytes(b"video")
+    metadata = tmp_path / "metadata.json"; metadata.write_bytes(b"metadata")
+
+    first = _upload_digest(video, metadata, "primary", "youtube-main")
+    second = _upload_digest(video, metadata, "primary", "youtube-backup")
+
+    assert first != second
+    assert first == hashlib.sha256(b"videometadataprimary\0scope\0youtube-main").hexdigest()
+
+
+def test_internal_youtube_unknown_result_is_preserved(capsys, tmp_path, monkeypatch):
+    monkeypatch.setenv("VIDEO_PLATFORM_CREDENTIAL", '{"accessToken":"must-not-appear"}')
+    video = tmp_path / "video.mp4"; video.write_bytes(b"sample")
+    metadata = tmp_path / "metadata.json"; metadata.write_text('{"title":"Private"}', encoding="utf-8")
+
+    class Runner:
+        def run(self, args, cwd=None, env=None):
+            output = json.dumps({"resultClass": "UNKNOWN", "value": {"externalId": None, "privacyStatus": "private"}})
+            return ProcessResult(tuple(args), 3, output, "")
+
+    monkeypatch.setattr("video_platform.cli.ProcessRunner", Runner)
+
+    code = main([
+        "upload", "youtube", str(video), "--metadata", str(metadata),
+        "--account", "primary", "--credential-env", "VIDEO_PLATFORM_CREDENTIAL",
+        "--execution-scope", "youtube-main", "--execute", "--json",
+    ])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert code == 3
+    assert payload["status"] == "unknown"
+    assert payload["childResultClass"] == "UNKNOWN"
+    assert payload["external_id"] is None
