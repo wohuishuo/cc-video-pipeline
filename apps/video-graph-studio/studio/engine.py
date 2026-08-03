@@ -60,6 +60,15 @@ class WorkflowEngine:
         if self.store.queue_snapshot()["queuedRuns"]:
             self._ensure_drain()
 
+    def retry(self, run_id: str) -> CommandResult:
+        """Continue a failed run while preserving every committed owner fact."""
+        if self._shutdown_event.is_set():
+            return CommandResult("REJECTED_CONFLICT", {"detail": "engine is stopping"})
+        result = self.store.retry_failed(run_id)
+        if result.result_class in {"COMPLETED", "DUPLICATE_COMPLETED"}:
+            self._ensure_drain()
+        return result
+
     def cancel(self, run_id: str) -> CommandResult:
         with self._lock:
             try:

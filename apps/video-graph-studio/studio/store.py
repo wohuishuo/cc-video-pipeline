@@ -290,6 +290,63 @@ class RunStore:
                 },
             )
 
+    def retry_failed(self, run_id: str) -> CommandResult:
+        """Reset only failed owners and durably enqueue the same run for continuation."""
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            run = connection.execute(
+                "SELECT status, version FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if run is None:
+                connection.rollback()
+                return CommandResult("REJECTED_NOT_FOUND", {"runId": run_id})
+            queue = connection.execute(
+                "SELECT sequence, status FROM start_queue WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if run["status"] == "INTERRUPTED" and queue is not None and queue["status"] in {"QUEUED", "RUNNING"}:
+                value = self._run_row(connection, run_id)
+                connection.commit()
+                return CommandResult("DUPLICATE_COMPLETED", value)
+            if run["status"] != "FAILED":
+                connection.rollback()
+                return CommandResult("REJECTED_CONFLICT", {"runId": run_id, "status": run["status"]})
+            reset_count = connection.execute(
+                """UPDATE steps SET status = 'PENDING', version = version + 1,
+                   result_json = NULL, error = NULL WHERE run_id = ? AND status = 'FAILED'""",
+                (run_id,),
+            ).rowcount
+            if reset_count < 1:
+                connection.rollback()
+                return CommandResult("REJECTED_CONFLICT", {"runId": run_id, "detail": "failed step missing"})
+            now = _now()
+            connection.execute(
+                """UPDATE runs SET status = 'INTERRUPTED', version = version + 1,
+                   terminal_result_json = NULL, updated_at = ? WHERE run_id = ?""",
+                (now, run_id),
+            )
+            sequence = connection.execute(
+                "SELECT COALESCE(MAX(sequence), 0) + 1 FROM run_logs WHERE run_id = ?", (run_id,)
+            ).fetchone()[0]
+            connection.execute(
+                "INSERT INTO run_logs (run_id, sequence, message, created_at) VALUES (?, ?, ?, ?)",
+                (run_id, sequence, f"retry requested: reset {reset_count} failed step(s)", now),
+            )
+            if queue is None:
+                connection.execute(
+                    """INSERT INTO start_queue (run_id, status, requested_at, updated_at)
+                    VALUES (?, 'QUEUED', ?, ?)""",
+                    (run_id, now, now),
+                )
+            else:
+                connection.execute(
+                    """UPDATE start_queue SET status = 'QUEUED', requested_at = ?, updated_at = ?
+                    WHERE run_id = ?""",
+                    (now, now, run_id),
+                )
+            value = self._run_row(connection, run_id)
+            connection.commit()
+            return CommandResult("COMPLETED", value)
+
     def claim_next_run(self) -> str | None:
         """Claim the oldest runnable start request for the single worker."""
         with self._lock, self._connect() as connection:

@@ -79,3 +79,30 @@ def test_steps_and_logs_keep_graph_and_append_order(tmp_path):
         "second",
     ]
 
+
+def test_retry_failed_keeps_completed_facts_and_resets_only_failed_step(tmp_path):
+    store = RunStore(tmp_path / "studio.db")
+    run_id = store.create_run(command("op-retry")).value["runId"]
+    store.transition(run_id, expected_version=0, target="RUNNING")
+    store.start_step(run_id, "source")
+    store.complete_step(run_id, "source", {"manifest": "source.json"})
+    store.start_step(run_id, "render")
+    failed_child_id = store.get_run(run_id)["steps"][1]["childOperationId"]
+    store.fail_step(run_id, "render", "temporary voice failure")
+    store.transition(run_id, expected_version=1, target="FAILED")
+
+    result = store.retry_failed(run_id)
+    run = store.get_run(run_id)
+    replay = store.retry_failed(run_id)
+
+    assert result.result_class == "COMPLETED"
+    assert run["status"] == "INTERRUPTED"
+    assert run["steps"][0]["status"] == "COMPLETED"
+    assert run["steps"][0]["result"] == {"manifest": "source.json"}
+    assert run["steps"][1]["status"] == "PENDING"
+    assert run["steps"][1]["error"] is None
+    assert run["steps"][1]["childOperationId"] == failed_child_id
+    assert replay.result_class == "DUPLICATE_COMPLETED"
+    assert store.queue_snapshot()["queuedRuns"] == 1
+    assert run["logs"][-1]["message"] == "retry requested: reset 1 failed step(s)"
+

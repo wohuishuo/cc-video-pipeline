@@ -13,7 +13,7 @@ from typing import Any
 
 
 CONTRACT_VERSION="1.0"
-COMMANDS=("CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL")
+COMMANDS=("CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL","CMD-RUN-RETRY")
 IDENTITY=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 SEMVER=re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
@@ -46,6 +46,7 @@ class ClientContracts:
                 "POST /api/v1/runs":{"scope":"runs:write","command":"CMD-RUN-CREATE"},
                 "POST /api/v1/runs/{runId}/start":{"scope":"runs:write","command":"CMD-RUN-START"},
                 "POST /api/v1/runs/{runId}/cancel":{"scope":"runs:write","command":"CMD-RUN-CANCEL"},
+                "POST /api/v1/runs/{runId}/retry":{"scope":"runs:write","command":"CMD-RUN-RETRY"},
                 "GET /api/v1/folders":{"scope":"artifacts:read","projection":"folder-list"},
             },
             "ownership":{"runState":"Video Graph Studio","workspaceAdmission":"Workspace Access","clientProjection":"disposable"},

@@ -7,6 +7,7 @@ APP = Path(__file__).resolve().parents[2] / "apps" / "video-graph-studio"
 sys.path.insert(0, str(APP))
 
 from studio.adapters import CommandAdapter  # noqa: E402
+from studio.adapters import AdapterResult  # noqa: E402
 from studio.contracts import GraphDefinition  # noqa: E402
 from studio.engine import WorkflowEngine  # noqa: E402
 from studio.store import CreateRun, RunStore  # noqa: E402
@@ -99,6 +100,27 @@ def test_failure_preserves_prior_checkpoint_and_stops_successors(tmp_path):
         "PENDING",
     ]
     assert marker.read_text() == "done"
+
+
+def test_retry_runs_only_failed_and_pending_steps(tmp_path):
+    graph = graph_with_commands([["one"], ["two"]])
+    store = RunStore(tmp_path / "studio.db")
+    run_id = create(store, graph)
+    calls = []
+
+    class OnceFailing:
+        def execute(self, node, context, on_log, cancel_event):
+            calls.append(node.id)
+            if node.id == "step-2" and calls.count("step-2") == 1:
+                return AdapterResult(False, {}, "temporary")
+            return AdapterResult(True, {"node": node.id})
+
+    engine = WorkflowEngine(store, {"command": OnceFailing()})
+    engine.start(run_id)
+    assert wait_terminal(store, run_id)["status"] == "FAILED"
+    assert engine.retry(run_id).result_class == "COMPLETED"
+    assert wait_terminal(store, run_id)["status"] == "COMPLETED"
+    assert calls == ["step-1", "step-2", "step-2"]
 
 
 def test_cancel_is_idempotent_and_stops_owned_process(tmp_path):

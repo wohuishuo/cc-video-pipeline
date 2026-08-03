@@ -391,6 +391,10 @@ class StudioApplication:
                     self._validate_envelope(body, "CMD-RUN-CANCEL")
                     result = self.engine.cancel(suffix[: -len("/cancel")])
                     return self._command_response(result.result_class, result.value)
+                if suffix.endswith("/retry") and method == "POST":
+                    self._validate_envelope(body, "CMD-RUN-RETRY")
+                    result = self.engine.retry(suffix[: -len("/retry")])
+                    return self._command_response(result.result_class, result.value, accepted=True)
             return 404, {"resultClass": "REJECTED_NOT_FOUND", "path": path}
         except KeyError as error:
             return 404, {"resultClass": "REJECTED_NOT_FOUND", "detail": str(error)}

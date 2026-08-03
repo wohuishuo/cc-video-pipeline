@@ -15,7 +15,7 @@ from studio.adapters import AdapterResult  # noqa: E402
 from studio.api import StudioApplication  # noqa: E402
 from studio.engine import WorkflowEngine  # noqa: E402
 from studio.server import _allowed_roots, create_server  # noqa: E402
-from studio.store import RunStore  # noqa: E402
+from studio.store import CommandResult, RunStore  # noqa: E402
 
 
 class SuccessAdapter:
@@ -37,6 +37,27 @@ def request_json(base: str, path: str, *, method: str = "GET", body=None):
             return response.status, json.loads(response.read())
     except HTTPError as error:
         return error.code, json.loads(error.read())
+
+
+def test_retry_endpoint_validates_command_and_delegates_to_engine(tmp_path):
+    calls = []
+
+    class RetryEngine:
+        def retry(self, run_id):
+            calls.append(run_id)
+            return CommandResult("COMPLETED", {"runId": run_id})
+
+    app = StudioApplication(RunStore(tmp_path / "studio.db"), RetryEngine(), allowed_roots=(tmp_path,))
+    command = {
+        "contractId": "CMD-RUN-RETRY", "contractVersion": "1.0",
+        "operationId": "retry-1", "correlationId": "corr-1", "payload": {},
+    }
+
+    status, response = app.handle("POST", "/api/v1/runs/run-123/retry", {}, command)
+
+    assert status == 202
+    assert response == {"resultClass": "COMPLETED", "value": {"runId": "run-123"}}
+    assert calls == ["run-123"]
 
 
 def running_server(tmp_path):

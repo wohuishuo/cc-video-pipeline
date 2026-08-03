@@ -10,7 +10,7 @@ import threading
 
 
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
-REQUIRED_COMMANDS = {"CMD-RUN-CREATE", "CMD-RUN-START", "CMD-RUN-CANCEL"}
+REQUIRED_COMMANDS = {"CMD-RUN-CREATE", "CMD-RUN-START", "CMD-RUN-CANCEL", "CMD-RUN-RETRY"}
 
 
 class ClientContractsError(RuntimeError):

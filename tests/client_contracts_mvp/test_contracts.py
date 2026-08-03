@@ -13,10 +13,11 @@ def test_bundle_names_commands_endpoints_scopes_and_state_owners():
     bundle=ClientContracts().bundle()
 
     assert bundle["contractVersion"]=="1.0"
-    assert set(bundle["commands"])=={"CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL"}
+    assert set(bundle["commands"])=={"CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL","CMD-RUN-RETRY"}
     assert bundle["endpoints"]["POST /api/v1/runs"]["scope"]=="runs:write"
     assert bundle["endpoints"]["GET /api/v1/runs"]["scope"]=="runs:read"
     assert bundle["endpoints"]["GET /api/v1/contracts"]=={"scope":None,"projection":"client-contracts"}
+    assert bundle["endpoints"]["POST /api/v1/runs/{runId}/retry"]["command"]=="CMD-RUN-RETRY"
     assert bundle["ownership"]["runState"]=="Video Graph Studio"
     assert bundle["ownership"]["clientProjection"]=="disposable"
 
@@ -51,6 +52,9 @@ def test_validate_accepts_known_command_and_rejects_wrong_version():
     try: owner.validate_command(command,"CMD-RUN-CREATE")
     except ContractError as error: assert error.code=="REJECTED_VERSION"
     else: raise AssertionError("unsupported command version accepted")
+
+    command.update({"contractId":"CMD-RUN-RETRY","contractVersion":"1.0"})
+    assert owner.validate_command(command,"CMD-RUN-RETRY").result_class=="VALID"
 
 
 def test_validate_rejects_unknown_fields_and_unbounded_identity():
