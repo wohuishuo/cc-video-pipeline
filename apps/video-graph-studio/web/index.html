@@ -29,16 +29,16 @@
 
     <section class="stage-content">
       <section id="stage-source" class="stage-panel active" data-stage="source">
-        <header class="stage-header"><div><p class="eyebrow">选择来源</p><h1>视频从哪里来？</h1><p>读取一个创作者账号的作品，或直接使用电脑里的视频文件。这里只建立清单，不会上传内容。</p></div><span class="effect-badge safe">只在本机处理</span></header>
+        <header class="stage-header"><div><p class="eyebrow">选择来源</p><h1>视频从哪里来？</h1><p>粘贴账号主页或单条视频链接，系统会自动识别；也可以直接使用电脑里的视频文件。</p></div><span class="effect-badge safe">只在本机处理</span></header>
         <div class="source-mode-grid">
-          <button class="source-mode selected" data-source-mode="creator" type="button"><b>账号全部作品</b><span>YouTube · Bilibili · 抖音 · TikTok</span></button>
+          <button class="source-mode selected" data-source-mode="creator" type="button"><b>粘贴视频链接</b><span>自动识别账号或单个视频</span></button>
           <button class="source-mode" data-source-mode="folder" type="button"><b>本地视频文件夹</b><span>直接使用电脑上的 MP4 / MOV / MKV</span></button>
         </div>
         <div id="creator-source-panel" class="form-card source-panel">
-          <label for="creator-url">创作者账号链接</label>
-          <div class="action-row"><input id="creator-url" type="url" autocomplete="off" placeholder="https://www.douyin.com/user/..."><button id="discover-creator" class="primary" type="button">列出全部视频</button></div>
+          <label for="creator-url">账号主页或视频链接</label>
+          <div class="action-row"><input id="creator-url" type="url" autocomplete="off" placeholder="粘贴 YouTube、Bilibili、抖音或 TikTok 链接"><button id="discover-creator" class="primary" type="button">识别链接</button></div>
           <details><summary>高级：限制数量与登录 Cookie</summary><div class="two-fields"><label><span>最多视频数</span><input id="creator-max-items" type="number" min="0" max="10000" value="0"><small>0 = 全部；限制后的清单会明确标记为不完整</small></label><label><span>Cookie 文件（可选）</span><input id="authentication-file" autocomplete="off" placeholder="C:\Users\...\cookies.txt"></label></div></details>
-          <div id="creator-result" class="empty-card"><span class="empty-icon">A</span><div><strong>还没有读取账号</strong><p>这里只读取作品目录，不会下载视频。</p></div></div>
+          <div id="creator-result" class="empty-card"><span class="empty-icon">A</span><div><strong>还没有识别链接</strong><p>账号链接会列出作品，单条链接只加入该视频。</p></div></div>
         </div>
         <div id="folder-source-panel" class="form-card source-panel" hidden>
           <label for="local-folder">本地视频文件夹</label>

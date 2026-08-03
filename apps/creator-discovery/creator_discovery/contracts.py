@@ -71,3 +71,8 @@ class DiscoveryPage:
     items: tuple[CreatorItem, ...]
     next_cursor: str | None
     has_more: bool
+    source_kind: str = "profile"
+
+    def __post_init__(self):
+        if self.source_kind not in {"profile", "video"}:
+            raise DiscoveryError("source_kind must be profile or video")

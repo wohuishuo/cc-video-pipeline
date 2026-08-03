@@ -20,6 +20,7 @@ def _manifest(tmp_path: Path) -> tuple[Path, dict]:
         "schemaVersion": 1,
         "platform": "douyin",
         "requestedUrl": "https://v.douyin.com/example/",
+        "sourceKind": "profile",
         "creator": {"id": "creator-1", "name": "Creator One"},
         "adapter": "fixture@1",
         "maxItems": 2,
@@ -45,6 +46,20 @@ def _manifest(tmp_path: Path) -> tuple[Path, dict]:
     path = tmp_path / "creator-manifest.json"
     path.write_text(json.dumps(value), encoding="utf-8")
     return path, value
+
+
+def test_projects_single_video_source_kind(tmp_path):
+    from studio.creator_catalog import project_creator_catalog
+
+    manifest, value = _manifest(tmp_path)
+    value["sourceKind"] = "video"
+    value["items"] = value["items"][:1]
+    manifest.write_text(json.dumps(value), encoding="utf-8")
+
+    catalog = project_creator_catalog(_run(RunStore(tmp_path / "studio.db"), manifest))
+
+    assert catalog["sourceKind"] == "video"
+    assert catalog["itemCount"] == 1
 
 
 def _run(store: RunStore, manifest: Path, *, graph="creator-profile", terminal=True):
@@ -88,6 +103,7 @@ def test_projects_exact_ordered_verified_creator_catalog(tmp_path):
         "runId": catalog["runId"],
         "platform": "douyin",
         "requestedUrl": "https://v.douyin.com/example/",
+        "sourceKind": "profile",
         "creator": {"id": "creator-1", "name": "Creator One"},
         "complete": True,
         "truncated": False,

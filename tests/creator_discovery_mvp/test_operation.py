@@ -53,3 +53,16 @@ def test_limit_marks_manifest_truncated(tmp_path):
     result=DiscoveryOperation().execute(ProfileSpec.from_url("https://youtube.com/@x",max_items=1),tmp_path/"out","op",enumerator=FakeEnumerator())
     value=json.loads(result.manifest_path.read_text(encoding="utf-8"))
     assert len(value["items"])==1 and value["complete"] is False and value["truncated"] is True
+
+
+def test_single_video_source_kind_is_committed_to_manifest(tmp_path):
+    class SingleVideoEnumerator:
+        identity="single-video@1"
+        def enumerate(self,spec,cookies,cursor,on_log):
+            yield DiscoveryPage("creator-1","Creator",(CreatorItem("v1","https://www.douyin.com/video/v1","One",1),),None,False,"video")
+
+    result=DiscoveryOperation().execute(ProfileSpec.from_url("https://v.douyin.com/a/"),tmp_path/"out","op",enumerator=SingleVideoEnumerator())
+    value=json.loads(result.manifest_path.read_text(encoding="utf-8"))
+
+    assert value["sourceKind"] == "video"
+    assert value["complete"] is True

@@ -113,11 +113,13 @@ def project_creator_catalog(run: dict[str, Any]) -> dict[str, Any]:
     platform = value.get("platform")
     creator = value.get("creator")
     requested_url = value.get("requestedUrl")
+    source_kind = value.get("sourceKind", "profile")
     if (
         value.get("schemaVersion") != 1
         or platform not in SUPPORTED_PLATFORMS
         or not isinstance(requested_url, str)
         or not requested_url.strip()
+        or source_kind not in {"profile", "video"}
         or not isinstance(creator, dict)
         or not isinstance(creator.get("id"), str)
         or not creator["id"].strip()
@@ -133,6 +135,7 @@ def project_creator_catalog(run: dict[str, Any]) -> dict[str, Any]:
         "runId": str(run["runId"]),
         "platform": platform,
         "requestedUrl": requested_url,
+        "sourceKind": source_kind,
         "creator": {"id": creator["id"], "name": creator.get("name")},
         "complete": value["complete"],
         "truncated": value["truncated"],

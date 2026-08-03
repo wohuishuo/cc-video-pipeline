@@ -10,6 +10,7 @@ const {
   filterCreatorItems,
   launchPresentation,
   selectVisibleIds,
+  sourcePresentation,
   stageAction,
 } = workspaceModel;
 
@@ -138,6 +139,19 @@ test("restores only the committed authentication file reference for discovery re
   assert.equal(workspaceModel.authenticationFileFromRun(null), "");
 });
 
+test("presents detected account and single-video links differently", () => {
+  assert.deepEqual(sourcePresentation({sourceKind: "video", itemCount: 1, creator: {name: "Creator"}}), {
+    title: "Creator",
+    detail: "已识别为单个视频",
+    buttonLabel: "识别链接",
+  });
+  assert.deepEqual(sourcePresentation({sourceKind: "profile", itemCount: 75, complete: true, truncated: false, creator: {name: "Creator"}}), {
+    title: "Creator",
+    detail: "75 条视频 · 完整账号清单",
+    buttonLabel: "识别链接",
+  });
+});
+
 test("stage actions name the next decision instead of saying continue", () => {
   assert.deepEqual(stageAction("source", {videoCount: 75}), {
     label: "查看 75 个视频",
@@ -146,6 +160,10 @@ test("stage actions name the next decision instead of saying continue", () => {
   assert.deepEqual(stageAction("translation", {languageCount: 2}), {
     label: "选择配音",
     hint: "已选择 2 种目标语言，下一步为每种语言选择声音。",
+  });
+  assert.deepEqual(stageAction("source", {videoCount: 1, sourceKind: "video"}), {
+    label: "查看 1 个视频",
+    hint: "已识别并自动选中单个视频，下一步确认视频信息。",
   });
   assert.deepEqual(stageAction("output", {outputRoot: "C:/Videos"}), {
     label: "检查任务",

@@ -24,7 +24,11 @@ export function stageAction(stage, facts = {}) {
     case "source":
       return {
         label: videoCount ? `查看 ${videoCount} 个视频` : "查看视频",
-        hint: videoCount ? "账号目录已读取，下一步确认要处理的视频。" : "选择账号或本地视频文件夹。",
+        hint: videoCount
+          ? facts.sourceKind === "video"
+            ? "已识别并自动选中单个视频，下一步确认视频信息。"
+            : "账号目录已读取，下一步确认要处理的视频。"
+          : "粘贴账号或视频链接，或者选择本地视频文件夹。",
       };
     case "videos":
       return {
@@ -92,6 +96,19 @@ export function campaignCounts(selectedVideoIds, selectedLanguages, destinations
     videos,
     localizedVideos: videos * languages,
     publicationJobs: videos * targetCount,
+  };
+}
+
+export function sourcePresentation(catalog) {
+  const title = catalog?.creator?.name || catalog?.creator?.id || "已识别来源";
+  if (catalog?.sourceKind === "video") {
+    return {title, detail: "已识别为单个视频", buttonLabel: "识别链接"};
+  }
+  const incomplete = catalog && (!catalog.complete || catalog.truncated);
+  return {
+    title,
+    detail: `${catalog?.itemCount || 0} 条视频 · ${incomplete ? "账号目录不完整" : "完整账号清单"}`,
+    buttonLabel: "识别链接",
   };
 }
 

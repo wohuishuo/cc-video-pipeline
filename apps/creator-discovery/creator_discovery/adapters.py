@@ -35,7 +35,10 @@ class YtDlpProfileEnumerator:
         if cookies: argv.extend(["--cookies", str(Path(cookies).resolve())])
         argv.append(spec.url); result = self.runner.run(argv)
         if result.exit_code != 0: raise DiscoveryError(result.stderr[-4000:] or "yt-dlp profile enumeration failed")
-        try: payload = json.loads(result.stdout); raw_items = payload.get("entries", [])
+        try:
+            payload = json.loads(result.stdout)
+            source_kind = "profile" if isinstance(payload.get("entries"), list) else "video"
+            raw_items = payload.get("entries", []) if source_kind == "profile" else [payload]
         except (json.JSONDecodeError, TypeError) as error: raise DiscoveryError(f"invalid yt-dlp metadata: {error}") from error
         items=[]
         for row in raw_items:
@@ -46,8 +49,8 @@ class YtDlpProfileEnumerator:
                 elif spec.platform=="bilibili": url=f"https://www.bilibili.com/video/{identity}"
                 else: continue
             items.append(CreatorItem(identity,url,str(row.get("title") or identity),int(row["timestamp"]) if row.get("timestamp") else None))
-        has_more=bool(spec.max_items and len(items)>=spec.max_items)
-        yield DiscoveryPage(str(payload.get("channel_id") or payload.get("uploader_id") or payload.get("id") or "") or None,str(payload.get("channel") or payload.get("uploader") or payload.get("title") or "") or None,tuple(items),None,has_more)
+        has_more=source_kind == "profile" and bool(spec.max_items and len(items)>=spec.max_items)
+        yield DiscoveryPage(str(payload.get("channel_id") or payload.get("uploader_id") or payload.get("id") or "") or None,str(payload.get("channel") or payload.get("uploader") or payload.get("title") or "") or None,tuple(items),None,has_more,source_kind)
 
 
 class F2DouyinEnumerator:
@@ -66,7 +69,7 @@ class F2DouyinEnumerator:
             except json.JSONDecodeError: continue
             if value.get("kind")!="page": continue
             items=tuple(CreatorItem(str(row["id"]),str(row["url"]),str(row.get("title") or row["id"]),int(row["publishedAt"]) if row.get("publishedAt") else None) for row in value.get("items",[]))
-            yielded=True; yield DiscoveryPage(value.get("creatorId"),value.get("creatorName"),items,value.get("nextCursor"),bool(value.get("hasMore")))
+            yielded=True; yield DiscoveryPage(value.get("creatorId"),value.get("creatorName"),items,value.get("nextCursor"),bool(value.get("hasMore")),str(value.get("sourceKind") or "profile"))
         stderr=process.stderr.read() if process.stderr else ""; code=process.wait()
         if code!=0: raise DiscoveryError(stderr[-4000:] or "F2 profile enumeration failed")
         if not yielded: raise DiscoveryError("F2 returned no profile pages")
