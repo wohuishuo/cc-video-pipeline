@@ -254,12 +254,23 @@ label.video-card:hover { border-color: #465467; background: var(--surface-raised
 .provider-option { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 11px; min-height: 122px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); padding: 17px; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease; }
 .provider-option:hover { border-color: #465467; background: var(--surface-raised); }
 .provider-option.selected { border-color: var(--accent); background: var(--surface-selected); box-shadow: inset 3px 0 0 var(--accent); }
-.provider-option.unavailable { opacity: .58; cursor: not-allowed; }
+.provider-option.unavailable { border-color: rgba(232, 179, 91, .28); cursor: pointer; }
 .provider-option b { font-size: 14px; }
 .provider-option small { float: right; color: var(--green); font-size: 10px; font-weight: 750; }
 .provider-option.unavailable small { color: var(--amber); }
 .provider-option p { margin: 9px 0; color: var(--muted-strong); font-size: 12px; line-height: 1.5; }
 .provider-option code { color: var(--muted); font-size: 10px; }
+.provider-setup { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(320px, 1.2fr); gap: 28px; margin: -7px 0 20px; border: 1px solid rgba(124, 106, 255, .42); border-radius: var(--radius-panel); background: linear-gradient(135deg, rgba(124, 106, 255, .11), rgba(18, 22, 30, .95) 52%); padding: 20px; }
+.provider-setup[hidden] { display: none; }
+.setup-copy { display: grid; align-content: start; gap: 7px; }
+.setup-copy .setup-step { color: var(--accent-strong); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.setup-copy strong { font-size: 16px; }
+.setup-copy p { margin: 0; color: var(--muted-strong); font-size: 12px; line-height: 1.55; }
+.setup-control { display: grid; align-content: center; gap: 7px; }
+.setup-control > label { color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.setup-control .action-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.setup-control small { color: var(--amber); font-size: 10px; }
+.setup-control small.ready { color: var(--green); }
 .language-grid, .voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: 10px; }
 .language-card { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); padding: 13px 14px; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease; }
 .language-card:hover { border-color: #465467; background: var(--surface-raised); }
@@ -427,6 +438,7 @@ dialog::backdrop { background: rgba(4, 7, 11, .78); backdrop-filter: blur(5px); 
 }
 
 @media (max-width:900px) {
+  .provider-setup { grid-template-columns: 1fr; gap: 16px; }
   .topbar { grid-template-columns: 1fr auto; }
   .project-state { display: none; }
   .workspace-shell { display: block; }

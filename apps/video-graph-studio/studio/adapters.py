@@ -15,6 +15,28 @@ from typing import Any, Callable
 from .contracts import GraphNode
 
 
+def wrap_command_with_vault(
+    command: list[str],
+    *,
+    vault_launcher: Path,
+    vault_path: Path,
+    credential_id: str,
+    provider: str,
+    target_environment: str,
+) -> list[str]:
+    """Wrap argv without ever resolving the secret in the Studio process."""
+    return [
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        str(Path(vault_launcher).resolve()), "run",
+        "--vault", str(Path(vault_path).resolve()),
+        "--credential-id", credential_id,
+        "--target-env", target_environment,
+        "--expected-provider", provider,
+        "--executable", command[0],
+        *(f"--argument={argument}" for argument in command[1:]),
+    ]
+
+
 @dataclass(frozen=True)
 class AdapterResult:
     completed: bool
@@ -401,10 +423,19 @@ class VerifyTranscriptAdapter:
 class TranslateTranscriptAdapter(CommandAdapter):
     """Invokes the independent Translation public launcher."""
 
-    def __init__(self, launcher: Path, translation_root: Path):
+    def __init__(
+        self,
+        launcher: Path,
+        translation_root: Path,
+        *,
+        credential_vault_launcher: Path | None = None,
+        credential_vault_path: Path | None = None,
+    ):
         super().__init__()
         self.launcher = Path(launcher).resolve()
         self.translation_root = Path(translation_root).resolve()
+        self.credential_vault_launcher = Path(credential_vault_launcher).resolve() if credential_vault_launcher else None
+        self.credential_vault_path = Path(credential_vault_path).resolve() if credential_vault_path else None
 
     def execute(
         self,
@@ -441,6 +472,20 @@ class TranslateTranscriptAdapter(CommandAdapter):
         for language in parameters.get("targetLanguages", []):
             argv.extend(["--target-language", str(language)])
         argv.append("--json")
+        if (
+            parameters.get("translationProvider") == "deepseek"
+            and not os.environ.get("DEEPSEEK_API_KEY", "").strip()
+            and self.credential_vault_launcher is not None
+            and self.credential_vault_path is not None
+        ):
+            argv = wrap_command_with_vault(
+                argv,
+                vault_launcher=self.credential_vault_launcher,
+                vault_path=self.credential_vault_path,
+                credential_id="deepseek-api",
+                provider="deepseek",
+                target_environment="DEEPSEEK_API_KEY",
+            )
         result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
         receipt_path = output / "translation-receipt.json"
         if not result.completed or not receipt_path.is_file():
@@ -791,10 +836,19 @@ class VerifyCreatorSelectionAdapter:
 class CreatorBatchAdapter(CommandAdapter):
     """Invoke the independent Creator Batch continuation owner."""
 
-    def __init__(self, launcher: Path, output_root: Path):
+    def __init__(
+        self,
+        launcher: Path,
+        output_root: Path,
+        *,
+        credential_vault_launcher: Path | None = None,
+        credential_vault_path: Path | None = None,
+    ):
         super().__init__()
         self.launcher = Path(launcher).resolve()
         self.output_root = Path(output_root).resolve()
+        self.credential_vault_launcher = Path(credential_vault_launcher).resolve() if credential_vault_launcher else None
+        self.credential_vault_path = Path(credential_vault_path).resolve() if credential_vault_path else None
 
     def execute(self, node, context, on_log, cancel_event):
         committed = next((
@@ -834,6 +888,20 @@ class CreatorBatchAdapter(CommandAdapter):
         if parameters.get("authenticationFile"):
             argv.extend(["--cookies", str(parameters["authenticationFile"])])
         argv.append("--json")
+        if (
+            parameters.get("translationProvider") == "deepseek"
+            and not os.environ.get("DEEPSEEK_API_KEY", "").strip()
+            and self.credential_vault_launcher is not None
+            and self.credential_vault_path is not None
+        ):
+            argv = wrap_command_with_vault(
+                argv,
+                vault_launcher=self.credential_vault_launcher,
+                vault_path=self.credential_vault_path,
+                credential_id="deepseek-api",
+                provider="deepseek",
+                target_environment="DEEPSEEK_API_KEY",
+            )
         result = super().execute(GraphNode(node.id, "command", {"argv": argv}), context, on_log, cancel_event)
         receipt_path = output / "creator-batch-receipt.json"
         if not result.completed or not receipt_path.is_file():

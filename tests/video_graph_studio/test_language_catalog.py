@@ -70,5 +70,5 @@ def test_translation_provider_api_reports_local_and_deepseek_readiness(tmp_path,
     assert status == 200
     assert response["providers"] == [
         {"id": "nllb", "name": "NLLB (local)", "ready": True, "defaultModel": "facebook/nllb-200-distilled-600M"},
-        {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": False, "defaultModel": "deepseek-v4-flash", "credentialEnvironment": "DEEPSEEK_API_KEY"},
+        {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": False, "defaultModel": "deepseek-v4-flash", "setupAvailable": False},
     ]

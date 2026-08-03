@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Creator Workflow Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=14">
+  <link rel="stylesheet" href="/styles.css?v=15">
 </head>
 <body>
   <header class="topbar">
@@ -67,6 +67,10 @@
       <section id="stage-translation" class="stage-panel" data-stage="translation" hidden>
         <header class="stage-header"><div><p class="eyebrow">设置翻译</p><h1>要生成哪些语言？</h1><p>先选择翻译引擎，再选择一种或多种目标语言。每种语言都会生成独立的本地成片。</p></div><div class="selection-total"><strong id="selected-language-count">0</strong><span>已选择</span></div></header>
         <div id="translation-provider" class="provider-options"></div>
+        <section id="deepseek-setup" class="provider-setup" hidden>
+          <div class="setup-copy"><span class="setup-step">DEEPSEEK 设置</span><strong id="deepseek-setup-title">连接 DeepSeek</strong><p id="deepseek-setup-copy">输入 API Key 后保存在这台电脑的 Windows 加密凭据库。任务和日志不会记录密钥。</p></div>
+          <div class="setup-control"><label for="deepseek-api-key">API Key</label><div class="action-row"><input id="deepseek-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…"><button id="save-deepseek-key" class="primary" type="button">保存并启用</button></div><small id="deepseek-setup-status" role="status" aria-live="polite">尚未配置</small></div>
+        </section>
         <div class="toolbar"><label class="search"><span>⌕</span><input id="language-search" placeholder="搜索 20 种语言"></label><button id="select-common-languages" type="button">俄语 + 英语</button><button id="clear-languages" type="button">清空</button></div>
         <div id="language-list" class="language-grid"></div>
       </section>
@@ -126,6 +130,6 @@
 
   <dialog id="access-dialog"><form id="access-form" method="dialog" class="dialog-card"><header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>连接工作区</h2></div><button value="cancel" aria-label="Close">×</button></header><label><span>Workspace</span><input id="access-workspace" required></label><label><span>Bearer credential</span><input id="access-token" type="password" required></label><p>只保存在当前浏览器 sessionStorage。</p><footer><button id="clear-access" type="button">清除</button><button value="default" class="primary">连接</button></footer></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=14"></script>
+  <script type="module" src="/app.js?v=15"></script>
 </body>
 </html>

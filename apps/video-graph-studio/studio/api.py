@@ -325,11 +325,13 @@ class StudioApplication:
         *,
         allowed_roots: tuple[Path, ...],
         repository: Path | None = None,
+        translation_credentials=None,
     ) -> None:
         self.store = store
         self.engine = engine
         self.allowed_roots = tuple(Path(root).resolve() for root in allowed_roots if Path(root).exists())
         self.repository = Path(repository).resolve() if repository is not None else None
+        self.translation_credentials = translation_credentials
 
     def handle(
         self,
@@ -359,9 +361,16 @@ class StudioApplication:
                     "contractVersion": "1.0",
                     "providers": [
                         {"id": "nllb", "name": "NLLB (local)", "ready": True, "defaultModel": "facebook/nllb-200-distilled-600M"},
-                        {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()), "defaultModel": "deepseek-v4-flash", "credentialEnvironment": "DEEPSEEK_API_KEY"},
+                        {"id": "deepseek", "name": "DeepSeek (cloud)", "ready": self._deepseek_ready(), "defaultModel": "deepseek-v4-flash", "setupAvailable": self.translation_credentials is not None},
                     ],
                 }
+            if method == "POST" and path == "/api/v1/translation-providers/deepseek/credential":
+                if self.translation_credentials is None:
+                    raise ContractError("REJECTED_UNAVAILABLE", "DeepSeek setup is unavailable in this runtime")
+                if not isinstance(body, dict):
+                    raise ContractError("REJECTED_MALFORMED", "request body must be an object")
+                value = self.translation_credentials.configure_deepseek(body.get("apiKey"))
+                return 200, {"resultClass": "COMPLETED", "value": value}
             if method == "GET" and path == "/api/v1/voice-providers":
                 return 200, {
                     "contractVersion": "1.0",
@@ -403,6 +412,16 @@ class StudioApplication:
             return status, {"resultClass": error.code, "detail": str(error)}
         except (TypeError, ValueError) as error:
             return 400, {"resultClass": "REJECTED_MALFORMED", "detail": str(error)}
+
+    def _deepseek_ready(self) -> bool:
+        if os.environ.get("DEEPSEEK_API_KEY", "").strip():
+            return True
+        if self.translation_credentials is None:
+            return False
+        try:
+            return self.translation_credentials.deepseek_configured()
+        except (OSError, ValueError):
+            return False
 
     def _create_run(self, body: dict[str, Any] | None) -> tuple[int, dict[str, Any]]:
         envelope = self._validate_envelope(body, "CMD-RUN-CREATE")
@@ -538,8 +557,8 @@ class StudioApplication:
             or not 0 <= source_volume <= 1
         ):
             raise ContractError("REJECTED_MALFORMED", "campaign processing policy is invalid")
-        if translation_provider == "deepseek" and not os.environ.get("DEEPSEEK_API_KEY", "").strip():
-            raise ContractError("REJECTED_MALFORMED", "DeepSeek translation requires DEEPSEEK_API_KEY")
+        if translation_provider == "deepseek" and not self._deepseek_ready():
+            raise ContractError("REJECTED_MALFORMED", "请先在翻译页面配置 DeepSeek API Key")
         raw_destination_plans = payload.get("destinationPlans")
         if (
             not isinstance(raw_destination_plans, list)
@@ -861,8 +880,8 @@ class StudioApplication:
             translation_batch_size = int(payload.get("translationBatchSize", 8))
             if translation_provider not in {"nllb", "deepseek"} or not translation_model or translation_device not in {"auto", "cpu", "cuda"}:
                 raise ContractError("REJECTED_MALFORMED", "unsupported translation policy")
-            if translation_provider == "deepseek" and not os.environ.get("DEEPSEEK_API_KEY", "").strip():
-                raise ContractError("REJECTED_MALFORMED", "DeepSeek translation requires DEEPSEEK_API_KEY")
+            if translation_provider == "deepseek" and not self._deepseek_ready():
+                raise ContractError("REJECTED_MALFORMED", "请先在翻译页面配置 DeepSeek API Key")
             if not 1 <= translation_batch_size <= 64:
                 raise ContractError("REJECTED_MALFORMED", "translationBatchSize must be between 1 and 64")
             parameters.update(

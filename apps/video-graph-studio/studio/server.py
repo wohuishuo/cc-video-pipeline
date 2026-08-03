@@ -253,6 +253,7 @@ def build_runtime(
     )
     from .engine import WorkflowEngine
     from .resource_leases import ResourceLeaseCoordinator
+    from .translation_credentials import TranslationCredentialService
     from .store import RunStore
 
     repository = Path(repository).resolve()
@@ -277,6 +278,10 @@ def build_runtime(
     publication_batch_execution_launcher = repository / "apps" / "publication-batch-execution" / "run.ps1"
     youtube_oauth_launcher = repository / "apps" / "youtube-oauth-bootstrap" / "run.ps1"
     credential_vault_launcher = repository / "apps" / "credential-vault" / "run.ps1"
+    credential_vault_path = data_root / "credential-vault.json"
+    translation_credentials = TranslationCredentialService(
+        credential_vault_launcher, credential_vault_path
+    )
     lease_coordinator = None
     if resource_budget_commands is not None:
         lease_coordinator = ResourceLeaseCoordinator(
@@ -299,7 +304,10 @@ def build_runtime(
             ),
             "verify-transcript": VerifyTranscriptAdapter(),
             "translate-transcript": TranslateTranscriptAdapter(
-                translation_launcher, artifact_root / "translations"
+                translation_launcher,
+                artifact_root / "translations",
+                credential_vault_launcher=credential_vault_launcher,
+                credential_vault_path=credential_vault_path,
             ),
             "verify-translation": VerifyTranslationAdapter(),
             "render-voice": VoiceRenderingAdapter(voice_launcher, artifact_root / "voices"),
@@ -317,7 +325,10 @@ def build_runtime(
             ),
             "verify-selection": VerifyCreatorSelectionAdapter(),
             "localize-creator-batch": CreatorBatchAdapter(
-                creator_batch_launcher, artifact_root / "creator-batches"
+                creator_batch_launcher,
+                artifact_root / "creator-batches",
+                credential_vault_launcher=credential_vault_launcher,
+                credential_vault_path=credential_vault_path,
             ),
             "verify-creator-batch": VerifyCreatorBatchAdapter(),
             "plan-publication-batch": PublicationBatchPlanAdapter(
@@ -352,6 +363,7 @@ def build_runtime(
         engine,
         allowed_roots=allowed_roots if allowed_roots is not None else _allowed_roots(repository),
         repository=repository,
+        translation_credentials=translation_credentials,
     )
     return application, engine
 

@@ -23,6 +23,9 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
     assert 'id="subtitle-status"' in html
     assert 'id="language-search"' in html
     assert 'id="translation-provider"' in html
+    assert 'id="deepseek-setup"' in html
+    assert 'id="deepseek-api-key"' in html
+    assert 'id="save-deepseek-key"' in html
     assert 'id="language-list"' in html
     assert 'id="voice-provider-list"' in html
     assert 'id="voice-list"' in html
@@ -51,8 +54,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=14"' in html
-    assert 'type="module" src="/app.js?v=14"' in html
+    assert 'href="/styles.css?v=15"' in html
+    assert 'type="module" src="/app.js?v=15"' in html
     assert 'src="https://' not in html and 'href="https://' not in html
 
 
@@ -61,6 +64,7 @@ def test_client_runs_discovery_catalog_and_selected_campaign_through_versioned_c
     assert 'api("/api/v1/contracts")' in script
     assert 'api("/api/v1/languages")' in script
     assert 'api("/api/v1/translation-providers")' in script
+    assert 'api("/api/v1/translation-providers/deepseek/credential"' in script
     assert 'api("/api/v1/voice-providers")' in script
     assert '/api/v1/folders?path=' in script
     assert 'encodeURIComponent(' in script
