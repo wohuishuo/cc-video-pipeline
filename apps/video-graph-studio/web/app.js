@@ -8,7 +8,7 @@ const STAGES = ["source", "videos", "translation", "voice", "output", "review", 
 const PLATFORM_POLICY = {
   youtube: {label: "YouTube", status: "READY_PRIVATE", copy: "确认凭据后仅私密上传"},
   bilibili: {label: "Bilibili", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
-  douyin: {label: "抖音", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
+  douyin: {label: "Douyin", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
   tiktok: {label: "TikTok", status: "PLAN_ONLY", copy: "保存计划，上传适配器尚未验证"},
 };
 const SUBTITLE_COPY = {SOURCE_AVAILABLE: "已有字幕", SOURCE_MISSING: "需要 ASR", UNKNOWN_ASR: "下载后检查"};

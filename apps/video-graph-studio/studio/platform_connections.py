@@ -11,7 +11,7 @@ from typing import Any, Callable
 PLATFORMS = (
     ("youtube", "YouTube"),
     ("bilibili", "Bilibili"),
-    ("douyin", "抖音"),
+    ("douyin", "Douyin"),
     ("tiktok", "TikTok"),
 )
 

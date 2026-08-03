@@ -26,7 +26,7 @@ The launcher reuses the repository runtime, installs missing Python workflow pac
 
 Downloaded source packages now retain bounded title, description, tags, source URL and a hash-verified thumbnail beside the video. Studio lists only redacted, active publishing accounts from the local Credential Vault. YouTube can be connected from the Output screen with a Google Desktop OAuth JSON file and remains private-only; unavailable upload adapters are shown as unavailable instead of accepting a fake account name.
 
-![Creator Workflow Studio: source, translation, and verified results](docs/assets/studio/studio-workflow.gif)
+![Creator Workflow Studio in English: source, translation, and publishing setup](docs/assets/studio/studio-workflow.gif)
 
 ```mermaid
 flowchart LR
@@ -42,9 +42,11 @@ flowchart LR
     local -. "optional, connected account only" .-> publish["YouTube / Bilibili / Douyin / TikTok"]
 ```
 
-After completion, Studio shows the real output folder, elapsed time, total bytes, provider-reported translation tokens, and a browser preview for every hash-verified derivative.
+The Output screen separates mandatory local delivery from optional publishing, and reports the real installation and connection state of every platform adapter.
 
-![Verified completion result with browser video preview](docs/assets/studio/completion-preview.jpg)
+![English publishing account and local output workspace](docs/assets/studio/publishing-accounts.jpg)
+
+After completion, Studio shows the real output folder, elapsed time, total bytes, provider-reported translation tokens, and a browser preview for every hash-verified derivative.
 
 ## One repository, twenty-five focused programs
 

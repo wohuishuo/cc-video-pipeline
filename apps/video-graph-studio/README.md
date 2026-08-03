@@ -40,7 +40,9 @@ Every completed creator campaign exposes a read-only result projection:
 - Native browser playback and download through opaque result IDs. The server accepts byte ranges and revalidates the committed file size and SHA-256 before serving media; arbitrary filesystem paths are never accepted.
 - Interface locale selection for Chinese, English and Russian, persisted only in browser local storage.
 
-![Verified result and browser preview](../../docs/assets/studio/completion-preview.jpg)
+The repository homepage uses an English-language walkthrough and publishing workspace screenshot. The running application can still switch between English, Chinese and Russian.
+
+![English publishing account and local output workspace](../../docs/assets/studio/publishing-accounts.jpg)
 
 There is no decorative infinite canvas, fake connection port, hidden node insertion or mandatory platform selection.
 
