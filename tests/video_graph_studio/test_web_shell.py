@@ -36,6 +36,12 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
         assert f'data-edit-stage="{stage}"' in html
     assert 'id="start-campaign"' in html
     assert 'id="activity-timeline"' in html
+    assert 'id="campaign-progress"' in html
+    assert 'id="current-item-progress"' in html
+    assert 'id="phase-progress"' in html
+    assert 'id="copy-log"' in html
+    assert 'id="retry-run"' in html
+    assert 'id="qwen-device"' in html
     assert 'id="access-dialog"' in html
     assert 'workflow-canvas' not in html
     assert 'zoom-in' not in html and 'zoom-out' not in html and 'fit-graph' not in html
@@ -45,8 +51,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=13"' in html
-    assert 'type="module" src="/app.js?v=13"' in html
+    assert 'href="/styles.css?v=14"' in html
+    assert 'type="module" src="/app.js?v=14"' in html
     assert 'src="https://' not in html and 'href="https://' not in html
 
 
@@ -63,6 +69,9 @@ def test_client_runs_discovery_catalog_and_selected_campaign_through_versioned_c
     assert 'buildCampaignPayload(state)' in script
     assert '"CMD-RUN-CREATE"' in script
     assert '"CMD-RUN-START"' in script
+    assert '"CMD-RUN-RETRY"' in script
+    assert 'projectActivity(state.currentRun)' in script
+    assert 'navigator.clipboard.writeText' in script
     assert 'TERMINAL_STATES.has(run.status)' in script
     assert 'sessionStorage.getItem("videoGraph.accessToken")' in script
     assert 'Authorization: `Bearer ${token}`' in script
@@ -83,6 +92,8 @@ def test_layout_is_responsive_and_uses_normal_document_flow():
     assert ".destination-grid" in styles
     assert ".source-mode-grid" in styles
     assert ".provider-options" in styles
+    assert ".phase-progress" in styles
+    assert "user-select: text" in styles
     assert "@media (max-width:900px)" in styles
     assert ".graph-track" not in styles
     assert "cursor: grab" not in styles

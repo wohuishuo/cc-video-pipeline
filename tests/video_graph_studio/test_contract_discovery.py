@@ -34,7 +34,7 @@ class FakeContracts:
                 "bundle": {
                     "schemaVersion": 1,
                     "contractVersion": "1.0",
-                    "commands": {key: {} for key in ("CMD-RUN-CREATE", "CMD-RUN-START", "CMD-RUN-CANCEL")},
+                    "commands": {key: {} for key in ("CMD-RUN-CREATE", "CMD-RUN-START", "CMD-RUN-CANCEL", "CMD-RUN-RETRY")},
                     "endpoints": {"GET /api/v1/contracts": {"scope": None}},
                 },
                 "sha256": "a" * 64,
@@ -123,7 +123,7 @@ def test_http_contract_discovery_is_public_before_workspace_admission(tmp_path):
 
 
 def test_command_adapter_parses_and_caches_public_cli_result(tmp_path, monkeypatch):
-    payload = {"resultClass":"COMPLETED","value":{"bundle":{"schemaVersion":1,"contractVersion":"1.0","commands":{key:{} for key in ("CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL")},"endpoints":{"GET /api/v1/contracts":{"scope":None}}},"sha256":"b"*64}}
+    payload = {"resultClass":"COMPLETED","value":{"bundle":{"schemaVersion":1,"contractVersion":"1.0","commands":{key:{} for key in ("CMD-RUN-CREATE","CMD-RUN-START","CMD-RUN-CANCEL","CMD-RUN-RETRY")},"endpoints":{"GET /api/v1/contracts":{"scope":None}}},"sha256":"b"*64}}
     completed = subprocess.CompletedProcess([], 0, "note\n" + json.dumps(payload) + "\n", "")
     calls=[]
     monkeypatch.setattr("studio.client_contracts.subprocess.run", lambda *args, **kwargs: calls.append(args) or completed)

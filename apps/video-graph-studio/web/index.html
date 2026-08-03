@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Creator Workflow Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=13">
+  <link rel="stylesheet" href="/styles.css?v=14">
 </head>
 <body>
   <header class="topbar">
@@ -75,6 +75,7 @@
         <header class="stage-header"><div><p class="eyebrow">设置声音</p><h1>译文使用什么声音？</h1><p>Edge TTS 速度快，Qwen3-TTS 在本机运行，也可以保留原声并只覆盖翻译字幕。</p></div></header>
         <div id="voice-provider-list" class="provider-options"></div>
         <div id="voice-compatibility" class="notice" hidden></div>
+        <label id="qwen-device-field" class="device-field" hidden><span>Qwen3 运行设备</span><select id="qwen-device"><option value="auto">自动 · 优先使用 NVIDIA GPU</option><option value="cuda">NVIDIA GPU · CUDA</option><option value="cpu">CPU · 兼容但较慢</option></select><small>自动模式会在可用时使用 RTX 显卡；Edge TTS 不受此设置影响。</small></label>
         <div id="voice-list" class="voice-grid"></div>
         <label class="range-field"><span>保留原视频声音 <b id="source-volume-value">12%</b></span><input id="source-volume" type="range" min="0" max="100" value="12"></label>
       </section>
@@ -108,7 +109,15 @@
 
       <section id="stage-activity" class="stage-panel" data-stage="activity" hidden>
         <header class="stage-header"><div><p class="eyebrow">任务进度</p><h1>现在正在处理什么？</h1><p>查看当前步骤、失败原因、持久日志和最终文件位置。关闭页面不会删除已经完成的结果。</p></div><span id="run-status" class="effect-badge">尚未开始</span></header>
-        <div class="activity-layout"><div><div class="run-heading"><strong id="active-run-title">还没有任务</strong><code id="active-run-id">—</code></div><div id="activity-timeline" class="timeline"></div></div><aside class="log-panel"><header><strong>执行日志</strong><button id="clear-log" type="button">清空视图</button></header><pre id="log-output">选择来源并开始处理后，日志会显示在这里。</pre></aside></div>
+        <div class="activity-layout">
+          <section id="campaign-progress" class="progress-panel" aria-label="任务详细进度">
+            <div class="run-heading"><div><strong id="active-run-title">还没有任务</strong><span id="current-item-progress">等待开始</span></div><code id="active-run-id">—</code></div>
+            <div id="phase-progress" class="phase-progress" aria-live="polite"></div>
+            <div id="activity-recovery" class="recovery-card" hidden><div><strong id="recovery-title">任务可以恢复</strong><p id="recovery-message"></p></div><button id="retry-run" class="primary" type="button">仅重试失败阶段</button></div>
+            <details class="system-steps"><summary>查看系统校验步骤</summary><div id="activity-timeline" class="timeline"></div></details>
+          </section>
+          <aside class="log-panel"><header><div><strong>执行日志</strong><small>原始诊断信息</small></div><div class="log-actions"><button id="copy-log" type="button">复制日志</button><button id="clear-log" type="button">清空视图</button></div></header><pre id="log-output" tabindex="0">选择来源并开始处理后，日志会显示在这里。</pre></aside>
+        </div>
       </section>
 
       <footer class="stage-footer"><button id="previous-stage" type="button" disabled>← 上一步</button><div><span id="footer-hint">选择账号或本地文件夹。</span><button id="next-stage" class="primary" type="button">继续 →</button></div></footer>
@@ -117,6 +126,6 @@
 
   <dialog id="access-dialog"><form id="access-form" method="dialog" class="dialog-card"><header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>连接工作区</h2></div><button value="cancel" aria-label="Close">×</button></header><label><span>Workspace</span><input id="access-workspace" required></label><label><span>Bearer credential</span><input id="access-token" type="password" required></label><p>只保存在当前浏览器 sessionStorage。</p><footer><button id="clear-access" type="button">清除</button><button value="default" class="primary">连接</button></footer></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=13"></script>
+  <script type="module" src="/app.js?v=14"></script>
 </body>
 </html>
