@@ -15,6 +15,7 @@ from .creator_catalog import project_creator_catalog
 from .engine import WorkflowEngine
 from .language_catalog import SUPPORTED_LANGUAGE_LOCALES, language_rows
 from .voice_provider_catalog import voice_provider_rows
+from .result_projection import project_run_results
 
 
 QWEN3_SUPPORTED_LANGUAGE_LOCALES = frozenset(
@@ -333,6 +334,25 @@ class StudioApplication:
         self.repository = Path(repository).resolve() if repository is not None else None
         self.translation_credentials = translation_credentials
 
+    def resolve_media(self, run_id: str, video_id: str) -> Path:
+        """Resolve an opaque result ID to a currently verified local media file."""
+        if not run_id or not video_id or "/" in run_id or "/" in video_id:
+            raise KeyError(video_id)
+        projection = project_run_results(
+            self.store.get_run(run_id), allowed_roots=self.allowed_roots
+        )
+        row = next(
+            (
+                value
+                for value in projection["videos"]
+                if value.get("id") == video_id and value.get("available") is True
+            ),
+            None,
+        )
+        if row is None:
+            raise KeyError(video_id)
+        return Path(row["path"]).resolve()
+
     def handle(
         self,
         method: str,
@@ -390,6 +410,18 @@ class StudioApplication:
                     if not run_id or "/" in run_id:
                         raise ContractError("REJECTED_MALFORMED", "invalid creator catalog run ID")
                     return 200, project_creator_catalog(self.store.get_run(run_id))
+                if suffix.endswith("/results") and method == "GET":
+                    run_id = suffix[: -len("/results")]
+                    if not run_id or "/" in run_id:
+                        raise ContractError("REJECTED_MALFORMED", "invalid results run ID")
+                    value = project_run_results(
+                        self.store.get_run(run_id), allowed_roots=self.allowed_roots
+                    )
+                    for row in value["videos"]:
+                        if row.get("available"):
+                            row["previewUrl"] = f"/api/v1/runs/{run_id}/media/{row['id']}"
+                            row["downloadUrl"] = f"/api/v1/runs/{run_id}/media/{row['id']}?download=1"
+                    return 200, value
                 if "/" not in suffix and method == "GET":
                     return 200, self.store.get_run(suffix)
                 if suffix.endswith("/start") and method == "POST":

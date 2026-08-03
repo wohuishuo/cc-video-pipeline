@@ -23,6 +23,31 @@ from .client_contracts import ClientContractsError
 
 
 MAX_BODY_BYTES = 1024 * 1024
+MEDIA_CHUNK_BYTES = 64 * 1024
+
+
+def _byte_range(value: str | None, size: int) -> tuple[int, int] | None:
+    if not value:
+        return None
+    if not value.startswith("bytes=") or "," in value or size <= 0:
+        raise ValueError("invalid byte range")
+    spec = value[6:].strip()
+    if "-" not in spec:
+        raise ValueError("invalid byte range")
+    left, right = spec.split("-", 1)
+    try:
+        if not left:
+            length = int(right)
+            if length <= 0:
+                raise ValueError("invalid byte range")
+            return max(0, size - length), size - 1
+        start = int(left)
+        end = size - 1 if not right else int(right)
+    except ValueError as error:
+        raise ValueError("invalid byte range") from error
+    if start < 0 or start >= size or end < start:
+        raise ValueError("invalid byte range")
+    return start, min(end, size - 1)
 
 
 def create_server(
@@ -103,6 +128,20 @@ def create_server(
                                 },
                             )
                             return
+                    media_parts = parsed.path.split("/")
+                    if (
+                        self.command == "GET"
+                        and len(media_parts) == 7
+                        and media_parts[1:4] == ["api", "v1", "runs"]
+                        and media_parts[5] == "media"
+                    ):
+                        self._serve_media(
+                            target_application,
+                            media_parts[4],
+                            media_parts[6],
+                            parse_qs(parsed.query),
+                        )
+                        return
                     status, payload = target_application.handle(
                         self.command, parsed.path, parse_qs(parsed.query), body
                     )
@@ -115,6 +154,45 @@ def create_server(
                 self._send_json(status, payload)
                 return
             self._serve_static(parsed.path)
+
+        def _serve_media(self, target_application, run_id, video_id, query) -> None:
+            try:
+                path = target_application.resolve_media(run_id, video_id)
+                size = path.stat().st_size
+            except (KeyError, OSError, ValueError):
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            try:
+                selected = _byte_range(self.headers.get("Range"), size)
+            except ValueError:
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            start, end = selected if selected is not None else (0, size - 1)
+            length = end - start + 1
+            self.send_response(HTTPStatus.PARTIAL_CONTENT if selected is not None else HTTPStatus.OK)
+            self.send_header("Content-Type", "video/mp4")
+            self.send_header("Content-Length", str(length))
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            if selected is not None:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            if query.get("download") == ["1"]:
+                safe_name = path.name.replace('"', "")
+                self.send_header("Content-Disposition", f'attachment; filename="{safe_name}"')
+            self.end_headers()
+            remaining = length
+            with path.open("rb") as source:
+                source.seek(start)
+                while remaining:
+                    chunk = source.read(min(remaining, MEDIA_CHUNK_BYTES))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
 
         def _authorize(self, path: str) -> AdmissionDecision:
             authorization = self.headers.get("Authorization", "")
