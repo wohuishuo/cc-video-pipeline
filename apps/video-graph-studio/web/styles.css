@@ -418,6 +418,8 @@ label.video-card:hover { border-color: #465467; background: var(--surface-raised
 .result-video { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: 100%; min-height: 64px; margin-bottom: 6px; text-align: left; white-space: normal; }
 .result-video strong, .result-video small { display: block; overflow: hidden; text-overflow: ellipsis; }
 .result-video small { margin-top: 4px; color: var(--muted); font-weight: 400; }
+.result-video-action { align-self: center; text-align: right; }
+.result-video-action strong { color: var(--accent-strong); font-size: 12px; }
 .result-video.selected { border-color: var(--accent); background: var(--surface-selected); }
 .result-video.unavailable { cursor: default; opacity: .68; }
 .preview-panel { display: grid; align-content: start; padding: 12px; }

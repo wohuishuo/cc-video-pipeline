@@ -4,6 +4,16 @@ Creator Workflow Studio is a local-first browser application for turning a creat
 
 ## Start
 
+Double-click `start-studio.cmd` in the repository root, or run the one-click launcher:
+
+```powershell
+.\start-studio.ps1
+```
+
+It creates the shared Python environment when absent and installs missing Studio workflow packages before starting. Use `-VerifyOnly` for a read-only prerequisite report.
+
+The lower-level launcher remains available for configured environments:
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File apps/video-graph-studio/run.ps1
 ```
@@ -19,6 +29,18 @@ Studio opens [http://127.0.0.1:8765](http://127.0.0.1:8765) and binds only to lo
 5. **Output** — choose an allowed local directory. Local MP4 delivery is sufficient; YouTube, Bilibili, Douyin and TikTok routes are collapsed under an optional section.
 6. **Review** — verify exact source-video, localized-video and optional-publication counts before execution.
 7. **Activity** — follow durable owner steps and logs. Processing is serial and completed checkpoints remain reusable.
+
+## Completion workspace
+
+Every completed creator campaign exposes a read-only result projection:
+
+- Real output directory, elapsed wall time and aggregate media bytes.
+- Provider-reported DeepSeek prompt, completion and total tokens. Older or local-provider runs show **Not reported**, never a fabricated zero.
+- One row per localized derivative with language, resolution, codecs and exact size.
+- Native browser playback and download through opaque result IDs. The server accepts byte ranges and revalidates the committed file size and SHA-256 before serving media; arbitrary filesystem paths are never accepted.
+- Interface locale selection for Chinese, English and Russian, persisted only in browser local storage.
+
+![Verified result and browser preview](../../docs/assets/studio/completion-preview.jpg)
 
 There is no decorative infinite canvas, fake connection port, hidden node insertion or mandatory platform selection.
 
@@ -41,6 +63,8 @@ Translation and voice are separate choices:
 | --- | --- | --- |
 | Translation | NLLB, DeepSeek | NLLB is local; DeepSeek requires `DEEPSEEK_API_KEY` in the server environment |
 | Voice | Edge TTS, Qwen3-TTS, original audio | Edge uses named network voices; Qwen3 uses one resident local model per process; original preserves source audio and burns translated subtitles |
+
+Qwen3 keeps one model resident and synthesizes up to eight independent subtitle clips in one generation call, preserving every original segment boundary. Edge has no local model startup; its cost is network round trips, so the loop uses a measured bounded concurrency of six. On the recorded 12-clip benchmark, Edge took `52.188s` with one worker, `17.219s` with three, `9.203s` with six and `9.125s` with eight; six was chosen because eight added no meaningful throughput.
 
 DeepSeek and Qwen3 readiness is projected by versioned endpoints without exposing credentials. Qwen3 currently uses preset voices, not voice cloning.
 
@@ -90,5 +114,6 @@ See [the local-first browser drill](../../docs/project/evidence/video-graph-stud
 - Strict incomplete-catalog rejection, explicit partial-catalog consent, authentication-file recovery, local-folder inventory, provider selection, zero-route local delivery, responsive layout and versioned payloads are domain verified.
 - The browser drills proved both a four-file local preflight and a three-item partial-catalog preflight. A live Douyin retry then reused the saved authentication-file reference and enumerated all 75 videos. Expensive media rendering was deliberately not started.
 - Edge and Qwen3 provider adapters are domain tested. Qwen3 first-model startup can be slow; no cloned-voice claim is made.
+- A 129-segment Qwen3 run completed in `285.18s` after batched generation, down from `1352.38s`, with exact independent clip coverage. The completed Studio projection was verified against a real `217.866s`, `53.4 MB` localized MP4 and loaded successfully through the browser media endpoint.
 - DeepSeek is tested at a deterministic HTTP boundary; no paid request is claimed.
 - Authenticated public uploads, remote hosting, production multi-tenancy, mobile packaging and representative load remain unproven.

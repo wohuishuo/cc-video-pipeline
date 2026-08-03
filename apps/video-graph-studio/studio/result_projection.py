@@ -147,29 +147,61 @@ def project_run_results(
         None,
     )
     if step is None:
-        result["warnings"].append("No completed Creator Batch result is available")
-        return result
-    try:
-        batch_path, batch = _committed_json(
-            step["result"].get("manifest"), step["result"].get("manifestSha256")
+        localization_step = next(
+            (
+                row
+                for row in run.get("steps", [])
+                if row.get("nodeId") == "localize-video"
+                and row.get("status") == "COMPLETED"
+                and isinstance(row.get("result"), dict)
+            ),
+            None,
         )
-    except (OSError, ValueError, json.JSONDecodeError) as error:
-        result["warnings"].append(str(error))
-        return result
-    result["outputRoot"] = str(batch_path.parent)
+        if localization_step is None:
+            result["warnings"].append("No completed Localization result is available")
+            return result
+        try:
+            localization_path, _ = _committed_json(
+                localization_step["result"].get("manifest"),
+                localization_step["result"].get("manifestSha256"),
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            result["warnings"].append(str(error))
+            return result
+        result["outputRoot"] = str(localization_path.parent)
+        batch_path = localization_path
+        batch = {
+            "items": [
+                {
+                    "id": "",
+                    "localizationManifest": str(localization_path),
+                    "localizationManifestSha256": _sha256(localization_path),
+                }
+            ]
+        }
+    else:
+        try:
+            batch_path, batch = _committed_json(
+                step["result"].get("manifest"), step["result"].get("manifestSha256")
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            result["warnings"].append(str(error))
+            return result
+        result["outputRoot"] = str(batch_path.parent)
 
     titles: dict[str, str] = {}
-    try:
-        _, creator = _committed_json(
-            batch.get("creatorManifest"), batch.get("creatorManifestSha256")
-        )
-        titles = {
-            str(row.get("id")): str(row.get("title") or row.get("id"))
-            for row in creator.get("items", [])
-            if isinstance(row, dict) and row.get("id") is not None
-        }
-    except (OSError, ValueError, json.JSONDecodeError) as error:
-        result["warnings"].append(str(error))
+    if batch.get("creatorManifest"):
+        try:
+            _, creator = _committed_json(
+                batch.get("creatorManifest"), batch.get("creatorManifestSha256")
+            )
+            titles = {
+                str(row.get("id")): str(row.get("title") or row.get("id"))
+                for row in creator.get("items", [])
+                if isinstance(row, dict) and row.get("id") is not None
+            }
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            result["warnings"].append(str(error))
 
     usage_receipts: set[Path] = set()
     usage_total = {"promptTokens": 0, "completionTokens": 0, "totalTokens": 0}
@@ -197,7 +229,9 @@ def project_run_results(
         for derivative in derivatives:
             if not isinstance(derivative, dict):
                 continue
-            media_id = _video_id(str(run.get("runId", "")), source_item_id, derivative)
+            resolved_source_id = source_item_id or str(derivative.get("mediaId", ""))
+            resolved_title = title or Path(str(derivative.get("path", ""))).stem or resolved_source_id
+            media_id = _video_id(str(run.get("runId", "")), resolved_source_id, derivative)
             try:
                 path = Path(str(derivative["path"])).resolve()
                 size = int(derivative["size"])
@@ -212,8 +246,8 @@ def project_run_results(
                 row = {
                     "id": media_id,
                     "available": True,
-                    "sourceItemId": source_item_id,
-                    "title": title,
+                    "sourceItemId": resolved_source_id,
+                    "title": resolved_title,
                     "targetLanguage": str(derivative["targetLanguage"]),
                     "mediaId": str(derivative["mediaId"]),
                     "path": str(path),
@@ -231,8 +265,8 @@ def project_run_results(
                     {
                         "id": media_id,
                         "available": False,
-                        "sourceItemId": source_item_id,
-                        "title": title,
+                        "sourceItemId": resolved_source_id,
+                        "title": resolved_title,
                         "targetLanguage": str(derivative.get("targetLanguage", "")),
                         "mediaId": str(derivative.get("mediaId", "")),
                         "error": str(error),

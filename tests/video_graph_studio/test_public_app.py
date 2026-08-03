@@ -45,3 +45,14 @@ def test_server_cli_exposes_port_data_and_browser_controls():
     assert "--resource-budget-database" in completed.stdout
     assert "--resource-reservation-bytes" in completed.stdout
     assert "--resource-lease-ttl-seconds" in completed.stdout
+
+
+def test_root_one_click_launcher_has_a_non_mutating_verification_mode():
+    powershell = ROOT / "start-studio.ps1"
+    cmd = ROOT / "start-studio.cmd"
+    assert powershell.is_file() and cmd.is_file()
+    script = powershell.read_text(encoding="utf-8")
+    assert "[switch]$VerifyOnly" in script
+    assert "REJECTED_DEPENDENCY" in script
+    assert '"apps\\video-graph-studio\\run.ps1"' in script
+    assert '"%~dp0start-studio.ps1"' in cmd.read_text(encoding="utf-8")

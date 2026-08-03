@@ -14,6 +14,36 @@
 
 ---
 
+## Start the Creator Workflow Studio
+
+On Windows, double-click **`start-studio.cmd`** or run:
+
+```powershell
+.\start-studio.ps1
+```
+
+The launcher reuses the repository runtime, installs missing Python workflow packages only when needed, starts the loopback-only Studio at `http://127.0.0.1:8765`, and opens it in your browser. It does not require a publishing account: saving verified local MP4 files is a complete workflow.
+
+![Creator Workflow Studio: source, translation, and verified results](docs/assets/studio/studio-workflow.gif)
+
+```mermaid
+flowchart LR
+    account["Creator account or video URL"] --> catalog["Complete video catalog"]
+    folder["Local video folder"] --> selected["Exact selected videos"]
+    catalog --> selected
+    selected --> download["Download or reuse source"]
+    download --> asr["Transcribe"]
+    asr --> translate["Translate to one or many languages"]
+    translate --> voice["Edge, Qwen3, or original audio"]
+    voice --> compose["Burn subtitles and compose MP4"]
+    compose --> local["Verified local results"]
+    local -. "optional, connected account only" .-> publish["YouTube / Bilibili / Douyin / TikTok"]
+```
+
+After completion, Studio shows the real output folder, elapsed time, total bytes, provider-reported translation tokens, and a browser preview for every hash-verified derivative.
+
+![Verified completion result with browser video preview](docs/assets/studio/completion-preview.jpg)
+
 ## One repository, twenty-five focused programs
 
 This is not one giant pipeline. Each MVP has its own launcher, installer, manifest, documentation, tests, output boundary, and delivery evidence. Use one application without learning the others; compose them through files when a larger workflow is useful.
@@ -158,6 +188,12 @@ Then install only the program you need:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\apps\platform-io\install.ps1
 powershell -ExecutionPolicy Bypass -File .\apps\platform-io\run.ps1 doctor --json
+```
+
+To verify the Studio prerequisites without installing or starting anything:
+
+```powershell
+.\start-studio.ps1 -VerifyOnly
 ```
 
 ## Delivery evidence

@@ -162,3 +162,23 @@ def test_results_api_projects_the_stored_run(tmp_path):
 
     assert status == 200
     assert payload["videos"][0]["previewUrl"].endswith(f"/{payload['videos'][0]['id']}")
+
+
+def test_projects_a_local_folder_localization_without_a_creator_batch(tmp_path):
+    run, video = completed_run(tmp_path)
+    batch = json.loads(Path(run["steps"][0]["result"]["manifest"]).read_text(encoding="utf-8"))
+    localization = Path(batch["items"][0]["localizationManifest"])
+    run["steps"] = [
+        {
+            "nodeId": "localize-video",
+            "status": "COMPLETED",
+            "result": {"manifest": str(localization), "manifestSha256": sha(localization)},
+        }
+    ]
+
+    result = project_run_results(run, allowed_roots=(tmp_path,))
+
+    assert result["outputRoot"] == str(localization.parent)
+    assert result["videos"][0]["sourceItemId"] == "media-1"
+    assert result["videos"][0]["title"] == video.stem
+    assert result["videos"][0]["available"] is True
