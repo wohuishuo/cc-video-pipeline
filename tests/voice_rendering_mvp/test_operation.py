@@ -152,3 +152,45 @@ def test_edge_capable_loop_bounds_concurrency_and_keeps_receipt_order(tmp_path):
     assert receipt["maximumActiveSynthesis"] == 3
     assert all(row["attempts"] == 1 for row in receipt["items"])
     assert all(row["elapsedSeconds"] > 0 for row in receipt["items"])
+
+
+def test_concurrent_failures_receive_a_serial_recovery_pass(tmp_path):
+    class ConcurrencySensitiveAdapter(FakeAdapter):
+        max_workers = 3
+
+        def __init__(self):
+            super().__init__()
+            self._lock = threading.Lock()
+
+        @property
+        def last_attempts(self):
+            return 1
+
+        def synthesize(self, text, language, voice, output, on_log, *, target_duration=None):
+            with self._lock:
+                self.active += 1
+                self.maximum_active = max(self.maximum_active, self.active)
+                collided = self.active > 1
+            try:
+                time.sleep(0.03)
+                if collided:
+                    raise RuntimeError("provider rejected concurrent request")
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_bytes(f"audio:{language}:{text}".encode())
+                return 0.75
+            finally:
+                with self._lock:
+                    self.active -= 1
+
+    logs = []
+    adapter = ConcurrencySensitiveAdapter()
+    result = VoiceRenderingLoop().execute(
+        translation_manifest(tmp_path), tmp_path / "adaptive-out", "adaptive-op",
+        voices=VOICES, adapter=adapter, on_log=logs.append,
+    )
+
+    assert result.result_class == "COMPLETED"
+    assert adapter.maximum_active == 3
+    assert any("serially" in line for line in logs)
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert all(row["status"] == "COMPLETED" for row in receipt["items"])

@@ -150,6 +150,8 @@ class EdgeTtsAdapter:
                 voice=voice,
                 rate=self.rate,
                 volume=self.volume,
+                connect_timeout=10,
+                receive_timeout=15,
             ).save(str(output))
         )
 

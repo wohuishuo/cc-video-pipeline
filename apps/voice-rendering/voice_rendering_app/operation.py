@@ -218,6 +218,20 @@ class VoiceRenderingLoop:
                         [value for value in results if value is not None], maximum_active,
                     )
                     progress()
+            failed_slots = [
+                slot for slot, _row in missing
+                if results[slot] is not None and results[slot].get("status") == "FAILED"
+            ]
+            if workers > 1 and failed_slots:
+                log(f"Retrying {len(failed_slots)} clip(s) serially after concurrent provider failures")
+                for slot in failed_slots:
+                    _slot, item = render_one(slot, work[slot])
+                    results[_slot] = item
+                    self._checkpoint(
+                        receipt_path, operation_id, fingerprint, adapter.identity, voices,
+                        [value for value in results if value is not None], maximum_active,
+                    )
+                    progress()
         items = [item for item in results if item is not None]
         failures = [item for item in items if item.get("status") == "FAILED"]
         if failures:

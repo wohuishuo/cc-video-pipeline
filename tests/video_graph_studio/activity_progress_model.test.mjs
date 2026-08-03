@@ -56,3 +56,16 @@ test("projects the existing failed legacy run accurately", () => {
   assert.equal(phases.composition.status, "PENDING");
   assert.match(result.failure.message, /10.*配音片段/);
 });
+
+test("clears an earlier phase failure after a successful retry", () => {
+  const rows = [
+    {event: "creator_phase", item: {ordinal: 1, count: 1, id: "v1"}, phase: "voice", status: "FAILED", error: "10 clips failed"},
+    {event: "creator_phase", item: {ordinal: 1, count: 1, id: "v1"}, phase: "voice", status: "RUNNING"},
+    {event: "voice_progress", status: "COMPLETED", completed: 62, failed: 0, total: 62, reused: 54},
+    {event: "creator_phase", item: {ordinal: 1, count: 1, id: "v1"}, phase: "voice", status: "COMPLETED"},
+  ];
+  const result = projectActivity({status: "COMPLETED", logs: rows.map((row, index) => log(index + 1, JSON.stringify(row)))});
+
+  assert.equal(result.phases.find((row) => row.id === "voice").status, "COMPLETED");
+  assert.equal(result.failure, null);
+});

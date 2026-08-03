@@ -47,6 +47,7 @@ export function projectActivity(run) {
     const phase = byId[id];
     if (!phase) return;
     phase.status = status;
+    if (status === "COMPLETED" && failure?.phase === id) failure = null;
     const at = timestamp(row);
     if (status === "RUNNING" && starts[id] == null) starts[id] = at;
     if (["COMPLETED", "FAILED"].includes(status) && starts[id] != null && at != null) {

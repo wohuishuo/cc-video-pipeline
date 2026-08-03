@@ -210,11 +210,10 @@ class BatchPolicy:
         )
 
     def to_public_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "targetLanguages": list(self.target_languages),
             "targetVoices": {language: self.target_voices[language] for language in self.target_languages},
             "voiceProvider": self.voice_provider,
-            "qwenDevice": self.qwen_device,
             "sourceLanguage": self.source_language,
             "asrModel": self.asr_model,
             "asrDevice": self.asr_device,
@@ -226,6 +225,9 @@ class BatchPolicy:
             "sourceVolume": self.source_volume,
             "maxHeight": self.max_height,
         }
+        if self.voice_provider == "qwen3":
+            value["qwenDevice"] = self.qwen_device
+        return value
 
     @property
     def fingerprint(self) -> str:

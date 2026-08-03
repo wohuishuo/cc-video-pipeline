@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -99,6 +100,23 @@ def test_edge_adapter_does_not_retry_non_transient_provider_errors(tmp_path):
 
     assert calls == ["called"]
     assert adapter.last_attempts == 1
+
+
+def test_edge_transport_uses_a_short_inactivity_timeout(tmp_path, monkeypatch):
+    observed = {}
+
+    class Communicate:
+        def __init__(self, **kwargs):
+            observed.update(kwargs)
+
+        async def save(self, destination):
+            Path(destination).write_bytes(b"audio")
+
+    monkeypatch.setitem(sys.modules, "edge_tts", SimpleNamespace(Communicate=Communicate))
+    EdgeTtsAdapter()._save("text", "ru-RU-DmitryNeural", tmp_path / "clip.mp3")
+
+    assert observed["connect_timeout"] == 10
+    assert observed["receive_timeout"] == 15
 
 
 class CliAdapter:
