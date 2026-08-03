@@ -45,6 +45,11 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
     assert 'id="copy-log"' in html
     assert 'id="retry-run"' in html
     assert 'id="qwen-device"' in html
+    assert 'id="ui-locale"' in html
+    assert 'id="completion-results"' in html
+    assert 'id="completion-preview"' in html
+    assert 'id="completion-output-path"' in html
+    assert 'id="copy-output-path"' in html
     assert 'id="access-dialog"' in html
     assert 'workflow-canvas' not in html
     assert 'zoom-in' not in html and 'zoom-out' not in html and 'fit-graph' not in html
@@ -54,8 +59,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=15"' in html
-    assert 'type="module" src="/app.js?v=15"' in html
+    assert 'href="/styles.css?v=16"' in html
+    assert 'type="module" src="/app.js?v=16"' in html
     assert 'src="https://' not in html and 'href="https://' not in html
 
 
@@ -75,6 +80,8 @@ def test_client_runs_discovery_catalog_and_selected_campaign_through_versioned_c
     assert '"CMD-RUN-START"' in script
     assert '"CMD-RUN-RETRY"' in script
     assert 'projectActivity(state.currentRun)' in script
+    assert '/results`' in script
+    assert 'presentResult(' in script
     assert 'navigator.clipboard.writeText' in script
     assert 'TERMINAL_STATES.has(run.status)' in script
     assert 'sessionStorage.getItem("videoGraph.accessToken")' in script

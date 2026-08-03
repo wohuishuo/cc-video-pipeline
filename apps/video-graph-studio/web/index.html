@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Creator Workflow Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=15">
+  <link rel="stylesheet" href="/styles.css?v=16">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="Creator Workflow Studio home"><span class="brand-mark"><i></i><i></i><i></i></span><span><strong>Creator Workflow</strong><small>LOCAL VIDEO STUDIO</small></span></a>
     <div class="project-state"><span id="project-name">新建本地视频项目</span><small id="save-state">只在电脑上处理 · 尚未开始</small></div>
-    <div class="top-actions"><button id="access-button" class="ghost" type="button" hidden>Access</button><span id="health-pill" class="health-pill"><i></i><span>正在连接</span></span></div>
+    <div class="top-actions"><label class="locale-control" for="ui-locale"><span>界面语言</span><select id="ui-locale"><option value="zh-CN">中文</option><option value="en-US">English</option><option value="ru-RU">Русский</option></select></label><button id="access-button" class="ghost" type="button" hidden>Access</button><span id="health-pill" class="health-pill"><i></i><span>正在连接</span></span></div>
   </header>
 
   <main class="workspace-shell">
@@ -122,6 +122,12 @@
           </section>
           <aside class="log-panel"><header><div><strong>执行日志</strong><small>原始诊断信息</small></div><div class="log-actions"><button id="copy-log" type="button">复制日志</button><button id="clear-log" type="button">清空视图</button></div></header><pre id="log-output" tabindex="0">选择来源并开始处理后，日志会显示在这里。</pre></aside>
         </div>
+        <section id="completion-results" class="completion-results" hidden>
+          <header><div><p id="completion-eyebrow" class="eyebrow">任务结果</p><h2 id="completion-title">成片已经保存。</h2><p id="completion-copy">在浏览器中检查成片，下载文件，或复制真实保存位置。</p></div></header>
+          <div class="result-metrics"><article><span id="elapsed-label">总耗时</span><strong id="result-elapsed">—</strong></article><article><span id="size-label">成片大小</span><strong id="result-size">—</strong></article><article><span id="tokens-label">翻译 Token</span><strong id="result-tokens">—</strong></article><article><span id="videos-label">可预览成片</span><strong id="result-video-count">—</strong></article></div>
+          <div class="output-path-row"><div><span id="output-folder-label">保存文件夹</span><code id="completion-output-path" tabindex="0"></code></div><button id="copy-output-path" type="button">复制路径</button></div>
+          <div class="result-browser"><div id="completion-video-list" class="completion-video-list"></div><div class="preview-panel"><video id="completion-preview" controls preload="metadata"></video><div id="completion-preview-copy"></div></div></div>
+        </section>
       </section>
 
       <footer class="stage-footer"><button id="previous-stage" type="button" disabled>← 上一步</button><div><span id="footer-hint">选择账号或本地文件夹。</span><button id="next-stage" class="primary" type="button">继续 →</button></div></footer>
@@ -130,6 +136,6 @@
 
   <dialog id="access-dialog"><form id="access-form" method="dialog" class="dialog-card"><header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>连接工作区</h2></div><button value="cancel" aria-label="Close">×</button></header><label><span>Workspace</span><input id="access-workspace" required></label><label><span>Bearer credential</span><input id="access-token" type="password" required></label><p>只保存在当前浏览器 sessionStorage。</p><footer><button id="clear-access" type="button">清除</button><button value="default" class="primary">连接</button></footer></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=15"></script>
+  <script type="module" src="/app.js?v=16"></script>
 </body>
 </html>

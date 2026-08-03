@@ -118,6 +118,9 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px r
 .project-state span { display: block; overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .project-state small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
 .top-actions { display: flex; align-items: center; gap: 10px; }
+.locale-control { display: flex; align-items: center; gap: 8px; }
+.locale-control span { color: var(--muted); font-size: 10px; }
+.locale-control select { width: auto; min-width: 104px; height: 34px; padding: 0 30px 0 10px; font-size: 11px; }
 .health-pill, .effect-badge {
   display: inline-flex;
   align-items: center;
@@ -398,6 +401,30 @@ label.video-card:hover { border-color: #465467; background: var(--surface-raised
 .log-panel pre { overflow: auto; height: 430px; margin: 0; padding: 14px; color: #a3b0c0; font: 11px/1.65 ui-monospace, "Cascadia Mono", monospace; user-select: text; white-space: pre-wrap; word-break: break-word; }
 .log-panel pre:focus-visible { outline: 2px solid #6994d2; outline-offset: -3px; }
 
+.completion-results { margin-top: 18px; border: 1px solid #36577f; border-radius: var(--radius-panel); background: #101722; padding: 22px; }
+.completion-results > header h2 { margin: 0; font-size: 24px; letter-spacing: -.02em; }
+.completion-results > header p:last-child { margin: 7px 0 0; color: var(--muted-strong); font-size: 12px; }
+.result-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 20px; background: var(--line); }
+.result-metrics article { min-width: 0; background: var(--surface); padding: 15px; }
+.result-metrics span { display: block; color: var(--muted); font-size: 10px; }
+.result-metrics strong { display: block; overflow: hidden; margin-top: 6px; font-size: 19px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
+.output-path-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 1px; background: var(--surface); padding: 15px; }
+.output-path-row > div { min-width: 0; }
+.output-path-row span { display: block; color: var(--muted); font-size: 10px; }
+.output-path-row code { display: block; overflow: auto; margin-top: 5px; color: var(--accent-strong); font-size: 12px; user-select: text; white-space: nowrap; }
+.result-browser { display: grid; grid-template-columns: minmax(260px, .42fr) minmax(420px, 1fr); gap: 12px; margin-top: 12px; }
+.completion-video-list, .preview-panel { min-height: 300px; border: 1px solid var(--line); background: var(--surface); }
+.completion-video-list { overflow: auto; max-height: 520px; padding: 8px; }
+.result-video { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: 100%; min-height: 64px; margin-bottom: 6px; text-align: left; white-space: normal; }
+.result-video strong, .result-video small { display: block; overflow: hidden; text-overflow: ellipsis; }
+.result-video small { margin-top: 4px; color: var(--muted); font-weight: 400; }
+.result-video.selected { border-color: var(--accent); background: var(--surface-selected); }
+.result-video.unavailable { cursor: default; opacity: .68; }
+.preview-panel { display: grid; align-content: start; padding: 12px; }
+.preview-panel video { width: 100%; max-height: 480px; background: #050608; }
+.preview-panel > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.preview-panel a { color: var(--accent-strong); font-size: 12px; }
+
 .stage-footer {
   position: fixed;
   right: 0;
@@ -435,6 +462,7 @@ dialog::backdrop { background: rgba(4, 7, 11, .78); backdrop-filter: blur(5px); 
   .launch-card { position: static; grid-row: 1; }
   .catalog-recovery-actions { justify-content: flex-start; }
   .topbar { grid-template-columns: 224px 1fr auto; }
+  .result-browser { grid-template-columns: 1fr; }
 }
 
 @media (max-width:900px) {
@@ -455,11 +483,13 @@ dialog::backdrop { background: rgba(4, 7, 11, .78); backdrop-filter: blur(5px); 
   .selection-total strong { font-size: 28px; }
   .review-grid { grid-template-columns: 1fr 1fr 1fr; }
   .stage-footer span { display: none; }
+  .result-metrics { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
   .topbar { height: 62px; padding: 0 14px; }
   .health-pill span, .brand small { display: none; }
+  .locale-control span { display: none; }
   .stage-rail { top: 62px; }
   .stage-content { padding: 24px 12px 96px; }
   .stage-header { margin-bottom: 22px; }
@@ -471,6 +501,7 @@ dialog::backdrop { background: rgba(4, 7, 11, .78); backdrop-filter: blur(5px); 
   .catalog-grid, .language-grid, .voice-grid, .provider-options { grid-template-columns: 1fr; }
   .platform-options { grid-template-columns: 1fr; }
   .review-grid { grid-template-columns: 1fr; }
+  .result-metrics { grid-template-columns: 1fr 1fr; }
   .review-grid article { display: grid; grid-template-columns: 1fr auto; align-items: center; min-height: 82px; }
   .review-grid article strong { grid-row: 1 / span 2; grid-column: 2; margin: 0; }
   .review-grid article small { margin-top: 3px; }
