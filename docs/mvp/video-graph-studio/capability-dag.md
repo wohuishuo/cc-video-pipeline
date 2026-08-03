@@ -13,7 +13,12 @@ flowchart LR
     T --> V["Voice Rendering"]
     V --> L["Localization"]
     L --> O["Verified localized derivatives"]
+    O --> RP["Result projection"]
+    RP --> PV["Verified browser preview"]
+    T --> U["Reported token usage"]
+    U --> RP
     R["Per-language destination routes"] --> P["Publication intent"]
+    AC["Redacted account connections"] --> P
     O --> P
     P --> Y["YouTube private-ready"]
     P --> Q["Bilibili / Douyin / TikTok plan-only"]
