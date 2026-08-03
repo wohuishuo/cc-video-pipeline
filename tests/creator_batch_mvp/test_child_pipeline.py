@@ -28,6 +28,7 @@ def policy(voice_provider="qwen3"):
 
 def test_public_processor_calls_each_owner_in_order_with_committed_predecessor_facts(tmp_path):
     calls = []
+    logs = []
     manifests = {}
 
     def runner(argv, on_log):
@@ -60,7 +61,7 @@ def test_public_processor_calls_each_owner_in_order_with_committed_predecessor_f
         "batch:item:1",
         policy(),
         cookies,
-        lambda _line: None,
+        logs.append,
     )
 
     assert result.completed
@@ -83,6 +84,14 @@ def test_public_processor_calls_each_owner_in_order_with_committed_predecessor_f
     assert calls[3].count("--voice") == 2
     assert calls[3][calls[3].index("--provider") + 1] == "qwen3"
     assert calls[3][calls[3].index("--qwen-device") + 1] == "auto"
+    events = [json.loads(line) for line in logs if line.startswith('{"event":"creator_phase"')]
+    assert [(row["phase"], row["status"]) for row in events] == [
+        (phase, status)
+        for phase in ("download", "transcription", "translation", "voice", "composition")
+        for status in ("RUNNING", "COMPLETED")
+    ]
+    assert all(row["item"] == {"ordinal": 1, "id": "video-1"} for row in events)
+    assert all("manifest" not in row and "artifact" not in row for row in events)
 
 
 def test_public_processor_stops_before_successor_when_owner_does_not_commit_manifest(tmp_path):

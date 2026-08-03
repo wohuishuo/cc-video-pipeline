@@ -133,8 +133,20 @@ class BatchOperation:
             maximum_active = max(maximum_active, 1)
             self._checkpoint(receipt_path, operation_id, fingerprint, source, policy, rows, maximum_active)
             log(f"Started creator item {item.ordinal}/{len(source.items)}: {item.id}")
+            def item_log(line: str) -> None:
+                try:
+                    event = json.loads(line)
+                except (TypeError, json.JSONDecodeError):
+                    log(line)
+                    return
+                if isinstance(event, dict) and event.get("event") == "creator_phase":
+                    item_value = event.get("item") if isinstance(event.get("item"), dict) else {}
+                    event["item"] = {**item_value, "count": len(source.items)}
+                    log(json.dumps(event, ensure_ascii=False, separators=(",", ":")))
+                else:
+                    log(line)
             try:
-                outcome = processor.process(item, item_root, child_prefix, policy, cookie_path, log)
+                outcome = processor.process(item, item_root, child_prefix, policy, cookie_path, item_log)
             except Exception as error:  # external child boundary
                 outcome = ItemProcessResult(False, None, 0, f"{type(error).__name__}: {error}")
             if outcome.completed and outcome.localization_manifest is not None:

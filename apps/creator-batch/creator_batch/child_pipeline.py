@@ -83,7 +83,8 @@ class PublicMvpItemProcessor:
         on_log: Callable[[str], None],
     ) -> ItemProcessResult:
         root = Path(item_root).resolve()
-        source = self._invoke(
+        source = self._invoke_phase(
+            item, "download",
             "Source Intake",
             self._base("source-intake")
             + [
@@ -103,7 +104,8 @@ class PublicMvpItemProcessor:
         if isinstance(source, str):
             return ItemProcessResult(False, None, 0, source)
 
-        transcript = self._invoke(
+        transcript = self._invoke_phase(
+            item, "transcription",
             "Transcription",
             self._base("transcription")
             + [
@@ -145,7 +147,7 @@ class PublicMvpItemProcessor:
         for language in batch_policy.target_languages:
             translation_argv.extend(["--target-language", language])
         translation_argv.append("--json")
-        translation = self._invoke("Translation", translation_argv, on_log)
+        translation = self._invoke_phase(item, "translation", "Translation", translation_argv, on_log)
         if isinstance(translation, str):
             return ItemProcessResult(False, None, 0, translation)
 
@@ -163,11 +165,12 @@ class PublicMvpItemProcessor:
         for language in batch_policy.target_languages:
             voice_argv.extend(["--voice", f"{language}={batch_policy.target_voices[language]}"])
         voice_argv.append("--json")
-        voice = self._invoke("Voice Rendering", voice_argv, on_log)
+        voice = self._invoke_phase(item, "voice", "Voice Rendering", voice_argv, on_log)
         if isinstance(voice, str):
             return ItemProcessResult(False, None, 0, voice)
 
-        localized = self._invoke(
+        localized = self._invoke_phase(
+            item, "composition",
             "Localization",
             self._base("localization")
             + [
@@ -218,6 +221,32 @@ class PublicMvpItemProcessor:
         if not manifest.is_file():
             return f"{owner} did not commit a readable manifest"
         return manifest
+
+    def _invoke_phase(
+        self,
+        item: CreatorItem,
+        phase: str,
+        owner: str,
+        argv: list[str],
+        on_log: Callable[[str], None],
+    ) -> Path | str:
+        base = {
+            "event": "creator_phase",
+            "item": {"ordinal": item.ordinal, "id": item.id},
+            "phase": phase,
+            "owner": owner,
+        }
+        on_log(json.dumps({**base, "status": "RUNNING"}, ensure_ascii=False, separators=(",", ":")))
+        result = self._invoke(owner, argv, on_log)
+        if isinstance(result, str):
+            on_log(json.dumps(
+                {**base, "status": "FAILED", "error": result[-1000:]},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ))
+        else:
+            on_log(json.dumps({**base, "status": "COMPLETED"}, ensure_ascii=False, separators=(",", ":")))
+        return result
 
     @staticmethod
     def _last_json(text: str) -> dict[str, Any] | None:

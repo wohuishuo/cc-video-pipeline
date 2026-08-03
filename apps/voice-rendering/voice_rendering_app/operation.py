@@ -137,6 +137,14 @@ class VoiceRenderingLoop:
             if item.get("status") == "COMPLETED" and _valid_clip(item.get("clip")):
                 reusable[key] = item
         log = on_log or (lambda _message: None)
+        def progress(status="RUNNING"):
+            completed = sum(value is not None and value.get("status") == "COMPLETED" for value in results)
+            failed = sum(value is not None and value.get("status") == "FAILED" for value in results)
+            reused_count = sum(value is not None and value.get("reused") is True for value in results)
+            log(json.dumps({
+                "event": "voice_progress", "status": status,
+                "completed": completed, "failed": failed, "total": len(work), "reused": reused_count,
+            }, ensure_ascii=False, separators=(",", ":")))
         results: list[dict[str, Any] | None] = [None] * len(work)
         missing: list[tuple[int, dict[str, Any]]] = []
         maximum_active = int((prior or {}).get("maximumActiveSynthesis", 0))
@@ -154,6 +162,7 @@ class VoiceRenderingLoop:
             receipt_path, operation_id, fingerprint, adapter.identity, voices,
             [item for item in results if item is not None], maximum_active,
         )
+        progress()
 
         def render_one(slot: int, row: dict[str, Any]) -> tuple[int, dict[str, Any]]:
             key = (row["targetLanguage"], row["mediaId"], row["segmentId"])
@@ -208,9 +217,11 @@ class VoiceRenderingLoop:
                         receipt_path, operation_id, fingerprint, adapter.identity, voices,
                         [value for value in results if value is not None], maximum_active,
                     )
+                    progress()
         items = [item for item in results if item is not None]
         failures = [item for item in items if item.get("status") == "FAILED"]
         if failures:
+            progress("FAILED")
             self._checkpoint(receipt_path, operation_id, fingerprint, adapter.identity, voices, items, maximum_active, result_class="FAILED", error=f"{len(failures)} clip(s) failed")
             if voice_manifest_path.exists(): voice_manifest_path.unlink()
             return VoiceRenderingResult("FAILED", receipt_path, None, f"{len(failures)} clip(s) failed")
@@ -219,6 +230,7 @@ class VoiceRenderingLoop:
             "translationManifestSha256": manifest_sha, "voices": voices,
             "clips": [{key: value for key, value in item.items() if key not in {"status", "reused"}} for item in items],
         }
+        progress("COMPLETED")
         _atomic_json(voice_manifest_path, manifest)
         manifest_digest = sha256_file(voice_manifest_path)
         self._checkpoint(receipt_path, operation_id, fingerprint, adapter.identity, voices, items, maximum_active, result_class="COMPLETED", manifest=voice_manifest_path, manifest_sha=manifest_digest)
