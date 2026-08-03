@@ -30,6 +30,10 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
     assert 'id="optional-publication"' in html
     assert 'id="destination-matrix"' in html
     assert 'id="campaign-review"' in html
+    assert 'id="launch-state-title"' in html
+    assert 'id="launch-state-description"' in html
+    for stage in ("source", "translation", "voice", "output"):
+        assert f'data-edit-stage="{stage}"' in html
     assert 'id="start-campaign"' in html
     assert 'id="activity-timeline"' in html
     assert 'id="access-dialog"' in html
