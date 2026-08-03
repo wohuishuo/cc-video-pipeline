@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Creator Workflow Studio</title>
-  <link rel="stylesheet" href="/styles.css?v=12">
+  <link rel="stylesheet" href="/styles.css?v=13">
 </head>
 <body>
   <header class="topbar">
@@ -29,7 +29,7 @@
 
     <section class="stage-content">
       <section id="stage-source" class="stage-panel active" data-stage="source">
-        <header class="stage-header"><div><p class="eyebrow">01 · SOURCE</p><h1>先选择视频从哪里来。</h1><p>账号模式会列出完整作品后再下载；本地模式直接处理电脑里的视频，不需要上传到任何平台。</p></div><span class="effect-badge safe">LOCAL FIRST</span></header>
+        <header class="stage-header"><div><p class="eyebrow">选择来源</p><h1>视频从哪里来？</h1><p>读取一个创作者账号的作品，或直接使用电脑里的视频文件。这里只建立清单，不会上传内容。</p></div><span class="effect-badge safe">只在本机处理</span></header>
         <div class="source-mode-grid">
           <button class="source-mode selected" data-source-mode="creator" type="button"><b>账号全部作品</b><span>YouTube · Bilibili · 抖音 · TikTok</span></button>
           <button class="source-mode" data-source-mode="folder" type="button"><b>本地视频文件夹</b><span>直接使用电脑上的 MP4 / MOV / MKV</span></button>
@@ -51,7 +51,7 @@
       </section>
 
       <section id="stage-videos" class="stage-panel" data-stage="videos" hidden>
-        <header class="stage-header"><div><p class="eyebrow">02 · VIDEOS</p><h1 id="videos-title">确认真正要处理的视频。</h1><p id="videos-copy">账号模式可精确选择；本地文件夹模式会处理当前文件夹中的全部视频。</p></div><div class="selection-total"><strong id="selected-video-count">0</strong><span>视频</span></div></header>
+        <header class="stage-header"><div><p class="eyebrow">确认视频</p><h1 id="videos-title">哪些视频需要处理？</h1><p id="videos-copy">选择当前任务真正需要的视频。搜索只过滤视图，不会取消已经选择的内容。</p></div><div class="selection-total"><strong id="selected-video-count">0</strong><span>已选择</span></div></header>
         <div class="toolbar" id="creator-video-tools"><label class="search"><span>⌕</span><input id="video-search" placeholder="搜索标题或视频 ID"></label><button id="select-all-videos" type="button">选择当前全部</button><button id="clear-videos" type="button">清空</button><span id="catalog-count">0 videos</span></div>
         <div id="subtitle-status" class="status-legend"><span><i class="source"></i>已有字幕</span><span><i class="asr"></i>需要 ASR</span><span><i class="unknown"></i>下载后检查</span></div>
         <div id="catalog-warning" class="notice danger catalog-warning" hidden>
@@ -65,14 +65,14 @@
       </section>
 
       <section id="stage-translation" class="stage-panel" data-stage="translation" hidden>
-        <header class="stage-header"><div><p class="eyebrow">03 · TRANSLATION</p><h1>翻译语言和引擎分开选择。</h1><p>先选择目标语言，再明确选择本地 NLLB 或云端 DeepSeek。选择不会藏在高级设置里。</p></div><div class="selection-total"><strong id="selected-language-count">0</strong><span>语言</span></div></header>
+        <header class="stage-header"><div><p class="eyebrow">设置翻译</p><h1>要生成哪些语言？</h1><p>先选择翻译引擎，再选择一种或多种目标语言。每种语言都会生成独立的本地成片。</p></div><div class="selection-total"><strong id="selected-language-count">0</strong><span>已选择</span></div></header>
         <div id="translation-provider" class="provider-options"></div>
         <div class="toolbar"><label class="search"><span>⌕</span><input id="language-search" placeholder="搜索 20 种语言"></label><button id="select-common-languages" type="button">俄语 + 英语</button><button id="clear-languages" type="button">清空</button></div>
         <div id="language-list" class="language-grid"></div>
       </section>
 
       <section id="stage-voice" class="stage-panel" data-stage="voice" hidden>
-        <header class="stage-header"><div><p class="eyebrow">04 · VOICE</p><h1>现在单独选择配音方式。</h1><p>Edge TTS 快速；Qwen3-TTS 本地、启动较慢但整条视频只加载一次；也可以保留原声，只覆盖翻译字幕。</p></div></header>
+        <header class="stage-header"><div><p class="eyebrow">设置声音</p><h1>译文使用什么声音？</h1><p>Edge TTS 速度快，Qwen3-TTS 在本机运行，也可以保留原声并只覆盖翻译字幕。</p></div></header>
         <div id="voice-provider-list" class="provider-options"></div>
         <div id="voice-compatibility" class="notice" hidden></div>
         <div id="voice-list" class="voice-grid"></div>
@@ -80,19 +80,34 @@
       </section>
 
       <section id="stage-output" class="stage-panel" data-stage="output" hidden>
-        <header class="stage-header"><div><p class="eyebrow">05 · OUTPUT</p><h1>先保存到电脑，上传只是可选项。</h1><p>本地 MP4 是完整交付结果。即使一个平台都不选择，任务仍然可以正常开始和完成。</p></div><span class="effect-badge safe">LOCAL OUTPUT REQUIRED</span></header>
+        <header class="stage-header"><div><p class="eyebrow">设置输出</p><h1>成片保存到哪里？</h1><p>本地 MP4 就是完整结果。上传平台是附加选项，不选择任何平台也可以正常完成任务。</p></div><span class="effect-badge safe">本地输出必选</span></header>
         <div class="form-card local-output-card"><label for="local-output-root">本地输出文件夹</label><div class="action-row"><input id="local-output-root" autocomplete="off" placeholder="C:\Users\...\Videos\CreatorWorkflow"><button id="browse-output" type="button">检查路径</button></div><p>每次运行会在这个目录下创建独立运行文件夹，不覆盖原视频。</p></div>
         <details id="optional-publication" class="optional-publication"><summary><strong>另外准备上传计划（可选）</strong><span id="route-summary">0 条路线</span></summary><div class="notice"><strong>真实边界</strong><span>YouTube 可准备私密上传；Bilibili、抖音和 TikTok 当前只保存计划，不会假装已经发布。</span></div><div id="destination-matrix" class="destination-grid"></div></details>
       </section>
 
       <section id="stage-review" class="stage-panel" data-stage="review" hidden>
-        <header class="stage-header"><div><p class="eyebrow">06 · REVIEW</p><h1>开始前看清每一步和输出位置。</h1><p>检查只阻止缺失的本地处理条件，不会强迫选择上传平台。</p></div></header>
-        <div id="campaign-review" class="review-grid"><article><span>来源视频</span><strong id="review-videos">0</strong></article><article><span>本地成片</span><strong id="review-localized">0</strong></article><article><span>可选上传路线</span><strong id="review-publications">0</strong></article></div>
-        <div class="review-layout"><div id="review-summary" class="summary-card"></div><div class="launch-card"><p class="eyebrow">PREFLIGHT</p><ul id="readiness-list"></ul><button id="start-campaign" class="primary large" type="button" disabled>开始本地处理</button><small>一条一条处理；已经完成的项目会保留。</small></div></div>
+        <header class="stage-header"><div><p class="eyebrow">检查任务</p><h1>确认这次要完成的工作。</h1><p>核对视频数量、语言、声音和保存位置。系统只会执行这里列出的内容。</p></div></header>
+        <div id="campaign-review" class="review-grid"><article><span>来源视频</span><strong id="review-videos">0</strong><small>本次选择</small></article><article class="primary-metric"><span>本地成片</span><strong id="review-localized">0</strong><small>最终交付</small></article><article><span>上传任务</span><strong id="review-publications">0</strong><small>可选</small></article></div>
+        <div class="review-layout">
+          <div id="review-summary" class="summary-card">
+            <section class="summary-section"><header><span>视频来源</span><button type="button" data-edit-stage="source">修改</button></header><strong id="review-source-name">未选择</strong><p id="review-source-details">还没有选择视频来源。</p></section>
+            <section class="summary-section"><header><span>翻译</span><button type="button" data-edit-stage="translation">修改</button></header><strong id="review-translation-name">未选择</strong><p id="review-translation-details">还没有选择目标语言。</p></section>
+            <section class="summary-section"><header><span>配音</span><button type="button" data-edit-stage="voice">修改</button></header><strong id="review-voice-name">未选择</strong><p id="review-voice-details">还没有选择配音方式。</p></section>
+            <section class="summary-section output-summary"><header><span>本地输出</span><button type="button" data-edit-stage="output">修改</button></header><strong id="review-output-name">未选择</strong><p id="review-output-details">还没有选择保存位置。</p></section>
+          </div>
+          <aside id="launch-card" class="launch-card" data-launch-state="blocked">
+            <span class="launch-kicker">开始前检查</span>
+            <h2 id="launch-state-title">等待配置</h2>
+            <p id="launch-state-description">完成必要设置后即可开始。</p>
+            <ul id="readiness-list"></ul>
+            <button id="start-campaign" class="primary large" type="button" disabled>完成设置后开始</button>
+            <small>任务按顺序处理，已完成的结果会保留。</small>
+          </aside>
+        </div>
       </section>
 
       <section id="stage-activity" class="stage-panel" data-stage="activity" hidden>
-        <header class="stage-header"><div><p class="eyebrow">07 · ACTIVITY</p><h1>一个时间线看完整个任务。</h1><p>这里显示哪个独立能力正在工作、失败在哪里，以及最终本地文件位置。</p></div><span id="run-status" class="effect-badge">NOT STARTED</span></header>
+        <header class="stage-header"><div><p class="eyebrow">任务进度</p><h1>现在正在处理什么？</h1><p>查看当前步骤、失败原因、持久日志和最终文件位置。关闭页面不会删除已经完成的结果。</p></div><span id="run-status" class="effect-badge">尚未开始</span></header>
         <div class="activity-layout"><div><div class="run-heading"><strong id="active-run-title">还没有任务</strong><code id="active-run-id">—</code></div><div id="activity-timeline" class="timeline"></div></div><aside class="log-panel"><header><strong>执行日志</strong><button id="clear-log" type="button">清空视图</button></header><pre id="log-output">选择来源并开始处理后，日志会显示在这里。</pre></aside></div>
       </section>
 
@@ -102,6 +117,6 @@
 
   <dialog id="access-dialog"><form id="access-form" method="dialog" class="dialog-card"><header><div><p class="eyebrow">WORKSPACE ACCESS</p><h2>连接工作区</h2></div><button value="cancel" aria-label="Close">×</button></header><label><span>Workspace</span><input id="access-workspace" required></label><label><span>Bearer credential</span><input id="access-token" type="password" required></label><p>只保存在当前浏览器 sessionStorage。</p><footer><button id="clear-access" type="button">清除</button><button value="default" class="primary">连接</button></footer></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=12"></script>
+  <script type="module" src="/app.js?v=13"></script>
 </body>
 </html>

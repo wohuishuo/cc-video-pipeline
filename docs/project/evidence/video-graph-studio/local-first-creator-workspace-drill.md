@@ -32,3 +32,20 @@ Verify the creator workflow as an understandable local application rather than a
 The final start button was not clicked because doing so would begin a real multi-video download, ASR, translation, voice synthesis and composition workload. The live read-only Douyin discovery did run to completion. The drill proves browser-to-contract composition, exact catalog enumeration and admission, not completed media quality, elapsed rendering performance or upload execution.
 
 The creator adapter performed platform pagination. No browser session was opened or scrolled on Douyin, and no cookie contents were copied into the browser application. Full catalog manifest SHA-256: `593c0bc777dc991fe7d690c24a8d65680c009ac117798f62a76cca8402d9ce57`.
+
+## Interaction redesign drill
+
+The version-13 workspace shell was exercised again in the in-app browser after the operator-facing redesign. The existing complete creator catalog was retained; no discovery, rendering or publication job was started.
+
+| Interaction | Observation | Result |
+| --- | --- | --- |
+| stage navigation | each footer action named the next decision: video list, translation, voice, output and final review | passed |
+| complete catalog selection | **Select all 75 videos** selected exactly 75 rendered catalog cards | passed |
+| multilingual projection | Russian plus English remained visibly selected and projected 150 local derivatives | passed |
+| voice and destination | Edge TTS remained explicit; local output was `C:\Users\eugen\Videos`; publication routes remained zero | passed |
+| actionable review | review showed source, translation, voice and output as separate editable sections; the translation edit action returned directly to the translation stage | passed |
+| launch state | the ready panel explained serial, resumable execution and enabled **Start local processing** | passed |
+| desktop containment | at a 1932-pixel browser client width, document scroll width equaled client width | passed |
+| browser console | no error entries were recorded during the complete seven-stage drill | passed |
+
+The browser session did not advertise a viewport-resize capability, so the new breakpoints were checked by deterministic shell assertions rather than by claiming another live mobile screenshot. The existing 800 x 900 browser evidence above remains the runtime proof for the same normal-flow workspace structure.

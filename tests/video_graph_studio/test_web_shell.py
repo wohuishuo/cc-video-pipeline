@@ -30,6 +30,10 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
     assert 'id="optional-publication"' in html
     assert 'id="destination-matrix"' in html
     assert 'id="campaign-review"' in html
+    assert 'id="launch-state-title"' in html
+    assert 'id="launch-state-description"' in html
+    for stage in ("source", "translation", "voice", "output"):
+        assert f'data-edit-stage="{stage}"' in html
     assert 'id="start-campaign"' in html
     assert 'id="activity-timeline"' in html
     assert 'id="access-dialog"' in html
@@ -41,8 +45,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=12"' in html
-    assert 'type="module" src="/app.js?v=12"' in html
+    assert 'href="/styles.css?v=13"' in html
+    assert 'type="module" src="/app.js?v=13"' in html
     assert 'src="https://' not in html and 'href="https://' not in html
 
 
