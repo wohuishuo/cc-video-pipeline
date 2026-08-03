@@ -68,12 +68,14 @@ class DeepSeekAdapter:
         self.maximum_attempts = int(maximum_attempts)
         self.requester = requester or self._request_json
         self.sleep = sleep
+        self.last_usage: dict[str, int] | None = None
 
     @property
     def identity(self) -> str:
         return f"deepseek@1:model={self.model_id}:attempts={self.maximum_attempts}"
 
     def translate(self, texts, source_language, target_language, on_log):
+        self.last_usage = None
         if not texts:
             return ()
         payload = {
@@ -127,6 +129,19 @@ class DeepSeekAdapter:
                         "INVALID_ADAPTER_OUTPUT",
                         "DeepSeek must return exactly one translation for every source segment",
                     )
+                usage = response.get("usage")
+                if isinstance(usage, dict):
+                    values = (
+                        usage.get("prompt_tokens"),
+                        usage.get("completion_tokens"),
+                        usage.get("total_tokens"),
+                    )
+                    if all(type(value) is int and value >= 0 for value in values):
+                        self.last_usage = {
+                            "promptTokens": values[0],
+                            "completionTokens": values[1],
+                            "totalTokens": values[2],
+                        }
                 on_log(f"DeepSeek translated {len(texts)} segment(s) to {target_language}")
                 return tuple(value.strip() for value in translations)
             except HTTPError as error:

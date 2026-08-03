@@ -119,6 +119,15 @@ def test_edge_transport_uses_a_short_inactivity_timeout(tmp_path, monkeypatch):
     assert observed["receive_timeout"] == 15
 
 
+def test_edge_adapter_exposes_the_measured_six_request_concurrency_policy():
+    adapter = EdgeTtsAdapter(
+        save_runner=lambda _text, _voice, destination: destination.write_bytes(b"audio"),
+        duration_probe=lambda _path: 1.0,
+    )
+
+    assert adapter.max_workers == 6
+
+
 class CliAdapter:
     identity = "cli-voice@1"
     output_suffix = ".wav"

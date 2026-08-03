@@ -81,7 +81,8 @@ def test_deepseek_adapter_requests_exact_json_segment_coverage_without_leaking_k
         return {
             "choices": [
                 {"message": {"content": '{"translations":["Hello","World"]}'}}
-            ]
+            ],
+            "usage": {"prompt_tokens": 31, "completion_tokens": 9, "total_tokens": 40},
         }
 
     adapter = DeepSeekAdapter(
@@ -101,6 +102,24 @@ def test_deepseek_adapter_requests_exact_json_segment_coverage_without_leaking_k
     assert observed["payload"]["response_format"] == {"type": "json_object"}
     assert "secret-key" not in adapter.identity
     assert "secret-key" not in " ".join(logs)
+    assert adapter.last_usage == {
+        "promptTokens": 31,
+        "completionTokens": 9,
+        "totalTokens": 40,
+    }
+
+
+def test_deepseek_adapter_omits_malformed_provider_usage():
+    adapter = DeepSeekAdapter(
+        "secret-key",
+        requester=lambda *_args: {
+            "choices": [{"message": {"content": '{"translations":["Hello"]}'}}],
+            "usage": {"prompt_tokens": -1, "completion_tokens": "9", "total_tokens": 8},
+        },
+    )
+
+    assert adapter.translate(("source",), "zh", "en-US", lambda _message: None) == ("Hello",)
+    assert adapter.last_usage is None
 
 
 def test_deepseek_adapter_retries_malformed_coverage_then_fails_bounded():

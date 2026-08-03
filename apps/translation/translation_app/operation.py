@@ -119,13 +119,17 @@ class TranslationLoop:
         ):
             return TranslationLoopResult("REJECTED_CONFLICT", receipt_path, None, "operation input conflict")
 
-        reusable: dict[tuple[str, str], TranslationArtifact] = {}
+        reusable: dict[tuple[str, str], tuple[TranslationArtifact, dict[str, int] | None]] = {}
         if prior:
             for item in prior.get("items", []):
                 if isinstance(item, dict) and item.get("status") == "COMPLETED":
                     artifact = _artifact_from_dict(item.get("artifact"))
                     if artifact is not None:
-                        reusable[(artifact.target_language, artifact.media_id)] = artifact
+                        usage = item.get("usage")
+                        reusable[(artifact.target_language, artifact.media_id)] = (
+                            artifact,
+                            usage if isinstance(usage, dict) else None,
+                        )
             if prior.get("resultClass") == "COMPLETED" and self._manifest_valid(
                 manifest_path, prior.get("manifestSha256"), source.sha256
             ):
@@ -139,10 +143,12 @@ class TranslationLoop:
             key = (language, transcript.media_id)
             reused = reusable.get(key)
             if reused is not None:
-                artifacts.append(reused)
-                items.append(
-                    {"targetLanguage": language, "mediaId": transcript.media_id, "status": "COMPLETED", "artifact": reused.to_dict(), "reused": True}
-                )
+                artifact, usage = reused
+                artifacts.append(artifact)
+                item = {"targetLanguage": language, "mediaId": transcript.media_id, "status": "COMPLETED", "artifact": artifact.to_dict(), "reused": True}
+                if usage is not None:
+                    item["usage"] = usage
+                items.append(item)
                 log(f"[{index}/{len(work)}] reused {language}/{transcript.media_id}")
                 self._checkpoint(receipt_path, operation_id, input_fingerprint, adapter.identity, languages, items)
                 continue
@@ -180,9 +186,11 @@ class TranslationLoop:
                     "MACHINE", len(segments),
                 )
                 artifacts.append(artifact)
-                items.append(
-                    {"targetLanguage": language, "mediaId": transcript.media_id, "status": "COMPLETED", "artifact": artifact.to_dict(), "reused": False}
-                )
+                item = {"targetLanguage": language, "mediaId": transcript.media_id, "status": "COMPLETED", "artifact": artifact.to_dict(), "reused": False}
+                usage = getattr(adapter, "last_usage", None)
+                if isinstance(usage, dict):
+                    item["usage"] = usage
+                items.append(item)
             except Exception as error:
                 message = f"{type(error).__name__}: {error}"[-2000:]
                 failures.append(key)

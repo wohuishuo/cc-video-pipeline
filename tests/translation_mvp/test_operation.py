@@ -64,6 +64,47 @@ def test_loop_publishes_language_major_items_serially(tmp_path):
     assert document["segments"][0]["translatedText"] == "ru-RU:你好世界"
 
 
+def test_loop_commits_provider_usage_without_changing_translation_manifest(tmp_path):
+    class UsageAdapter(FakeAdapter):
+        def translate(self, texts, source_language, target_language, on_log):
+            translated = super().translate(texts, source_language, target_language, on_log)
+            self.last_usage = {
+                "promptTokens": 20,
+                "completionTokens": 10,
+                "totalTokens": 30,
+            }
+            return translated
+
+    result = TranslationLoop().execute(
+        write_transcript_manifest(tmp_path),
+        tmp_path / "usage-out",
+        "usage-op",
+        target_languages=["ru-RU"],
+        adapter=UsageAdapter(),
+    )
+
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert [row["usage"] for row in receipt["items"]] == [
+        {"promptTokens": 20, "completionTokens": 10, "totalTokens": 30},
+        {"promptTokens": 20, "completionTokens": 10, "totalTokens": 30},
+    ]
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert all("usage" not in row for row in manifest["translations"])
+
+
+def test_loop_omits_usage_when_adapter_does_not_report_it(tmp_path):
+    result = TranslationLoop().execute(
+        write_transcript_manifest(tmp_path),
+        tmp_path / "no-usage-out",
+        "no-usage-op",
+        target_languages=["ru-RU"],
+        adapter=FakeAdapter(),
+    )
+
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert all("usage" not in row for row in receipt["items"])
+
+
 def test_failure_is_explicit_and_retry_reuses_other_completed_items(tmp_path):
     transcript = write_transcript_manifest(tmp_path)
     output = tmp_path / "out"

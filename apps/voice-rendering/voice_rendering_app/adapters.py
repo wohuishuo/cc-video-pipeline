@@ -77,7 +77,9 @@ class _QwenPresetEngine:
 class EdgeTtsAdapter:
     identity = "edge-tts@1"
     output_suffix = ".mp3"
-    max_workers = 3
+    # Six concurrent requests reached the measured throughput plateau on the
+    # production connection while retaining bounded retry behavior.
+    max_workers = 6
     _TRANSIENT_ERRORS = (
         "NoAudioReceived",
         "No audio was received",
