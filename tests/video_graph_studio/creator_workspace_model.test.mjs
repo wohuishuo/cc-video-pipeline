@@ -8,7 +8,9 @@ const {
   campaignCounts,
   campaignReadiness,
   filterCreatorItems,
+  launchPresentation,
   selectVisibleIds,
+  stageAction,
 } = workspaceModel;
 
 
@@ -133,4 +135,46 @@ test("restores only the committed authentication file reference for discovery re
   );
   assert.equal(workspaceModel.authenticationFileFromRun({parameters: {authenticationFile: null}}), "");
   assert.equal(workspaceModel.authenticationFileFromRun(null), "");
+});
+
+test("stage actions name the next decision instead of saying continue", () => {
+  assert.deepEqual(stageAction("source", {videoCount: 75}), {
+    label: "查看 75 个视频",
+    hint: "账号目录已读取，下一步确认要处理的视频。",
+  });
+  assert.deepEqual(stageAction("translation", {languageCount: 2}), {
+    label: "选择配音",
+    hint: "已选择 2 种目标语言，下一步为每种语言选择声音。",
+  });
+  assert.deepEqual(stageAction("output", {outputRoot: "C:/Videos"}), {
+    label: "检查任务",
+    hint: "成片将保存到 C:/Videos，上传平台仍为可选。",
+  });
+});
+
+test("launch presentation distinguishes blocked ready and running jobs", () => {
+  assert.deepEqual(
+    launchPresentation({ready: false, missing: ["Select at least one language", "Choose a local output folder"]}, false),
+    {
+      state: "blocked",
+      title: "还差 2 项设置",
+      description: "先完成下方检查项，再开始本地处理。",
+      buttonLabel: "完成设置后开始",
+      action: "blocked",
+    },
+  );
+  assert.deepEqual(launchPresentation({ready: true, missing: []}, false), {
+    state: "ready",
+    title: "任务可以开始",
+    description: "配置完整。系统会逐条处理，并保留已经完成的结果。",
+    buttonLabel: "开始本地处理",
+    action: "start",
+  });
+  assert.deepEqual(launchPresentation({ready: true, missing: []}, true), {
+    state: "running",
+    title: "已有任务正在处理",
+    description: "打开进度页查看当前步骤、日志和输出位置。",
+    buttonLabel: "查看任务进度",
+    action: "activity",
+  });
 });
