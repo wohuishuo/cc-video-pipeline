@@ -1,8 +1,10 @@
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 
-from video_platform.download import DownloadRequest, YtDlpDownloader, fallback_heights
+from video_platform.download import DownloadRequest, YtDlpDownloader, extract_download_metadata, fallback_heights
 from video_platform.models import Platform
 from video_platform.platforms import detect_platform
 
@@ -35,6 +37,49 @@ def test_download_args_cap_height_without_requiring_cookie(tmp_path):
     assert "height<=1080" in joined
     assert "--cookies" not in args
     assert str(tmp_path.resolve()) in joined
+    assert "--write-thumbnail" in args
+    assert args[args.index("--convert-thumbnails") + 1] == "jpg"
+
+
+def test_extract_download_metadata_preserves_publishable_source_facts(tmp_path):
+    media = tmp_path / "Useful title [abc].mp4"
+    media.write_bytes(b"video")
+    info = tmp_path / "Useful title [abc].info.json"
+    info.write_text(json.dumps({
+        "id": "abc",
+        "title": "Useful title",
+        "description": "A useful description",
+        "tags": ["one", "two", 3, ""],
+        "webpage_url": "https://youtu.be/abc",
+        "uploader": "Creator",
+        "thumbnail": "https://example.invalid/remote.jpg",
+        "cookies": "must-not-leak",
+    }), encoding="utf-8")
+    thumbnail = tmp_path / "Useful title [abc].jpg"
+    thumbnail.write_bytes(b"image")
+
+    metadata = extract_download_metadata(media)
+
+    assert metadata["title"] == "Useful title"
+    assert metadata["description"] == "A useful description"
+    assert metadata["tags"] == ["one", "two"]
+    assert metadata["sourceUrl"] == "https://youtu.be/abc"
+    assert metadata["uploader"] == "Creator"
+    assert metadata["info"]["path"] == str(info.resolve())
+    assert metadata["info"]["sha256"] == hashlib.sha256(info.read_bytes()).hexdigest()
+    assert metadata["thumbnail"] == {
+        "path": str(thumbnail.resolve()),
+        "sha256": hashlib.sha256(thumbnail.read_bytes()).hexdigest(),
+        "size": len(b"image"),
+    }
+    assert "cookies" not in metadata
+
+
+def test_extract_download_metadata_is_optional_for_older_downloads(tmp_path):
+    media = tmp_path / "legacy.mp4"
+    media.write_bytes(b"video")
+
+    assert extract_download_metadata(media) == {}
 
 
 def test_download_args_add_explicit_cookie_file(tmp_path):

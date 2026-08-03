@@ -87,6 +87,11 @@
       <section id="stage-output" class="stage-panel" data-stage="output" hidden>
         <header class="stage-header"><div><p class="eyebrow">设置输出</p><h1>成片保存到哪里？</h1><p>本地 MP4 就是完整结果。上传平台是附加选项，不选择任何平台也可以正常完成任务。</p></div><span class="effect-badge safe">本地输出必选</span></header>
         <div class="form-card local-output-card"><label for="local-output-root">本地输出文件夹</label><div class="action-row"><input id="local-output-root" autocomplete="off" placeholder="C:\Users\...\Videos\CreatorWorkflow"><button id="browse-output" type="button">检查路径</button></div><p>每次运行会在这个目录下创建独立运行文件夹，不覆盖原视频。</p></div>
+        <section class="connection-panel" aria-labelledby="connection-title">
+          <header><div><p class="eyebrow">发布账户</p><h2 id="connection-title">先连接账户，再选择上传目标。</h2></div><span id="connection-count">0 个已连接</span></header>
+          <div id="connection-list" class="connection-list"></div>
+          <details id="youtube-connect-setup"><summary>连接一个 YouTube 账户</summary><div class="connection-form"><label><span>Google Desktop OAuth JSON</span><input id="youtube-client-config" autocomplete="off" placeholder="C:\Users\...\client_secret.json"></label><label><span>账户名称</span><input id="youtube-account-label" autocomplete="off" value="Main YouTube"></label><label><span>本地账户 ID</span><input id="youtube-credential-id" autocomplete="off" value="youtube-main"></label><button id="connect-youtube" class="primary" type="button">打开 Google 登录</button><small>凭据由 Windows 当前用户加密保存；网页和日志不会显示 Token。</small></div></details>
+        </section>
         <details id="optional-publication" class="optional-publication"><summary><strong>另外准备上传计划（可选）</strong><span id="route-summary">0 条路线</span></summary><div class="notice"><strong>真实边界</strong><span>YouTube 可准备私密上传；Bilibili、抖音和 TikTok 当前只保存计划，不会假装已经发布。</span></div><div id="destination-matrix" class="destination-grid"></div></details>
       </section>
 

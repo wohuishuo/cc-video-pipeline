@@ -7,6 +7,8 @@
 | Douyin | yt-dlp requested fresh cookies; f2 returned empty API responses and no media | Adapter installed; no account draft test | implemented, externally blocked without usable session/cookie |
 | TikTok | yt-dlp extractor failed on two real URLs; f2 TikTok initialization failed to obtain msToken | Bridge installed; no account draft test | implemented, externally blocked without usable session/token |
 
+All yt-dlp download commands now request an info JSON and converted JPEG thumbnail. Unit evidence verifies that title, description, string tags, source URL and uploader are projected as bounded facts with SHA-256/size/path evidence, while extractor cookies and unrelated fields are excluded.
+
 Automated evidence covers platform routing, credential redaction and the non-empty external-ID gate. The product rejects a zero exit code when no media file or declared upload identity exists, so failed third-party extraction or incomplete publication cannot be reported as success.
 
 Receipts are written under the chosen output directory as `download-receipt.json`. Cookie contents and cookie paths are redacted from persisted receipts.

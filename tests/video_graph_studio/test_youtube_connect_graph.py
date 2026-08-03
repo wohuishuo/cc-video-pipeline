@@ -38,6 +38,27 @@ def test_connect_graph_admits_only_local_nonsecret_references(tmp_path, monkeypa
     assert "secret" not in json.dumps(run)
 
 
+def test_connect_graph_uses_the_studio_vault_without_asking_the_browser_for_its_path(tmp_path, monkeypatch):
+    config, vault = files(tmp_path)
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+    store = RunStore(tmp_path / "studio.db")
+    connections = type("Connections", (), {"vault_path": vault})()
+    app = StudioApplication(
+        store,
+        WorkflowEngine(store, {}),
+        allowed_roots=(tmp_path,),
+        platform_connections=connections,
+    )
+
+    status, response = app.handle(
+        "POST", "/api/v1/runs", {},
+        envelope({"templateId": "youtube-connect", "clientConfigPath": str(config), "credentialId": "youtube-main", "label": "Main"}),
+    )
+
+    assert status == 201
+    assert store.get_run(response["value"]["runId"])["parameters"]["credentialVaultPath"] == str(vault.resolve())
+
+
 def test_connect_graph_rejects_vault_outside_user_home(tmp_path, monkeypatch):
     config, vault = files(tmp_path); home = tmp_path / "home"; home.mkdir(); monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
     store = RunStore(tmp_path / "studio.db"); app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))

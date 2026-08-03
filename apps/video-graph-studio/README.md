@@ -26,7 +26,7 @@ Studio opens [http://127.0.0.1:8765](http://127.0.0.1:8765) and binds only to lo
 2. **Videos** — inspect the exact account catalog and select any subset, or inspect every supported file in the local folder. An incomplete catalog remains visibly marked; after an explicit acknowledgement, its exact discovered items may still be processed without claiming that the account is complete.
 3. **Translation** — choose one or many of 20 locales and explicitly select NLLB local or DeepSeek cloud translation.
 4. **Voice** — independently choose Edge TTS, Qwen3-TTS preset synthesis, or original audio with translated subtitles. Voice choices are validated per locale.
-5. **Output** — choose an allowed local directory. Local MP4 delivery is sufficient; YouTube, Bilibili, Douyin and TikTok routes are collapsed under an optional section.
+5. **Output** — choose an allowed local directory. Local MP4 delivery is sufficient. The account catalog lists only active redacted Vault records; a Google Desktop OAuth JSON can connect YouTube without asking for the Vault path. Targets without a connected account or installed adapter remain disabled.
 6. **Review** — verify exact source-video, localized-video and optional-publication counts before execution.
 7. **Activity** — follow durable owner steps and logs. Processing is serial and completed checkpoints remain reusable.
 
@@ -95,6 +95,8 @@ The folder browser permits only configured roots. The default local launch inclu
 ## Publication boundary
 
 No platform is required for a valid run. Zero destination routes means “produce local files only.” YouTube remains a separately confirmed private-upload path; Bilibili, Douyin and TikTok remain plan-only until their authenticated execution adapters are independently verified. The ordinary local-processing button never silently publishes.
+
+Platform downloads preserve a bounded source-metadata fact (`title`, `description`, `tags`, source URL and uploader) plus hash/size/path facts for the yt-dlp info document and converted JPEG thumbnail. Secret and cookie fields from the extractor document are never projected into Studio receipts.
 
 ## Durable execution
 

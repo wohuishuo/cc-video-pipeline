@@ -24,6 +24,8 @@ On Windows, double-click **`start-studio.cmd`** or run:
 
 The launcher reuses the repository runtime, installs missing Python workflow packages only when needed, starts the loopback-only Studio at `http://127.0.0.1:8765`, and opens it in your browser. It does not require a publishing account: saving verified local MP4 files is a complete workflow.
 
+Downloaded source packages now retain bounded title, description, tags, source URL and a hash-verified thumbnail beside the video. Studio lists only redacted, active publishing accounts from the local Credential Vault. YouTube can be connected from the Output screen with a Google Desktop OAuth JSON file and remains private-only; unavailable upload adapters are shown as unavailable instead of accepting a fake account name.
+
 ![Creator Workflow Studio: source, translation, and verified results](docs/assets/studio/studio-workflow.gif)
 
 ```mermaid

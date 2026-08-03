@@ -15,6 +15,13 @@ const COPY = {
   copied: {"zh-CN":"保存路径已复制。", "en-US":"Output path copied.", "ru-RU":"Путь скопирован."},
   unavailable: {"zh-CN":"文件校验失败", "en-US":"File unavailable", "ru-RU":"Файл недоступен"},
   localeLabel: {"zh-CN":"界面语言", "en-US":"Interface language", "ru-RU":"Язык интерфейса"},
+  connectionReady: {"zh-CN":"已连接 · 仅私密", "en-US":"Connected · private only", "ru-RU":"Подключено · только приватно"},
+  connectionRequired: {"zh-CN":"需要连接账户", "en-US":"Account connection required", "ru-RU":"Требуется подключить аккаунт"},
+  adapterMissing: {"zh-CN":"上传组件未安装", "en-US":"Uploader not installed", "ru-RU":"Загрузчик не установлен"},
+  noAccounts: {"zh-CN":"没有可用账户", "en-US":"No available accounts", "ru-RU":"Нет доступных аккаунтов"},
+  connectedAccounts: {"zh-CN":"个已连接", "en-US":"connected", "ru-RU":"подключено"},
+  verifiedPrivate: {"zh-CN":"选择已验证账户；当前只允许私密上传。", "en-US":"Choose a verified account. Publishing is currently private only.", "ru-RU":"Выберите подтверждённый аккаунт. Сейчас доступна только приватная публикация."},
+  youtubeConnected: {"zh-CN":"YouTube 账户已连接，可以选择私密上传。", "en-US":"YouTube is connected and ready for private publishing.", "ru-RU":"YouTube подключён и готов к приватной публикации."},
 };
 
 const PAGE_COPY = {
@@ -47,6 +54,9 @@ const PAGE_COPY = {
   "Edge TTS 速度快，Qwen3-TTS 在本机运行，也可以保留原声并只覆盖翻译字幕。": ["Edge TTS is fast, Qwen3-TTS runs locally, and original audio can be kept with translated subtitles only.", "Edge TTS работает быстро, Qwen3-TTS локально; можно сохранить оригинальный звук и заменить только субтитры."],
   "保留原视频声音": ["Keep source audio", "Сохранить исходный звук"],
   "设置输出": ["SET OUTPUT", "НАСТРОЙКА РЕЗУЛЬТАТА"], "成片保存到哪里？": ["Where should finished videos be saved?", "Куда сохранить готовые видео?"],
+  "发布账户": ["PUBLISHING ACCOUNTS", "АККАУНТЫ ПУБЛИКАЦИИ"], "先连接账户，再选择上传目标。": ["Connect an account before choosing a publishing destination.", "Сначала подключите аккаунт, затем выберите площадку."],
+  "连接一个 YouTube 账户": ["Connect a YouTube account", "Подключить аккаунт YouTube"], "账户名称": ["Account label", "Название аккаунта"], "本地账户 ID": ["Local account ID", "Локальный ID аккаунта"],
+  "打开 Google 登录": ["Open Google sign-in", "Открыть вход Google"], "凭据由 Windows 当前用户加密保存；网页和日志不会显示 Token。": ["Windows encrypts the credential for the current user; tokens never appear in the page or logs.", "Windows шифрует данные для текущего пользователя; токены не отображаются на странице или в журнале."],
   "本地 MP4 就是完整结果。上传平台是附加选项，不选择任何平台也可以正常完成任务。": ["A local MP4 is a complete result. Publishing is optional and no platform is required.", "Локальный MP4 является готовым результатом. Публикация необязательна."],
   "本地输出必选": ["Local output required", "Локальный результат обязателен"], "本地输出文件夹": ["Local output folder", "Папка результата"], "检查路径": ["Check path", "Проверить путь"],
   "另外准备上传计划（可选）": ["Also prepare publishing plans (optional)", "Также подготовить публикацию (необязательно)"],

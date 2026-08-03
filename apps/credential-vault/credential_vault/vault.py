@@ -116,6 +116,14 @@ class CredentialVault:
             "COMPLETED", self._public(self._required_record(registry, credential_id))
         )
 
+    def list_records(self) -> VaultResult:
+        registry = self._load()
+        records = sorted(
+            (self._public(record) for record in registry["records"]),
+            key=lambda record: record["credentialId"],
+        )
+        return VaultResult("COMPLETED", {"records": records})
+
     def revoke(self, credential_id: str) -> VaultResult:
         registry = self._load(require_exists=True)
         record = self._required_record(registry, credential_id)

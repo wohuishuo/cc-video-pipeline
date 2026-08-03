@@ -332,6 +332,7 @@ def build_runtime(
     from .engine import WorkflowEngine
     from .resource_leases import ResourceLeaseCoordinator
     from .translation_credentials import TranslationCredentialService
+    from .platform_connections import PlatformConnectionService
     from .store import RunStore
 
     repository = Path(repository).resolve()
@@ -359,6 +360,9 @@ def build_runtime(
     credential_vault_path = data_root / "credential-vault.json"
     translation_credentials = TranslationCredentialService(
         credential_vault_launcher, credential_vault_path
+    )
+    platform_connections = PlatformConnectionService(
+        repository, credential_vault_launcher, credential_vault_path
     )
     lease_coordinator = None
     if resource_budget_commands is not None:
@@ -442,6 +446,7 @@ def build_runtime(
         allowed_roots=allowed_roots if allowed_roots is not None else _allowed_roots(repository),
         repository=repository,
         translation_credentials=translation_credentials,
+        platform_connections=platform_connections,
     )
     return application, engine
 

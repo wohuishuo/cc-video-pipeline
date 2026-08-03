@@ -56,3 +56,10 @@ def test_root_one_click_launcher_has_a_non_mutating_verification_mode():
     assert "REJECTED_DEPENDENCY" in script
     assert '"apps\\video-graph-studio\\run.ps1"' in script
     assert '"%~dp0start-studio.ps1"' in cmd.read_text(encoding="utf-8")
+
+
+def test_studio_shell_exposes_results_and_real_account_connection_controls():
+    html = (APP / "web" / "index.html").read_text(encoding="utf-8")
+    assert 'id="completion-results"' in html
+    assert 'id="connection-list"' in html
+    assert 'id="connect-youtube"' in html

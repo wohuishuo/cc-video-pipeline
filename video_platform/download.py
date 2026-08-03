@@ -2,11 +2,62 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, replace
+import hashlib
 from pathlib import Path
 
 from .models import JobReceipt, Platform
 from .platforms import detect_platform
 from .process import ProcessRunner
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _sibling(media: Path, suffixes: tuple[str, ...]) -> Path | None:
+    candidates = [media.with_suffix(suffix) for suffix in suffixes]
+    candidates.extend(Path(str(media) + suffix) for suffix in suffixes)
+    return next((path.resolve() for path in candidates if path.is_file()), None)
+
+
+def extract_download_metadata(media: Path) -> dict[str, object]:
+    """Project only bounded, reusable publication facts from yt-dlp artifacts."""
+    media = Path(media).resolve()
+    info = _sibling(media, (".info.json",))
+    if info is None:
+        return {}
+    try:
+        raw = json.loads(info.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    tags = [
+        value.strip()[:100]
+        for value in raw.get("tags", [])[:100]
+        if isinstance(value, str) and value.strip()
+    ] if isinstance(raw.get("tags"), list) else []
+    facts: dict[str, object] = {
+        "title": str(raw.get("title") or media.stem).strip()[:500],
+        "description": str(raw.get("description") or "")[:5000],
+        "tags": tags,
+        "sourceUrl": str(raw.get("webpage_url") or raw.get("original_url") or "")[:2048],
+        "uploader": str(raw.get("uploader") or raw.get("channel") or "")[:500],
+        "sourceId": str(raw.get("id") or "")[:256],
+        "info": {"path": str(info), "sha256": _sha256(info), "size": info.stat().st_size},
+    }
+    thumbnail = _sibling(media, (".jpg", ".jpeg", ".png", ".webp"))
+    if thumbnail is not None:
+        facts["thumbnail"] = {
+            "path": str(thumbnail),
+            "sha256": _sha256(thumbnail),
+            "size": thumbnail.stat().st_size,
+        }
+    return facts
 
 
 def fallback_heights(max_height: int) -> tuple[int, ...]:
@@ -53,6 +104,9 @@ class YtDlpDownloader:
             "--newline",
             "--no-progress",
             "--write-info-json",
+            "--write-thumbnail",
+            "--convert-thumbnails",
+            "jpg",
             "--merge-output-format",
             "mp4",
             "--format",
@@ -102,6 +156,9 @@ class YtDlpDownloader:
         if media is None:
             return JobReceipt(request.platform, "download", "failed", error="yt-dlp exited successfully but no media file was found")
         facts = self._probe(media)
+        metadata = extract_download_metadata(media)
+        if metadata:
+            facts["sourceMetadata"] = metadata
         facts.update({
             "requested_max_height": request.max_height,
             "authenticated_retry": authenticated_retry,

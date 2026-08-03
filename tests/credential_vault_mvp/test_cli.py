@@ -58,6 +58,23 @@ def test_cli_accepts_secret_from_environment_and_never_echoes_it(tmp_path):
     assert "ciphertext" not in described.stdout
 
 
+def test_cli_lists_redacted_accounts_without_requiring_a_credential_id(tmp_path):
+    vault = tmp_path / "vault.json"
+    put = run_cli(
+        "put", "--vault", str(vault), "--credential-id", "youtube-main",
+        "--provider", "youtube", "--label", "Main channel", "--secret-env", "TEST_SECRET",
+        "--json", extra_env={"TEST_SECRET": "private-value"},
+    )
+
+    listed = run_cli("list", "--vault", str(vault), "--json")
+
+    assert put.returncode == listed.returncode == 0
+    payload = json.loads(listed.stdout)
+    assert payload["value"]["records"][0]["credentialId"] == "youtube-main"
+    assert "private-value" not in listed.stdout
+    assert "ciphertext" not in listed.stdout
+
+
 def test_cli_rejects_missing_secret_environment_variable(tmp_path):
     result = run_cli(
         "put",

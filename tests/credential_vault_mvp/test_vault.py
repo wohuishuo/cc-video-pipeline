@@ -67,6 +67,22 @@ def test_describe_is_redacted_and_rotation_changes_secret(tmp_path):
     assert "new-secret" not in str(rotated.value)
 
 
+def test_list_records_returns_only_redacted_account_metadata(tmp_path):
+    path = tmp_path / "vault.json"
+    vault = CredentialVault(path, cipher=FakeCipher(), clock=lambda: NOW)
+    vault.put("youtube-main", "youtube", "Main channel", "youtube-secret")
+    vault.put("deepseek-api", "deepseek", "Translation", "deepseek-secret")
+
+    result = vault.list_records()
+
+    assert result.result_class == "COMPLETED"
+    assert [row["credentialId"] for row in result.value["records"]] == ["deepseek-api", "youtube-main"]
+    serialized = json.dumps(result.value)
+    assert "ciphertext" not in serialized
+    assert "youtube-secret" not in serialized
+    assert "deepseek-secret" not in serialized
+
+
 def test_revoke_destroys_ciphertext_and_blocks_resolution(tmp_path):
     path = tmp_path / "vault.json"
     vault = CredentialVault(path, cipher=FakeCipher(), clock=lambda: NOW)

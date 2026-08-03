@@ -48,6 +48,10 @@ def _parser() -> argparse.ArgumentParser:
         _vault_credential(command)
         command.add_argument("--json", action="store_true")
 
+    listing = commands.add_parser("list")
+    listing.add_argument("--vault", required=True, type=Path)
+    listing.add_argument("--json", action="store_true")
+
     run = commands.add_parser("run")
     _vault_credential(run)
     run.add_argument("--target-env", required=True)
@@ -112,6 +116,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.operation == "describe":
             result = vault.describe(args.credential_id)
+        elif args.operation == "list":
+            result = vault.list_records()
         elif args.operation == "revoke":
             result = vault.revoke(args.credential_id)
         else:

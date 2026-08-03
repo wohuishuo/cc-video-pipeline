@@ -327,12 +327,14 @@ class StudioApplication:
         allowed_roots: tuple[Path, ...],
         repository: Path | None = None,
         translation_credentials=None,
+        platform_connections=None,
     ) -> None:
         self.store = store
         self.engine = engine
         self.allowed_roots = tuple(Path(root).resolve() for root in allowed_roots if Path(root).exists())
         self.repository = Path(repository).resolve() if repository is not None else None
         self.translation_credentials = translation_credentials
+        self.platform_connections = platform_connections
 
     def resolve_media(self, run_id: str, video_id: str) -> Path:
         """Resolve an opaque result ID to a currently verified local media file."""
@@ -396,6 +398,9 @@ class StudioApplication:
                     "contractVersion": "1.0",
                     "providers": voice_provider_rows(self.repository),
                 }
+            if method == "GET" and path == "/api/v1/platform-connections":
+                platforms = self.platform_connections.catalog() if self.platform_connections else []
+                return 200, {"contractVersion": "1.0", "platforms": platforms}
             if method == "GET" and path == "/api/v1/folders":
                 return self._folders(query)
             if method == "GET" and path == "/api/v1/runs":
@@ -718,7 +723,8 @@ class StudioApplication:
             raise ContractError("REJECTED_MALFORMED", "publication plan is invalid") from error
         if value.get("public") is not False or not jobs or not all(row.get("platform") == "youtube" and row.get("visibility") == "private-or-draft" and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", str(row.get("credentialId", ""))) for row in jobs):
             raise ContractError("REJECTED_MALFORMED", "browser execution requires credential-backed private YouTube jobs")
-        vault = Path(str(payload.get("credentialVaultPath", ""))).resolve()
+        default_vault = getattr(self.platform_connections, "vault_path", "")
+        vault = Path(str(payload.get("credentialVaultPath") or default_vault)).resolve()
         if not vault.is_file() or not vault.is_relative_to(Path.home().resolve()):
             raise ContractError("REJECTED_MALFORMED", "credentialVaultPath must be an existing file inside the user home directory")
         parameters = {"templateId":template_id,"planRunId":plan_run_id,"planPath":str(plan),"confirmation":confirmation,"credentialVaultPath":str(vault)}
@@ -732,7 +738,8 @@ class StudioApplication:
         self._require_allowed(client_config)
         if not client_config.is_file() or client_config.suffix.lower() != ".json":
             raise ContractError("REJECTED_NOT_FOUND", "Google desktop OAuth client JSON does not exist")
-        vault = Path(str(payload.get("credentialVaultPath", ""))).resolve()
+        default_vault = getattr(self.platform_connections, "vault_path", "")
+        vault = Path(str(payload.get("credentialVaultPath") or default_vault)).resolve()
         home = Path.home().resolve()
         if vault.suffix.lower() != ".json" or not vault.is_relative_to(home):
             raise ContractError("REJECTED_MALFORMED", "credentialVaultPath must be a JSON path inside the user home directory")
