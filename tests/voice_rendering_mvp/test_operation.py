@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 import sys
+import threading
+import time
 
 
 APP = Path(__file__).resolve().parents[2] / "apps" / "voice-rendering"
@@ -106,3 +108,47 @@ def test_voice_loop_passes_locale_duration_and_uses_adapter_suffix(tmp_path):
         ("ru-RU", 1.0), ("ru-RU", 1.0), ("en-US", 1.0), ("en-US", 1.0)
     ]
     assert all(name.endswith(".wav.partial") for _, _, name in observed)
+
+
+def test_edge_capable_loop_bounds_concurrency_and_keeps_receipt_order(tmp_path):
+    class ConcurrentAdapter(FakeAdapter):
+        max_workers = 3
+
+        def __init__(self):
+            super().__init__()
+            self._lock = threading.Lock()
+
+        @property
+        def last_attempts(self):
+            return 1
+
+        def synthesize(self, text, language, voice, output, on_log, *, target_duration=None):
+            with self._lock:
+                self.active += 1
+                self.maximum_active = max(self.maximum_active, self.active)
+            try:
+                time.sleep(0.05)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_bytes(f"audio:{language}:{text}".encode())
+                return 0.75
+            finally:
+                with self._lock:
+                    self.active -= 1
+
+    adapter = ConcurrentAdapter()
+    result = VoiceRenderingLoop().execute(
+        translation_manifest(tmp_path),
+        tmp_path / "concurrent-out",
+        "concurrent-op",
+        voices=VOICES,
+        adapter=adapter,
+    )
+
+    assert result.result_class == "COMPLETED"
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert [(row["targetLanguage"], row["segmentId"]) for row in receipt["items"]] == [
+        ("ru-RU", 1), ("ru-RU", 2), ("en-US", 1), ("en-US", 2),
+    ]
+    assert receipt["maximumActiveSynthesis"] == 3
+    assert all(row["attempts"] == 1 for row in receipt["items"])
+    assert all(row["elapsedSeconds"] > 0 for row in receipt["items"])

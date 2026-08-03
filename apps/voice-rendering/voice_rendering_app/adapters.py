@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 import subprocess
 import sys
+import threading
+import time
 
 
 QWEN3_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
@@ -52,27 +55,94 @@ class _QwenPresetEngine:
 class EdgeTtsAdapter:
     identity = "edge-tts@1"
     output_suffix = ".mp3"
+    max_workers = 3
+    _TRANSIENT_ERRORS = (
+        "NoAudioReceived",
+        "No audio was received",
+        "TimeoutError",
+        "ConnectionError",
+        "Connection reset",
+        "temporarily unavailable",
+    )
 
-    def __init__(self, *, rate="+0%", volume="+0%", command_runner=None, duration_probe=None):
+    def __init__(
+        self,
+        *,
+        rate="+0%",
+        volume="+0%",
+        command_runner=None,
+        save_runner=None,
+        duration_probe=None,
+        sleep=None,
+        max_attempts=3,
+    ):
+        if command_runner is not None and save_runner is not None:
+            raise ValueError("choose one Edge transport runner")
         self.rate = rate
         self.volume = volume
-        self.command_runner = command_runner or self._run
+        self.command_runner = command_runner
+        self.save_runner = save_runner or self._save
         self.duration_probe = duration_probe or self._probe
+        self.sleep = sleep or time.sleep
+        self.max_attempts = int(max_attempts)
+        if self.max_attempts < 1:
+            raise ValueError("Edge attempts must be positive")
         self.active = 0
         self.maximum_active = 0
+        self._active_lock = threading.Lock()
+        self._thread_state = threading.local()
+
+    @property
+    def last_attempts(self):
+        return int(getattr(self._thread_state, "last_attempts", 1))
 
     def synthesize(self, text, language, voice, output, on_log, *, target_duration=None):
-        self.active += 1
-        self.maximum_active = max(self.maximum_active, self.active)
+        with self._active_lock:
+            self.active += 1
+            self.maximum_active = max(self.maximum_active, self.active)
         try:
-            argv = [sys.executable, "-m", "edge_tts", "--text", text, "--voice", voice,
-                    "--rate", self.rate, "--volume", self.volume, "--write-media", str(output)]
-            self.command_runner(argv)
-            duration = float(self.duration_probe(output))
-            on_log(f"Synthesized {duration:.3f}s with {voice}")
-            return duration
+            for attempt in range(1, self.max_attempts + 1):
+                self._thread_state.last_attempts = attempt
+                Path(output).unlink(missing_ok=True)
+                try:
+                    if self.command_runner is not None:
+                        argv = [
+                            sys.executable, "-m", "edge_tts", "--text", text,
+                            "--voice", voice, "--rate", self.rate, "--volume",
+                            self.volume, "--write-media", str(output),
+                        ]
+                        self.command_runner(argv)
+                    else:
+                        self.save_runner(text, voice, Path(output))
+                    duration = float(self.duration_probe(output))
+                    on_log(f"Synthesized {duration:.3f}s with {voice}")
+                    return duration
+                except Exception as error:
+                    transient = any(token.casefold() in str(error).casefold() for token in self._TRANSIENT_ERRORS)
+                    if not transient or attempt >= self.max_attempts:
+                        raise
+                    delay = float(2 ** (attempt - 1))
+                    on_log(
+                        f"Edge TTS transient failure; retry {attempt + 1}/{self.max_attempts} "
+                        f"in {delay:.0f}s"
+                    )
+                    self.sleep(delay)
+            raise RuntimeError("Edge TTS attempts exhausted")
         finally:
-            self.active -= 1
+            with self._active_lock:
+                self.active -= 1
+
+    def _save(self, text, voice, output):
+        import edge_tts
+
+        asyncio.run(
+            edge_tts.Communicate(
+                text=text,
+                voice=voice,
+                rate=self.rate,
+                volume=self.volume,
+            ).save(str(output))
+        )
 
     @staticmethod
     def _run(argv):
@@ -95,6 +165,7 @@ class Qwen3TtsAdapter:
 
     identity = "qwen3-tts-preset@1"
     output_suffix = ".wav"
+    max_workers = 1
 
     def __init__(self, *, device="cpu", engine_factory=None, audio_writer=None):
         self.device = device
@@ -142,6 +213,7 @@ class OriginalAudioAdapter:
 
     identity = "original-audio-silence@1"
     output_suffix = ".wav"
+    max_workers = 1
 
     def __init__(self, *, command_runner=None):
         self.command_runner = command_runner or self._run

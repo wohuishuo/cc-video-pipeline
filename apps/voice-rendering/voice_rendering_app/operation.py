@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
 from pathlib import Path
+import time
 from typing import Any, Callable, Protocol
 
 
@@ -135,19 +137,31 @@ class VoiceRenderingLoop:
             if item.get("status") == "COMPLETED" and _valid_clip(item.get("clip")):
                 reusable[key] = item
         log = on_log or (lambda _message: None)
-        items, failures = [], []
-        maximum_active = 0
+        results: list[dict[str, Any] | None] = [None] * len(work)
+        missing: list[tuple[int, dict[str, Any]]] = []
+        maximum_active = int((prior or {}).get("maximumActiveSynthesis", 0))
         for index, row in enumerate(work, 1):
             key = (row["targetLanguage"], row["mediaId"], row["segmentId"])
             reused = reusable.get(key)
             text_sha = hashlib.sha256(row["text"].encode("utf-8")).hexdigest()
             voice = voices[row["targetLanguage"]]
             if reused and reused.get("textSha256") == text_sha and reused.get("voice") == voice and reused.get("translationSha256") == row["translationSha256"]:
-                items.append({**reused, "reused": True})
+                results[index - 1] = {**reused, "reused": True}
                 log(f"[{index}/{len(work)}] reused {row['targetLanguage']}/{row['mediaId']}/{row['segmentId']}")
-                self._checkpoint(receipt_path, operation_id, fingerprint, adapter.identity, voices, items, maximum_active)
-                continue
-            log(f"[{index}/{len(work)}] rendering {row['targetLanguage']}/{row['mediaId']}/{row['segmentId']}")
+            else:
+                missing.append((index - 1, row))
+        self._checkpoint(
+            receipt_path, operation_id, fingerprint, adapter.identity, voices,
+            [item for item in results if item is not None], maximum_active,
+        )
+
+        def render_one(slot: int, row: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            key = (row["targetLanguage"], row["mediaId"], row["segmentId"])
+            text_sha = hashlib.sha256(row["text"].encode("utf-8")).hexdigest()
+            voice = voices[row["targetLanguage"]]
+            partial: Path | None = None
+            started = time.monotonic()
+            log(f"[{slot + 1}/{len(work)}] rendering {row['targetLanguage']}/{row['mediaId']}/{row['segmentId']}")
             try:
                 item_key = hashlib.sha256(f"{key}".encode()).hexdigest()[:20]
                 suffix = str(getattr(adapter, "output_suffix", ".mp3"))
@@ -156,26 +170,46 @@ class VoiceRenderingLoop:
                 final = output / "clips" / f"{item_key}{suffix}"
                 partial = final.with_name(f".{final.name}.partial")
                 partial.parent.mkdir(parents=True, exist_ok=True)
-                if partial.exists(): partial.unlink()
+                partial.unlink(missing_ok=True)
                 duration = float(adapter.synthesize(
                     row["text"], row["targetLanguage"], voice, partial, log,
                     target_duration=row["end"] - row["start"],
                 ))
-                maximum_active = max(maximum_active, int(getattr(adapter, "maximum_active", 1)))
                 if duration <= 0 or not partial.is_file() or partial.stat().st_size <= 0:
                     raise VoiceRenderingError("adapter returned invalid audio")
                 os.replace(partial, final)
                 clip = {"path": str(final), "sha256": sha256_file(final), "duration": duration, "size": final.stat().st_size}
-                items.append({
-                    **{key: row[key] for key in ("targetLanguage", "mediaId", "segmentId", "translationSha256", "start", "end")},
+                return slot, {
+                    **{field: row[field] for field in ("targetLanguage", "mediaId", "segmentId", "translationSha256", "start", "end")},
                     "text": row["text"], "textSha256": text_sha, "voice": voice,
                     "status": "COMPLETED", "clip": clip, "reused": False,
-                })
+                    "attempts": int(getattr(adapter, "last_attempts", 1)),
+                    "elapsedSeconds": round(time.monotonic() - started, 3),
+                }
             except Exception as error:
-                if partial.exists(): partial.unlink()
-                failures.append(key)
-                items.append({"targetLanguage": key[0], "mediaId": key[1], "segmentId": key[2], "status": "FAILED", "error": f"{type(error).__name__}: {error}"[-2000:]})
-            self._checkpoint(receipt_path, operation_id, fingerprint, adapter.identity, voices, items, maximum_active)
+                if partial is not None:
+                    partial.unlink(missing_ok=True)
+                return slot, {
+                    "targetLanguage": key[0], "mediaId": key[1], "segmentId": key[2],
+                    "status": "FAILED", "attempts": int(getattr(adapter, "last_attempts", 1)),
+                    "elapsedSeconds": round(time.monotonic() - started, 3),
+                    "error": f"{type(error).__name__}: {error}"[-2000:],
+                }
+
+        if missing:
+            workers = max(1, min(int(getattr(adapter, "max_workers", 1)), len(missing)))
+            with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="voice-segment") as executor:
+                futures = [executor.submit(render_one, slot, row) for slot, row in missing]
+                for future in as_completed(futures):
+                    slot, item = future.result()
+                    results[slot] = item
+                    maximum_active = max(maximum_active, int(getattr(adapter, "maximum_active", 1)))
+                    self._checkpoint(
+                        receipt_path, operation_id, fingerprint, adapter.identity, voices,
+                        [value for value in results if value is not None], maximum_active,
+                    )
+        items = [item for item in results if item is not None]
+        failures = [item for item in items if item.get("status") == "FAILED"]
         if failures:
             self._checkpoint(receipt_path, operation_id, fingerprint, adapter.identity, voices, items, maximum_active, result_class="FAILED", error=f"{len(failures)} clip(s) failed")
             if voice_manifest_path.exists(): voice_manifest_path.unlink()

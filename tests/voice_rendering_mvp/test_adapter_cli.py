@@ -45,6 +45,61 @@ def test_edge_adapter_invokes_argv_and_requires_probe(tmp_path):
     assert "--write-media" in calls[0]
 
 
+def test_edge_adapter_retries_transient_no_audio_and_reports_attempts(tmp_path):
+    calls = []
+    logs = []
+    output = tmp_path / "clip.mp3"
+
+    def save(text, voice, destination):
+        calls.append((text, voice))
+        if len(calls) == 1:
+            raise RuntimeError(
+                "edge_tts.exceptions.NoAudioReceived: No audio was received"
+            )
+        destination.write_bytes(b"audio")
+
+    adapter = EdgeTtsAdapter(
+        save_runner=save,
+        duration_probe=lambda _path: 1.25,
+        sleep=lambda _seconds: None,
+    )
+
+    duration = adapter.synthesize(
+        "Привет", "ru-RU", "ru-RU-DmitryNeural", output, logs.append
+    )
+
+    assert duration == 1.25
+    assert adapter.last_attempts == 2
+    assert len(calls) == 2
+    assert any("retry 2/3" in line for line in logs)
+
+
+def test_edge_adapter_does_not_retry_non_transient_provider_errors(tmp_path):
+    calls = []
+
+    def save(_text, _voice, _destination):
+        calls.append("called")
+        raise RuntimeError("voice name is invalid")
+
+    adapter = EdgeTtsAdapter(
+        save_runner=save,
+        duration_probe=lambda _path: 1.0,
+        sleep=lambda _seconds: None,
+    )
+
+    try:
+        adapter.synthesize(
+            "text", "ru-RU", "bad-voice", tmp_path / "bad.mp3", lambda _line: None
+        )
+    except RuntimeError as error:
+        assert "invalid" in str(error)
+    else:
+        raise AssertionError("non-transient provider error was accepted")
+
+    assert calls == ["called"]
+    assert adapter.last_attempts == 1
+
+
 class CliAdapter:
     identity = "cli-voice@1"
     output_suffix = ".wav"
