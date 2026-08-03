@@ -45,8 +45,8 @@ def test_shell_is_a_seven_stage_local_first_workspace_without_canvas_controls():
 
 def test_shell_loads_only_local_versioned_assets():
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert 'href="/styles.css?v=12"' in html
-    assert 'type="module" src="/app.js?v=12"' in html
+    assert 'href="/styles.css?v=13"' in html
+    assert 'type="module" src="/app.js?v=13"' in html
     assert 'src="https://' not in html and 'href="https://' not in html
 
 
