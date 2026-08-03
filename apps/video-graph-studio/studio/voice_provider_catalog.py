@@ -40,7 +40,7 @@ def voice_provider_rows(repository: Path | None) -> list[dict]:
             "id": "qwen3", "name": "Qwen3-TTS", "ready": _qwen_ready(repository),
             "supportedLocales": list(QWEN3_LOCALES),
             "voices": [{"id": identity, "name": name} for identity, name in QWEN3_VOICES],
-            "description": "Local preset synthesis with one resident model per video.",
+            "description": "Local CUDA synthesis; batches 8 independent clips while preserving subtitle alignment.",
         },
         {
             "id": "original", "name": "Original audio + subtitles", "ready": True,

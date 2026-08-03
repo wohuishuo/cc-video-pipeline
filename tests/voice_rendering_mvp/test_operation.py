@@ -56,6 +56,80 @@ def test_loop_renders_translation_order_one_clip_at_a_time(tmp_path):
     assert manifest["voices"] == VOICES
 
 
+def test_batch_capable_loop_reduces_model_calls_and_keeps_exact_clip_alignment(tmp_path):
+    class BatchAdapter:
+        identity = "batch-voice@1"
+        output_suffix = ".wav"
+        max_workers = 1
+        batch_size = 3
+
+        def __init__(self):
+            self.calls = []
+            self.maximum_active = 0
+
+        def synthesize(self, *args, **kwargs):
+            raise AssertionError("batch-capable adapter fell back to one model call per segment")
+
+        def synthesize_batch(self, requests, on_log):
+            self.calls.append([request["text"] for request in requests])
+            self.maximum_active = 1
+            durations = []
+            for request in requests:
+                request["output"].parent.mkdir(parents=True, exist_ok=True)
+                request["output"].write_bytes(f"audio:{request['text']}".encode())
+                durations.append(float(request["target_duration"]))
+            return durations
+
+    adapter = BatchAdapter()
+    result = VoiceRenderingLoop().execute(
+        translation_manifest(tmp_path), tmp_path / "batch-out", "batch-op",
+        voices=VOICES, adapter=adapter,
+    )
+
+    assert result.result_class == "COMPLETED"
+    assert [len(batch) for batch in adapter.calls] == [3, 1]
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert [(row["targetLanguage"], row["segmentId"]) for row in receipt["items"]] == [
+        ("ru-RU", 1), ("ru-RU", 2), ("en-US", 1), ("en-US", 2),
+    ]
+    assert [row["end"] - row["start"] for row in receipt["items"]] == [1.0, 1.0, 1.0, 1.0]
+    assert receipt["maximumActiveSynthesis"] == 1
+
+
+def test_failed_batch_retries_only_that_batch_as_independent_clips(tmp_path):
+    class RecoveringBatchAdapter(FakeAdapter):
+        identity = "recovering-batch@1"
+        output_suffix = ".wav"
+        batch_size = 3
+
+        def __init__(self):
+            super().__init__()
+            self.batch_calls = 0
+
+        def synthesize_batch(self, requests, on_log):
+            self.batch_calls += 1
+            if self.batch_calls == 1:
+                raise RuntimeError("simulated GPU batch pressure")
+            for request in requests:
+                request["output"].parent.mkdir(parents=True, exist_ok=True)
+                request["output"].write_bytes(b"batch-audio")
+            return [0.75] * len(requests)
+
+    logs = []
+    adapter = RecoveringBatchAdapter()
+    result = VoiceRenderingLoop().execute(
+        translation_manifest(tmp_path), tmp_path / "batch-recovery", "batch-recovery-op",
+        voices=VOICES, adapter=adapter, on_log=logs.append,
+    )
+
+    assert result.result_class == "COMPLETED"
+    assert adapter.batch_calls == 2
+    assert len(adapter.calls) == 3
+    assert any("serially after batch provider failure" in line for line in logs)
+    receipt = json.loads(result.receipt_path.read_text(encoding="utf-8"))
+    assert all(row["status"] == "COMPLETED" for row in receipt["items"])
+
+
 def test_failed_clip_prevents_manifest_and_retry_reuses_completed_clips(tmp_path):
     source = translation_manifest(tmp_path)
     output = tmp_path / "out"

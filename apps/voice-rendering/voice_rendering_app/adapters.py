@@ -60,6 +60,19 @@ class _QwenPresetEngine:
             raise RuntimeError("Qwen3-TTS must return exactly one waveform")
         return wavs[0], sample_rate
 
+    def synth_presets(self, texts, languages, speakers):
+        if self.model is None:
+            raise RuntimeError("Qwen3-TTS model is not loaded")
+        resolved = [QWEN3_LANGUAGE_NAMES.get(str(language).lower()) for language in languages]
+        if any(language is None for language in resolved):
+            raise RuntimeError("Qwen3-TTS batch contains an unsupported locale")
+        wavs, sample_rate = self.model.generate_custom_voice(
+            text=list(texts), language=resolved, speaker=list(speakers), instruct=[""] * len(texts)
+        )
+        if not isinstance(wavs, list) or len(wavs) != len(texts):
+            raise RuntimeError("Qwen3-TTS must return one waveform per batch item")
+        return wavs, sample_rate
+
 
 class EdgeTtsAdapter:
     identity = "edge-tts@1"
@@ -177,6 +190,7 @@ class Qwen3TtsAdapter:
     identity = "qwen3-tts-preset@1"
     output_suffix = ".wav"
     max_workers = 1
+    batch_size = 8
 
     def __init__(self, *, device="auto", engine_factory=None, audio_writer=None):
         self.device = device
@@ -211,6 +225,36 @@ class Qwen3TtsAdapter:
             duration = len(audio) / sample_rate
             on_log(f"Synthesized {duration:.3f}s with Qwen3-TTS {voice}")
             return duration
+        finally:
+            self.active -= 1
+
+    def synthesize_batch(self, requests, on_log):
+        if not isinstance(requests, list) or not requests or len(requests) > self.batch_size:
+            raise RuntimeError(f"Qwen3-TTS batch must contain 1-{self.batch_size} items")
+        self.active += 1
+        self.maximum_active = max(self.maximum_active, self.active)
+        try:
+            engine = self._get_engine()
+            if not self._reported_device:
+                on_log(f"Qwen3-TTS device: {getattr(engine, 'resolved_device', self.device)}")
+                self._reported_device = True
+            texts = [str(request["text"]) for request in requests]
+            languages = [str(request["language"]).split("-", 1)[0] for request in requests]
+            speakers = [str(request["voice"]) for request in requests]
+            on_log(f"Qwen3-TTS batch: {len(requests)} independent clip(s)")
+            audios, sample_rate = engine.synth_presets(texts, languages, speakers)
+            sample_rate = int(sample_rate)
+            if sample_rate <= 0 or len(audios) != len(requests):
+                raise RuntimeError("Qwen3-TTS returned invalid batch audio")
+            durations = []
+            for request, audio in zip(requests, audios, strict=True):
+                if len(audio) <= 0:
+                    raise RuntimeError("Qwen3-TTS returned an empty batch clip")
+                self.audio_writer(request["output"], audio, sample_rate)
+                duration = len(audio) / sample_rate
+                durations.append(duration)
+                on_log(f"Synthesized {duration:.3f}s with Qwen3-TTS {request['voice']}")
+            return durations
         finally:
             self.active -= 1
 

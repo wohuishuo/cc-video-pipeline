@@ -187,6 +187,37 @@ def test_qwen3_adapter_keeps_one_engine_and_writes_provider_audio(tmp_path):
     assert ("Hello", "en", "Aiden") in calls
 
 
+def test_qwen3_adapter_batches_independent_clips_in_one_model_call(tmp_path):
+    calls = []
+
+    class Engine:
+        def load(self):
+            calls.append("load")
+
+        def synth_presets(self, texts, languages, speakers):
+            calls.append((texts, languages, speakers))
+            return [[0.0, 0.5, 0.0], [0.0, -0.5, 0.0, 0.25]], 4
+
+    def writer(path, audio, sample_rate):
+        calls.append((Path(path).name, len(audio), sample_rate))
+        Path(path).write_bytes(b"wav")
+
+    adapter = Qwen3TtsAdapter(engine_factory=Engine, audio_writer=writer)
+    outputs = [tmp_path / "one.wav", tmp_path / "two.wav"]
+    durations = adapter.synthesize_batch(
+        [
+            {"text": "Привет", "language": "ru-RU", "voice": "Vivian", "output": outputs[0]},
+            {"text": "Hello", "language": "en-US", "voice": "Ryan", "output": outputs[1]},
+        ],
+        lambda _line: None,
+    )
+
+    assert durations == [0.75, 1.0]
+    assert calls.count("load") == 1
+    assert calls[1] == (["Привет", "Hello"], ["ru", "en"], ["Vivian", "Ryan"])
+    assert all(path.read_bytes() == b"wav" for path in outputs)
+
+
 def test_qwen_device_auto_prefers_cuda_and_has_cpu_fallback():
     assert resolve_qwen_device("auto", cuda_available=True) == "cuda"
     assert resolve_qwen_device("auto", cuda_available=False) == "cpu"

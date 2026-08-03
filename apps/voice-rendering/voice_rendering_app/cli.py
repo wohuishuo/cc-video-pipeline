@@ -1,4 +1,4 @@
-"""Public CLI for serial voice rendering."""
+"""Public CLI for checkpointed, segment-aligned voice rendering."""
 
 from __future__ import annotations
 
@@ -24,7 +24,9 @@ def parse_voices(values):
 
 
 def parser():
-    value = argparse.ArgumentParser(description="Render one provider-selected clip per translated segment serially.")
+    value = argparse.ArgumentParser(
+        description="Render one aligned provider-selected clip per translated segment."
+    )
     value.add_argument("translation_manifest", type=Path)
     value.add_argument("--output-dir", type=Path, required=True)
     value.add_argument("--operation-id", required=True)

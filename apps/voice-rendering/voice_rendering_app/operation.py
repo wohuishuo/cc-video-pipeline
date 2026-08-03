@@ -1,4 +1,4 @@
-"""Serial, resumable voice rendering from a Translation Manifest."""
+"""Checkpointed, resumable voice rendering from a Translation Manifest."""
 
 from __future__ import annotations
 
@@ -205,33 +205,123 @@ class VoiceRenderingLoop:
                     "error": f"{type(error).__name__}: {error}"[-2000:],
                 }
 
+        def render_batch(entries: list[tuple[int, dict[str, Any]]]) -> list[tuple[int, dict[str, Any]]]:
+            started = time.monotonic()
+            prepared = []
+            for slot, row in entries:
+                key = (row["targetLanguage"], row["mediaId"], row["segmentId"])
+                text_sha = hashlib.sha256(row["text"].encode("utf-8")).hexdigest()
+                voice = voices[row["targetLanguage"]]
+                item_key = hashlib.sha256(f"{key}".encode()).hexdigest()[:20]
+                suffix = str(getattr(adapter, "output_suffix", ".mp3"))
+                if not suffix.startswith(".") or any(value in suffix for value in ("/", "\\")):
+                    raise VoiceRenderingError("adapter output suffix is invalid")
+                final = output / "clips" / f"{item_key}{suffix}"
+                partial = final.with_name(f".{final.name}.partial")
+                partial.parent.mkdir(parents=True, exist_ok=True)
+                partial.unlink(missing_ok=True)
+                log(f"[{slot + 1}/{len(work)}] rendering {row['targetLanguage']}/{row['mediaId']}/{row['segmentId']}")
+                prepared.append({
+                    "slot": slot, "row": row, "key": key, "textSha256": text_sha,
+                    "voice": voice, "final": final, "partial": partial,
+                })
+            try:
+                durations = adapter.synthesize_batch([
+                    {
+                        "text": item["row"]["text"],
+                        "language": item["row"]["targetLanguage"],
+                        "voice": item["voice"],
+                        "output": item["partial"],
+                        "target_duration": item["row"]["end"] - item["row"]["start"],
+                    }
+                    for item in prepared
+                ], log)
+                if not isinstance(durations, list) or len(durations) != len(prepared):
+                    raise VoiceRenderingError("batch adapter returned incomplete duration coverage")
+                elapsed = round(time.monotonic() - started, 3)
+                completed = []
+                for item, duration_value in zip(prepared, durations, strict=True):
+                    duration = float(duration_value)
+                    partial = item["partial"]
+                    if duration <= 0 or not partial.is_file() or partial.stat().st_size <= 0:
+                        raise VoiceRenderingError("batch adapter returned invalid audio")
+                    os.replace(partial, item["final"])
+                    row = item["row"]
+                    final = item["final"]
+                    completed.append((item["slot"], {
+                        **{field: row[field] for field in ("targetLanguage", "mediaId", "segmentId", "translationSha256", "start", "end")},
+                        "text": row["text"], "textSha256": item["textSha256"], "voice": item["voice"],
+                        "status": "COMPLETED",
+                        "clip": {"path": str(final), "sha256": sha256_file(final), "duration": duration, "size": final.stat().st_size},
+                        "reused": False, "attempts": 1, "elapsedSeconds": elapsed,
+                    }))
+                return completed
+            except Exception as error:
+                for item in prepared:
+                    item["partial"].unlink(missing_ok=True)
+                    item["final"].unlink(missing_ok=True)
+                elapsed = round(time.monotonic() - started, 3)
+                return [
+                    (item["slot"], {
+                        "targetLanguage": item["key"][0], "mediaId": item["key"][1],
+                        "segmentId": item["key"][2], "status": "FAILED", "attempts": 1,
+                        "elapsedSeconds": elapsed, "error": f"{type(error).__name__}: {error}"[-2000:],
+                    })
+                    for item in prepared
+                ]
+
         if missing:
-            workers = max(1, min(int(getattr(adapter, "max_workers", 1)), len(missing)))
-            with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="voice-segment") as executor:
-                futures = [executor.submit(render_one, slot, row) for slot, row in missing]
-                for future in as_completed(futures):
-                    slot, item = future.result()
-                    results[slot] = item
+            batch_renderer = getattr(adapter, "synthesize_batch", None)
+            if callable(batch_renderer):
+                batch_size = max(1, min(int(getattr(adapter, "batch_size", 1)), len(missing)))
+                for offset in range(0, len(missing), batch_size):
+                    batch_results = render_batch(missing[offset:offset + batch_size])
+                    for slot, item in batch_results:
+                        results[slot] = item
                     maximum_active = max(maximum_active, int(getattr(adapter, "maximum_active", 1)))
                     self._checkpoint(
                         receipt_path, operation_id, fingerprint, adapter.identity, voices,
                         [value for value in results if value is not None], maximum_active,
                     )
                     progress()
-            failed_slots = [
-                slot for slot, _row in missing
-                if results[slot] is not None and results[slot].get("status") == "FAILED"
-            ]
-            if workers > 1 and failed_slots:
-                log(f"Retrying {len(failed_slots)} clip(s) serially after concurrent provider failures")
-                for slot in failed_slots:
-                    _slot, item = render_one(slot, work[slot])
-                    results[_slot] = item
-                    self._checkpoint(
-                        receipt_path, operation_id, fingerprint, adapter.identity, voices,
-                        [value for value in results if value is not None], maximum_active,
-                    )
-                    progress()
+                failed_slots = [slot for slot, _row in missing if results[slot] is not None and results[slot].get("status") == "FAILED"]
+                if failed_slots:
+                    log(f"Retrying {len(failed_slots)} clip(s) serially after batch provider failure")
+                    for slot in failed_slots:
+                        _slot, item = render_one(slot, work[slot])
+                        results[_slot] = item
+                        self._checkpoint(
+                            receipt_path, operation_id, fingerprint, adapter.identity, voices,
+                            [value for value in results if value is not None], maximum_active,
+                        )
+                        progress()
+            else:
+                workers = max(1, min(int(getattr(adapter, "max_workers", 1)), len(missing)))
+                with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="voice-segment") as executor:
+                    futures = [executor.submit(render_one, slot, row) for slot, row in missing]
+                    for future in as_completed(futures):
+                        slot, item = future.result()
+                        results[slot] = item
+                        maximum_active = max(maximum_active, int(getattr(adapter, "maximum_active", 1)))
+                        self._checkpoint(
+                            receipt_path, operation_id, fingerprint, adapter.identity, voices,
+                            [value for value in results if value is not None], maximum_active,
+                        )
+                        progress()
+                failed_slots = [
+                    slot for slot, _row in missing
+                    if results[slot] is not None and results[slot].get("status") == "FAILED"
+                ]
+                if workers > 1 and failed_slots:
+                    log(f"Retrying {len(failed_slots)} clip(s) serially after concurrent provider failures")
+                    for slot in failed_slots:
+                        _slot, item = render_one(slot, work[slot])
+                        results[_slot] = item
+                        self._checkpoint(
+                            receipt_path, operation_id, fingerprint, adapter.identity, voices,
+                            [value for value in results if value is not None], maximum_active,
+                        )
+                        progress()
         items = [item for item in results if item is not None]
         failures = [item for item in items if item.get("status") == "FAILED"]
         if failures:

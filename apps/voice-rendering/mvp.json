@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "voice-rendering",
-  "summary": "Serially synthesize verified voice clips from a Translation Manifest.",
+  "summary": "Checkpoint and verify one aligned voice clip per translated segment, using provider-safe batching where available.",
   "entrypoint": "run.ps1",
   "install": "install.ps1",
   "test": "python -m pytest --import-mode=importlib tests/voice_rendering_mvp -q",
