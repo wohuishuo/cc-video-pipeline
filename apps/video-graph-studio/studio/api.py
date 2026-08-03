@@ -506,6 +506,9 @@ class StudioApplication:
             raise ContractError("REJECTED_MALFORMED", "unsupported voice provider")
         if voice_provider == "qwen3" and not set(languages).issubset(QWEN3_SUPPORTED_LANGUAGE_LOCALES):
             raise ContractError("REJECTED_MALFORMED", "Qwen3-TTS does not support every selected language")
+        qwen_device = str(payload.get("qwenDevice", "auto")).strip().lower()
+        if qwen_device not in {"auto", "cuda", "cpu"}:
+            raise ContractError("REJECTED_MALFORMED", "unsupported Qwen device policy")
         source_language = str(payload.get("sourceLanguage", "auto")).strip()
         asr_model = str(payload.get("asrModel", "small")).strip()
         asr_device = str(payload.get("asrDevice", "auto")).strip()
@@ -591,6 +594,7 @@ class StudioApplication:
             "targetLanguages": list(languages),
             "targetVoices": {language: voices[language].strip() for language in languages},
             "voiceProvider": voice_provider,
+            "qwenDevice": qwen_device,
             "sourceVolume": source_volume,
             "destinationPlans": destination_plans,
             "localOutputRoot": str(local_output_path) if local_output_path else None,
@@ -875,8 +879,12 @@ class StudioApplication:
                 raise ContractError("REJECTED_MALFORMED", "unsupported voice provider")
             if voice_provider == "qwen3" and not set(parameters["targetLanguages"]).issubset(QWEN3_SUPPORTED_LANGUAGE_LOCALES):
                 raise ContractError("REJECTED_MALFORMED", "Qwen3-TTS does not support every selected language")
+            qwen_device = str(payload.get("qwenDevice", "auto")).strip().lower()
+            if qwen_device not in {"auto", "cuda", "cpu"}:
+                raise ContractError("REJECTED_MALFORMED", "unsupported Qwen device policy")
             parameters["targetVoices"] = dict(voices)
             parameters["voiceProvider"] = voice_provider
+            parameters["qwenDevice"] = qwen_device
         if template_id in LOCALIZATION_GRAPHS or release_mode or creator_batch_mode:
             try:
                 source_volume = float(payload.get("sourceVolume", 0.12))

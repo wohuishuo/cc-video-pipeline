@@ -134,6 +134,7 @@ class BatchPolicy:
     target_languages: tuple[str, ...]
     target_voices: Mapping[str, str]
     voice_provider: str
+    qwen_device: str
     source_language: str
     asr_model: str
     asr_device: str
@@ -152,6 +153,7 @@ class BatchPolicy:
         target_voices: Mapping[str, str],
         *,
         voice_provider: str = "edge",
+        qwen_device: str = "auto",
         source_language: str = "auto",
         asr_model: str = "small",
         asr_device: str = "auto",
@@ -174,6 +176,9 @@ class BatchPolicy:
             raise BatchContractError("voice provider is invalid")
         if provider == "qwen3" and not set(languages).issubset(QWEN3_SUPPORTED_LANGUAGES):
             raise BatchContractError("Qwen3-TTS does not support every selected language")
+        qwen_device = str(qwen_device).strip().lower()
+        if qwen_device not in {"auto", "cuda", "cpu"}:
+            raise BatchContractError("Qwen device policy is invalid")
         if isinstance(source_volume, bool) or not 0 <= float(source_volume) <= 1:
             raise BatchContractError("source volume must be between zero and one")
         if isinstance(translation_batch_size, bool) or not 1 <= int(translation_batch_size) <= 64:
@@ -191,6 +196,7 @@ class BatchPolicy:
             languages,
             voices,
             provider,
+            qwen_device,
             source_language.strip(),
             asr_model.strip(),
             asr_device,
@@ -208,6 +214,7 @@ class BatchPolicy:
             "targetLanguages": list(self.target_languages),
             "targetVoices": {language: self.target_voices[language] for language in self.target_languages},
             "voiceProvider": self.voice_provider,
+            "qwenDevice": self.qwen_device,
             "sourceLanguage": self.source_language,
             "asrModel": self.asr_model,
             "asrDevice": self.asr_device,

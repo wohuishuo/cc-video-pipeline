@@ -33,6 +33,7 @@ def parser() -> argparse.ArgumentParser:
     localize.add_argument("--target-language", action="append", required=True)
     localize.add_argument("--voice", action="append", required=True)
     localize.add_argument("--voice-provider", default="edge", choices=("edge", "qwen3", "original"))
+    localize.add_argument("--qwen-device", default="auto", choices=("auto", "cuda", "cpu"))
     localize.add_argument("--cookies", type=Path)
     localize.add_argument("--output-dir", type=Path, required=True)
     localize.add_argument("--operation-id", required=True)
@@ -82,6 +83,7 @@ def main(
             args.target_language,
             _voices(args.voice),
             voice_provider=args.voice_provider,
+            qwen_device=args.qwen_device,
             source_language=args.source_language,
             asr_model=args.asr_model,
             asr_device=args.asr_device,

@@ -122,6 +122,25 @@ def test_creator_campaign_resolves_server_fact_and_creates_four_steps(tmp_path):
     assert run["parameters"]["destinationPlans"][1]["targets"][0]["executionStatus"] == "READY_PRIVATE"
 
 
+def test_creator_campaign_preserves_qwen_device_policy(tmp_path):
+    manifest = _creator_manifest(tmp_path)
+    store = RunStore(tmp_path / "studio.db")
+    creator_run_id = _completed_creator_run(store, manifest)
+    app = StudioApplication(store, WorkflowEngine(store, {}), allowed_roots=(tmp_path,))
+    payload = _payload(creator_run_id)
+    payload.update({
+        "voiceProvider": "qwen3",
+        "targetVoices": {"ru-RU": "Ryan", "en-US": "Aiden"},
+        "qwenDevice": "cuda",
+    })
+
+    status, response = app.handle("POST", "/api/v1/runs", {}, _envelope(payload))
+    run = store.get_run(response["value"]["runId"])
+
+    assert status == 201
+    assert run["parameters"]["qwenDevice"] == "cuda"
+
+
 def test_creator_campaign_rejects_browser_artifact_paths_and_unknown_ids(tmp_path):
     manifest = _creator_manifest(tmp_path)
     store = RunStore(tmp_path / "studio.db")

@@ -30,7 +30,7 @@ def parser():
     value.add_argument("--operation-id", required=True)
     value.add_argument("--voice", action="append", required=True, help="LANGUAGE=VOICE_ID")
     value.add_argument("--provider", choices=("edge", "qwen3", "original"), default="edge")
-    value.add_argument("--qwen-device", choices=("cpu", "cuda", "xpu"), default="cpu")
+    value.add_argument("--qwen-device", choices=("auto", "cpu", "cuda"), default="auto")
     value.add_argument("--rate", default="+0%")
     value.add_argument("--volume", default="+0%")
     value.add_argument("--json", action="store_true")

@@ -157,6 +157,8 @@ class PublicMvpItemProcessor:
             f"{child_prefix}:voice",
             "--provider",
             batch_policy.voice_provider,
+            "--qwen-device",
+            batch_policy.qwen_device,
         ]
         for language in batch_policy.target_languages:
             voice_argv.extend(["--voice", f"{language}={batch_policy.target_voices[language]}"])

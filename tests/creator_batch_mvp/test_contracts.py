@@ -90,6 +90,7 @@ def test_batch_policy_requires_exact_language_voice_coverage_and_safe_ranges():
         ["kk-KZ"], {"kk-KZ": "original-audio"}, voice_provider="original",
     )
     assert qwen.to_public_dict()["voiceProvider"] == "qwen3"
+    assert qwen.to_public_dict()["qwenDevice"] == "auto"
     assert original.to_public_dict()["voiceProvider"] == "original"
 
     with pytest.raises(BatchContractError, match="Qwen3-TTS"):
@@ -99,6 +100,10 @@ def test_batch_policy_requires_exact_language_voice_coverage_and_safe_ranges():
     with pytest.raises(BatchContractError, match="voice provider"):
         BatchPolicy.create(
             ["ru-RU"], {"ru-RU": "voice"}, voice_provider="unknown"
+        )
+    with pytest.raises(BatchContractError, match="Qwen device"):
+        BatchPolicy.create(
+            ["ru-RU"], {"ru-RU": "Ryan"}, voice_provider="qwen3", qwen_device="metal"
         )
 
     invalid = [

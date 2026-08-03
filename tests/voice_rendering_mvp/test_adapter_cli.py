@@ -13,6 +13,7 @@ from voice_rendering_app.adapters import (  # noqa: E402
     EdgeTtsAdapter,
     OriginalAudioAdapter,
     Qwen3TtsAdapter,
+    resolve_qwen_device,
 )
 from voice_rendering_app.cli import main, parse_voices  # noqa: E402
 
@@ -166,6 +167,13 @@ def test_qwen3_adapter_keeps_one_engine_and_writes_provider_audio(tmp_path):
     assert calls.count("load") == 1
     assert ("Привет", "ru", "Ryan") in calls
     assert ("Hello", "en", "Aiden") in calls
+
+
+def test_qwen_device_auto_prefers_cuda_and_has_cpu_fallback():
+    assert resolve_qwen_device("auto", cuda_available=True) == "cuda"
+    assert resolve_qwen_device("auto", cuda_available=False) == "cpu"
+    assert resolve_qwen_device("cuda", cuda_available=False) == "cpu"
+    assert resolve_qwen_device("cpu", cuda_available=True) == "cpu"
 
 
 def test_original_audio_adapter_generates_exact_segment_silence(tmp_path):

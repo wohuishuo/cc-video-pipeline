@@ -92,6 +92,7 @@ test("campaign payload omits unselected videos and preserves language routing", 
     locale: "ru-RU",
     targets: [{platform: "youtube", account: "ru-main"}, {platform: "tiktok", account: "ru-short"}],
   });
+  assert.equal("qwenDevice" in payload, false);
 });
 
 test("local folder payload completes locally with zero publication routes", () => {
@@ -150,6 +151,24 @@ test("stage actions name the next decision instead of saying continue", () => {
     label: "检查任务",
     hint: "成片将保存到 C:/Videos，上传平台仍为可选。",
   });
+});
+
+test("qwen campaign payload selects automatic GPU resolution explicitly", () => {
+  const payload = buildCampaignPayload({
+    sourceMode: "creator",
+    creatorRunId: "creator-run",
+    selectedVideoIds: ["v3"],
+    selectedLanguages: ["ru-RU"],
+    voices: {"ru-RU": "Ryan"},
+    destinations: {},
+    translationProvider: {id: "nllb", ready: true, defaultModel: "nllb"},
+    voiceProvider: {id: "qwen3", ready: true},
+    qwenDevice: "auto",
+    localOutputRoot: "C:/Videos/Localized",
+  });
+
+  assert.equal(payload.voiceProvider, "qwen3");
+  assert.equal(payload.qwenDevice, "auto");
 });
 
 test("launch presentation distinguishes blocked ready and running jobs", () => {

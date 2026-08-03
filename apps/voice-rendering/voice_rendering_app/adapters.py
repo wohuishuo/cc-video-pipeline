@@ -19,6 +19,18 @@ QWEN3_LANGUAGE_NAMES = {
 }
 
 
+def resolve_qwen_device(requested, *, cuda_available):
+    """Resolve a portable Qwen device policy without silently pinning capable PCs to CPU."""
+    value = str(requested).strip().lower()
+    if value == "cpu":
+        return "cpu"
+    if value in {"auto", "cuda"}:
+        return "cuda" if cuda_available else "cpu"
+    if value == "xpu":
+        return "cpu"
+    raise RuntimeError(f"unsupported Qwen device policy: {requested}")
+
+
 class _QwenPresetEngine:
     def __init__(self, device):
         self.device = device
@@ -28,11 +40,8 @@ class _QwenPresetEngine:
         import torch
         from qwen_tts import Qwen3TTSModel
 
-        device = self.device
-        if device == "xpu":
-            device = "cpu"
-        elif device == "cuda" and not torch.cuda.is_available():
-            device = "cpu"
+        device = resolve_qwen_device(self.device, cuda_available=torch.cuda.is_available())
+        self.resolved_device = device
         dtype = torch.float32 if device == "cpu" else torch.bfloat16
         self.model = Qwen3TTSModel.from_pretrained(
             QWEN3_MODEL_ID, device_map=device, dtype=dtype, attn_implementation="sdpa"
@@ -167,11 +176,12 @@ class Qwen3TtsAdapter:
     output_suffix = ".wav"
     max_workers = 1
 
-    def __init__(self, *, device="cpu", engine_factory=None, audio_writer=None):
+    def __init__(self, *, device="auto", engine_factory=None, audio_writer=None):
         self.device = device
         self.engine_factory = engine_factory or self._engine
         self.audio_writer = audio_writer or self._write_wav
         self._resident = None
+        self._reported_device = False
         self.active = 0
         self.maximum_active = 0
 
@@ -185,7 +195,11 @@ class Qwen3TtsAdapter:
         self.active += 1
         self.maximum_active = max(self.maximum_active, self.active)
         try:
-            audio, sample_rate = self._get_engine().synth_preset(
+            engine = self._get_engine()
+            if not self._reported_device:
+                on_log(f"Qwen3-TTS device: {getattr(engine, 'resolved_device', self.device)}")
+                self._reported_device = True
+            audio, sample_rate = engine.synth_preset(
                 text, str(language).split("-", 1)[0], voice
             )
             sample_rate = int(sample_rate)

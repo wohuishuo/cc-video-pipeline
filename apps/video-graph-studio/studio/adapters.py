@@ -531,7 +531,7 @@ class VoiceRenderingAdapter(CommandAdapter):
         if not manifest.is_file(): return AdapterResult(False,{},"translation manifest missing")
         parameters=context["parameters"]
         output=self.voice_root/str(context["runId"])
-        argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),str(manifest),"--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}","--provider",str(parameters.get("voiceProvider","edge"))]
+        argv=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(self.launcher),str(manifest),"--output-dir",str(output),"--operation-id",f"{context['runId']}:step:{node.id}","--provider",str(parameters.get("voiceProvider","edge")),"--qwen-device",str(parameters.get("qwenDevice","auto"))]
         for language in parameters["targetLanguages"]: argv.extend(["--voice",f"{language}={parameters['targetVoices'][language]}"])
         argv.append("--json")
         result=super().execute(GraphNode(node.id,"command",{"argv":argv}),context,on_log,cancel_event)
@@ -825,6 +825,7 @@ class CreatorBatchAdapter(CommandAdapter):
             "--translation-device", str(parameters["translationDevice"]),
             "--translation-batch-size", str(parameters["translationBatchSize"]),
             "--voice-provider", str(parameters.get("voiceProvider", "edge")),
+            "--qwen-device", str(parameters.get("qwenDevice", "auto")),
             "--source-volume", str(parameters["sourceVolume"]),
         ]
         for language in parameters["targetLanguages"]:

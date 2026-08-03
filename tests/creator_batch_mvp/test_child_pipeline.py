@@ -82,6 +82,7 @@ def test_public_processor_calls_each_owner_in_order_with_committed_predecessor_f
     assert calls[2][calls[2].index("--provider") + 1] == "deepseek"
     assert calls[3].count("--voice") == 2
     assert calls[3][calls[3].index("--provider") + 1] == "qwen3"
+    assert calls[3][calls[3].index("--qwen-device") + 1] == "auto"
 
 
 def test_public_processor_stops_before_successor_when_owner_does_not_commit_manifest(tmp_path):

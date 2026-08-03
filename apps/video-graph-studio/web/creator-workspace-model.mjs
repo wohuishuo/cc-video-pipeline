@@ -143,6 +143,7 @@ export function buildCampaignPayload(state) {
     sourceVolume: state.voiceProvider?.id === "original" ? 1 : Number(state.sourceVolume ?? 0.12),
     localOutputRoot: String(state.localOutputRoot || ""),
   };
+  if (common.voiceProvider === "qwen3") common.qwenDevice = state.qwenDevice || "auto";
   if ((state.sourceMode || "creator") === "folder") {
     return {
       templateId: "folder-dub",
